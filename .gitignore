@@ -3,7 +3,6 @@
 .*.swp
 /env
 /dl
-/.config
 /.config.old
 /bin
 /build_dir
@@ -18,7 +17,6 @@
 *.orig
 *.rej
 *~
-.#*
 *#
 .emacs.desktop*
 TAGS*~
