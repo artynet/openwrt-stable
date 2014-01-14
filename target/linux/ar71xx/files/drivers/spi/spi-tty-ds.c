@@ -833,7 +833,6 @@ static int spi_tty_probe(struct spi_device *spi)
 	return 0;
 
 err_req_tty:
-	tty_port_destroy(&avr->port);
 	spi_tty_unregister_interrupt(avr);
 err_req_irq:
 	kfree(avr);
@@ -858,7 +857,6 @@ static int spi_tty_remove(struct spi_device *spi)
 	/* Remove device */
 	spi_tty_all_dev[avr->tty_minor] = NULL;
 	tty_unregister_device(spi_serial_tty_driver, avr->tty_minor);
-	tty_port_destroy(&avr->port);
 	spi_tty_unregister_interrupt(avr);
 	kfree(avr);
 
