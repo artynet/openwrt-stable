@@ -893,8 +893,7 @@ static int spi_serial_init(void)
 	 * Allocate driver structure and reserve space for a number of
 	 * devices
 	 */
-	spi_serial_tty_driver = tty_alloc_driver(SPI_SERIAL_TTY_MINORS,
-			TTY_DRIVER_DYNAMIC_DEV);
+	spi_serial_tty_driver = alloc_tty_driver(SPI_SERIAL_TTY_MINORS);
 	if (!spi_serial_tty_driver)
 		return -ENOMEM;
 
