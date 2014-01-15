@@ -411,7 +411,7 @@ static void spi_tty_message_complete(void *context)
 		dev_dbg(&avr->spi->dev, "%s: buf[%d] = 0x%x (rx) = 0x%x (tx)\n", __func__, i, avr_msg->rx_buf[i], avr_msg->tx_buf[i]);
 
 	/* Push incoming data to user space throught TTY interface */
-	if (tty && tty->port->itty)
+	if (tty)
 		spi_tty_parsing_message(tty, avr_msg);
 
 	/* If necessary, generate clock */
@@ -425,7 +425,7 @@ static void spi_tty_message_complete(void *context)
 		 avr->active_msg_count, avr->active_bytes_count);
 	spin_unlock_irqrestore(&avr->lock, flags);
 
-	if (tty && tty->port->itty) {
+	if (tty) {
 		/* Wake up queue (wait until all transfered) */
 		wake_up_interruptible(&avr->wait);
 		tty_wakeup(tty);
