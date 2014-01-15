@@ -815,7 +815,6 @@ static int spi_tty_probe(struct spi_device *spi)
 
 	/* Register new port*/
 	avr->tty_minor = dev_count;
-	tty_port_link_device(&avr->port, spi_serial_tty_driver, avr->tty_minor);
 	avr->tty_dev = tty_register_device(spi_serial_tty_driver,
 					avr->tty_minor, &avr->spi->dev);
 	if (IS_ERR(avr->tty_dev)) {
