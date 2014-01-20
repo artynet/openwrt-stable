@@ -37,7 +37,7 @@
 static unsigned int dev_count = 0;
 static spinlock_t lock;
 
-#define port_to_avr_dev(_ptr) (container_of(_ptr, struct spi_tty_dev, port))
+#define tty_to_avr_dev(_ptr) ((struct spi_tty_dev *) dev_get_drvdata(_ptr->dev))
 
 
 static int transfer_delay = 25, transfer_len = 1, max_pending_byte = 1024;
@@ -579,7 +579,7 @@ static int spi_tty_send_message(struct spi_tty_dev *avr,
  */
 static int spi_serial_tty_open(struct tty_struct * tty, struct file * filp)
 {
-	struct spi_tty_dev *avr = port_to_avr_dev(tty->port);
+	struct spi_tty_dev *avr = tty_to_avr_dev(tty);
 
 	dev_vdbg(&avr->spi->dev, "%s:%d\n", __func__, __LINE__);
 	/*
@@ -588,7 +588,7 @@ static int spi_serial_tty_open(struct tty_struct * tty, struct file * filp)
 	 */
 	init_waitqueue_head(&avr->wait);
 
-	return tty_port_open(tty->port, tty, filp);
+	return tty_port_open(&avr->port, tty, filp);
 }
 
 /*
@@ -597,15 +597,15 @@ static int spi_serial_tty_open(struct tty_struct * tty, struct file * filp)
  */
 static void spi_serial_tty_close(struct tty_struct * tty, struct file * filp)
 {
-	struct spi_tty_dev *avr = port_to_avr_dev(tty->port);
+	struct spi_tty_dev *avr = tty_to_avr_dev(tty);
 
 	dev_vdbg(&avr->spi->dev, "%s:%d\n", __func__, __LINE__);
 
 	tty_ldisc_flush(tty);
-	tty_port_close(tty->port, tty, filp);
+	tty_port_close(&avr->port, tty, filp);
 
-	wake_up_interruptible(&tty->port->open_wait);
-	wake_up_interruptible(&tty->port->close_wait);
+	wake_up_interruptible(&avr->port.open_wait);
+	wake_up_interruptible(&avr->port.close_wait);
 }
 
 
@@ -616,7 +616,7 @@ static void spi_serial_tty_close(struct tty_struct * tty, struct file * filp)
  */
 static int spi_serial_tty_write_room(struct tty_struct *tty)
 {
-	struct spi_tty_dev *avr = port_to_avr_dev(tty->port);
+	struct spi_tty_dev *avr = tty_to_avr_dev(tty);
 	int size;
 
 	size = max_pending_byte - avr->active_bytes_count;
@@ -637,7 +637,7 @@ static int spi_serial_tty_write_room(struct tty_struct *tty)
 static int spi_serial_tty_write(struct tty_struct * tty,
 				const unsigned char *buf, int count)
 {
-	struct spi_tty_dev *avr = port_to_avr_dev(tty->port);
+	struct spi_tty_dev *avr = tty_to_avr_dev(tty);
 	unsigned int left, len;
 	int i;
 
@@ -666,7 +666,7 @@ static int spi_serial_tty_write(struct tty_struct * tty,
 static void spi_serial_tty_wait_until_sent(struct tty_struct *tty,
 					   int timeout)
 {
-	struct spi_tty_dev *avr = port_to_avr_dev(tty->port);
+	struct spi_tty_dev *avr = tty_to_avr_dev(tty);
 
 	dev_vdbg(&avr->spi->dev, "%s:%d %d\n", __func__, __LINE__,
 		avr->active_msg_count);
@@ -684,9 +684,7 @@ static struct tty_operations spi_serial_ops = {
 };
 
 static void spi_serial_port_dtr_rts(struct tty_port *port, int on){
-	struct spi_tty_dev *avr = port_to_avr_dev(port);
-
-	dev_vdbg(&avr->spi->dev, "%s:%d\n", __func__, __LINE__);
+	pr_info("%s:%d\n", __func__, __LINE__);
 }
 
 static const struct tty_port_operations spi_serial_port_ops = {
@@ -822,6 +820,9 @@ static int spi_tty_probe(struct spi_device *spi)
 		goto err_req_tty;
 	}
 
+	/* add private data to the device */
+	dev_set_drvdata(avr->tty_dev, avr);
+
 	spin_lock_irqsave(&lock, flags);
 	dev_count++;
 	spin_unlock_irqrestore(&lock, flags);
@@ -904,6 +905,7 @@ static int spi_serial_init(void)
 	spi_serial_tty_driver->minor_start = 0;
 	spi_serial_tty_driver->type = TTY_DRIVER_TYPE_SERIAL;
 	spi_serial_tty_driver->subtype = SERIAL_TYPE_NORMAL;
+	spi_serial_tty_driver->flags = TTY_DRIVER_DYNAMIC_DEV;
 
 	tty_set_operations(spi_serial_tty_driver, &spi_serial_ops);
 	err = tty_register_driver(spi_serial_tty_driver);
@@ -921,16 +923,26 @@ exit_reg_driver:
 
 static int spi_tty_init(void)
 {
+	int err;
+
 	pr_info("%s: SPI TTY INIT", __func__);
 	spin_lock_init(&lock);
 
-	spi_serial_init();
+	err = spi_serial_init();
+	if (err)
+		return err;
 	return spi_register_driver(&spi_tty_driver);
 }
 
 static void spi_tty_exit(void)
 {
+	int err;
 	pr_info("%s: SPI TTY EXIT", __func__);
+
+	err = tty_unregister_driver(spi_serial_tty_driver);
+	if (err)
+		pr_err("failed to unregister spiserial driver(%d)\n", err);
+	put_tty_driver(spi_serial_tty_driver);
 
 	driver_unregister(&spi_tty_driver.driver);
 }
