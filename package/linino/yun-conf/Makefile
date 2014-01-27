@@ -45,8 +45,6 @@ endef
 define Package/yun-conf/postinst
 #!/bin/sh -e
 if [ -n "$${IPKG_INSTROOT}" ]; then
-	#removing unconfigured services
-	rm "$${IPKG_INSTROOT}/etc/avahi/services/http.service"
 
 	#configuring dhcp/dnsmasq
 	#rm "$${IPKG_INSTROOT}/etc/config/dhcp"
