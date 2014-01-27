@@ -40,7 +40,6 @@ define Package/yun-conf/install
 	$(INSTALL_CONF) ./files/etc/avahi/services/arduino.service $(1)/etc/avahi/services/
 	$(INSTALL_CONF) ./files/etc/triggerhappy/triggers.d/reset.conf $(1)/etc/triggerhappy/triggers.d
 
-	$(INSTALL_CONF) ./files/etc/httpd.conf $(1)/etc/
 	$(INSTALL_CONF) ./files/etc/config/arduino $(1)/etc/config/
 	$(INSTALL_CONF) ./files/etc/config/firewall $(1)/etc/config/firewall.1
 	#$(INSTALL_CONF) ./files/etc/config/dhcp $(1)/etc/config/dhcp.1
