@@ -39,7 +39,6 @@ define Package/yun-conf/install
 
 	$(INSTALL_CONF) ./files/etc/avahi/services/arduino.service $(1)/etc/avahi/services/
 	$(INSTALL_CONF) ./files/etc/triggerhappy/triggers.d/reset.conf $(1)/etc/triggerhappy/triggers.d
-	$(INSTALL_CONF) ./files/etc/shadow $(1)/etc/shadow.1
 	$(INSTALL_DATA) ./files/etc/banner $(1)/etc/
 
 	$(INSTALL_CONF) ./files/etc/httpd.conf $(1)/etc/
@@ -84,10 +83,6 @@ if [ -n "$${IPKG_INSTROOT}" ]; then
 	sed -i "s/option commonname	OpenWrt/option commonname	'Arduino LLC'/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
 	sed -i "s/option rfc1918_filter 1/option rfc1918_filter 0/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
 	sed -i "s/option max_requests 3/option max_requests 2/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
-
-	#setting default root password
-	cp "$${IPKG_INSTROOT}/etc/shadow" "$${IPKG_INSTROOT}/etc/shadow-"
-	mv "$${IPKG_INSTROOT}/etc/shadow.1" "$${IPKG_INSTROOT}/etc/shadow"
 fi
 endef
 
