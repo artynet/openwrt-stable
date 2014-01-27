@@ -41,7 +41,6 @@ define Package/yun-conf/install
 	$(INSTALL_CONF) ./files/etc/triggerhappy/triggers.d/reset.conf $(1)/etc/triggerhappy/triggers.d
 
 	$(INSTALL_CONF) ./files/etc/config/arduino $(1)/etc/config/
-	$(INSTALL_CONF) ./files/etc/config/firewall $(1)/etc/config/firewall.1
 	#$(INSTALL_CONF) ./files/etc/config/dhcp $(1)/etc/config/dhcp.1
 
 	$(INSTALL_DATA) ./files/etc/arduino/Caterina-Yun.hex $(1)/etc/arduino/
@@ -60,10 +59,6 @@ define Package/yun-conf/postinst
 if [ -n "$${IPKG_INSTROOT}" ]; then
 	#removing unconfigured services
 	rm "$${IPKG_INSTROOT}/etc/avahi/services/http.service"
-
-	#configuring firewall
-	rm "$${IPKG_INSTROOT}/etc/config/firewall"
-	mv "$${IPKG_INSTROOT}/etc/config/firewall.1" "$${IPKG_INSTROOT}/etc/config/firewall"
 
 	#configuring dhcp/dnsmasq
 	#rm "$${IPKG_INSTROOT}/etc/config/dhcp"
