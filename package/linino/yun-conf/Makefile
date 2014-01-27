@@ -79,7 +79,6 @@ if [ -n "$${IPKG_INSTROOT}" ]; then
 	#mv "$${IPKG_INSTROOT}/etc/config/dhcp.1" "$${IPKG_INSTROOT}/etc/config/dhcp"
 
 	#setting hostname, ip address, and wifi ssid
-	sed -i "s/option hostname	OpenWrt/option hostname	linino/" "$${IPKG_INSTROOT}/etc/config/system"
 	sed -i "s/option ssid     Linino/option ssid     Arduino/" "$${IPKG_INSTROOT}/etc/config/wireless"
 	sed -i "s/192.168.1.1/192.168.240.1/" "$${IPKG_INSTROOT}/lib/functions/uci-defaults.sh"
 	sed -i "s/set network.lan.ifname/#set network.lan.ifname/" "$${IPKG_INSTROOT}/lib/functions/uci-defaults.sh"
