@@ -38,8 +38,6 @@ define Package/yun-conf/install
 
 	$(INSTALL_CONF) ./files/etc/avahi/services/arduino.service $(1)/etc/avahi/services/
 	#$(INSTALL_CONF) ./files/etc/config/dhcp $(1)/etc/config/dhcp.1
-
-	$(INSTALL_CONF) ./files/etc/openwrt_version $(1)/etc/
 endef
 
 define Package/yun-conf/postinst
