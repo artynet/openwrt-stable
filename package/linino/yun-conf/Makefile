@@ -64,8 +64,6 @@ if [ -n "$${IPKG_INSTROOT}" ]; then
 
 	#setting hostname, ip address, and wifi ssid
 	sed -i "s/option ssid     Linino/option ssid     Arduino/" "$${IPKG_INSTROOT}/etc/config/wireless"
-	sed -i "s/set network.lan.ifname/#set network.lan.ifname/" "$${IPKG_INSTROOT}/lib/functions/uci-defaults.sh"
-	sed -i "s/set network.lan.type/#set network.lan.type/" "$${IPKG_INSTROOT}/lib/functions/uci-defaults.sh"
 fi
 endef
 
