@@ -82,7 +82,6 @@ if [ -n "$${IPKG_INSTROOT}" ]; then
 	sed -i "s/option ssid     Linino/option ssid     Arduino/" "$${IPKG_INSTROOT}/etc/config/wireless"
 	sed -i "s/set network.lan.ifname/#set network.lan.ifname/" "$${IPKG_INSTROOT}/lib/functions/uci-defaults.sh"
 	sed -i "s/set network.lan.type/#set network.lan.type/" "$${IPKG_INSTROOT}/lib/functions/uci-defaults.sh"
-	sed -i "s/\*wpa_supplicant\*/\*wpa_supplicant\*\|\*udhcpc\*/" "$${IPKG_INSTROOT}/lib/upgrade/common.sh"
 
 	sed -i "s/option days		730/option days		36500/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
 	sed -i "s/option country		DE/option country		IT/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
