@@ -39,7 +39,6 @@ define Package/yun-conf/install
 
 	$(INSTALL_CONF) ./files/etc/avahi/services/arduino.service $(1)/etc/avahi/services/
 	$(INSTALL_CONF) ./files/etc/triggerhappy/triggers.d/reset.conf $(1)/etc/triggerhappy/triggers.d
-	$(INSTALL_DATA) ./files/etc/banner $(1)/etc/
 
 	$(INSTALL_CONF) ./files/etc/httpd.conf $(1)/etc/
 	$(INSTALL_CONF) ./files/etc/config/arduino $(1)/etc/config/
