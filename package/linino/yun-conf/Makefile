@@ -66,14 +66,6 @@ if [ -n "$${IPKG_INSTROOT}" ]; then
 	sed -i "s/option ssid     Linino/option ssid     Arduino/" "$${IPKG_INSTROOT}/etc/config/wireless"
 	sed -i "s/set network.lan.ifname/#set network.lan.ifname/" "$${IPKG_INSTROOT}/lib/functions/uci-defaults.sh"
 	sed -i "s/set network.lan.type/#set network.lan.type/" "$${IPKG_INSTROOT}/lib/functions/uci-defaults.sh"
-
-	sed -i "s/option days		730/option days		36500/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
-	sed -i "s/option country		DE/option country		IT/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
-	sed -i "s/option state		Berlin/option state		Turin/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
-	sed -i "s/option location		Berlin/option location		Turin/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
-	sed -i "s/option commonname	OpenWrt/option commonname	'Arduino LLC'/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
-	sed -i "s/option rfc1918_filter 1/option rfc1918_filter 0/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
-	sed -i "s/option max_requests 3/option max_requests 2/" "$${IPKG_INSTROOT}/etc/config/uhttpd"
 fi
 endef
 
