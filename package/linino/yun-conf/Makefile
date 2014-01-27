@@ -97,11 +97,6 @@ if [ -n "$${IPKG_INSTROOT}" ]; then
 	#setting default root password
 	cp "$${IPKG_INSTROOT}/etc/shadow" "$${IPKG_INSTROOT}/etc/shadow-"
 	mv "$${IPKG_INSTROOT}/etc/shadow.1" "$${IPKG_INSTROOT}/etc/shadow"
-
-	#adding boot time scripts
-	sed -i "s/exit 0//" "$${IPKG_INSTROOT}/etc/rc.local"
-	echo "wifi-live-or-reset" >> "$${IPKG_INSTROOT}/etc/rc.local"
-	echo "exit 0" >> "$${IPKG_INSTROOT}/etc/rc.local"
 fi
 endef
 
