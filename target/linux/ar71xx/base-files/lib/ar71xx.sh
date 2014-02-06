@@ -450,6 +450,9 @@ ar71xx_board_detect() {
 	*"Linino One")
 		name="linino-one"
 		;;
+	*"Arduino Yun")
+		name="linino-yun"
+		;;
 	esac
 
 	case "$machine" in

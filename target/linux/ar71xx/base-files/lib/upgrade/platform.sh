@@ -96,7 +96,8 @@ platform_check_image() {
 	zcn-1523h-2 | \
 	zcn-1523h-5 | \
 	linino-one | \
-	linino-freedog)
+	linino-freedog | \
+	linino-yun)
 		[ "$magic_long" != "68737173" -a "$magic_long" != "19852003" ] && {
 			echo "Invalid image type."
 			return 1
