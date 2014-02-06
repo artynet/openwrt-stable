@@ -95,7 +95,8 @@ platform_check_image() {
 	hornet-ub | \
 	zcn-1523h-2 | \
 	zcn-1523h-5 | \
-	linino)
+	linino-one | \
+	linino-freedog)
 		[ "$magic_long" != "68737173" -a "$magic_long" != "19852003" ] && {
 			echo "Invalid image type."
 			return 1
