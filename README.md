@@ -9,4 +9,8 @@ The binary of Linino distribution are available on http://download.linino.org
 
 A wiki, a forum and a blog will be available on the web site http://www.linino.org
 
+On the master branch will be commited the latest changes on the Linino 
 
+On the release branch will be merged all the commit from the master branch tested and considered stable
+
+On the arduino branch will be integrated some Arduino's cutomizations for Arduino Yun board
