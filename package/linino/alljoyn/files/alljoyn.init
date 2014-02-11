@@ -1,18 +1,18 @@
 #!/bin/sh /etc/rc.common
 
-# Copyright (C) 2013 Qualcomm Innovation Center, Inc.
+# Copyright (c) 2013, AllSeen Alliance. All rights reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
 START=65
@@ -82,8 +82,6 @@ process_unix_transport() {
 	fi
 	export ${NO_EXPORT:+-n} listen_specs="${listen_specs}
   <listen>unix:${path}</listen>"
-
-	config_get unix_auth_timeout unix auth_timeout "$unix_auth_timeout"
     fi
 }
 
@@ -113,42 +111,19 @@ process_ip_transport() {
 }
 
 
-process_ice_transport() {
-    if check ice enable; then
-	local url
-	local addrport
-	local proto
+process_slap_transport() {
+    if check slap enable; then
+	local path
+	local baud
+
+	config_get path slap path "/dev/ttyUSB0"
+	config_get_bool baud slap baud "115200"
+	config_get databits slap databits "8"
+	config_get parity slap parity "none"
+	config_get stopbits slap stopbits "1"
 
 	export ${NO_EXPORT:+-n} listen_specs="${listen_specs}
-  <listen>ice:</listen>"
-
-	process_networks ice
-
-	config_get url ice server
-
-	proto="${url%%:*}"
-	addrport="${url##${proto}://}"
-
-	export ice_server="${addrport%:*}"
-
-	if [ "$proto" == "http" ]; then
-	    export ice_protocol="HTTP"
-	else
-	    export ice_protocol="HTTPS"
-	fi
-
-
-	config_get ice_max_incomplete_conn ice max_incomplete_conn "$ice_max_incomplete_conn"
-	config_get ice_max_complete_conn ice max_complete_conn "$ice_max_complete_conn"
-	config_get ice_auth_timeout ice auth_timeout "$ice_auth_timeout"
-    fi
-}
-
-
-process_bluetooth_transport() {
-    if check bluetooth enable; then
-	export ${NO_EXPORT:+-n} listen_specs="${listen_specs}
-  <listen>bluetooth:</listen>"
+  <listen>slap:type=uart;dev=${path};baud=${baud};databits=${databits};parity=${parity};stopbits=${stopbits}</listen>"
     fi
 }
 
@@ -156,20 +131,11 @@ process_bluetooth_transport() {
 generate_conf_file() {
     local listen_specs=""
 
-    local unix_auth_timeout=5000
-
     local ip_max_incomplete_conn=16
     local ip_max_complete_conn=64
     local ip_auth_timeout=20000
     local ip_networks=""
     local ip_advertise_daemon=""
-
-    local ice_max_incomplete_conn=16
-    local ice_max_complete_conn=64
-    local ice_auth_timeout=40000
-    local ice_networks=""
-    local ice_server
-    local ice_protocol
 
     include /lib/network
     scan_interfaces
@@ -177,8 +143,7 @@ generate_conf_file() {
 
     process_unix_transport
     process_ip_transport
-    process_ice_transport
-    process_bluetooth_transport
+    process_slap_transport
 
     mkdir -p $(dirname $CONFIGFILE)
 
@@ -196,17 +161,6 @@ generate_conf_file() {
   <limit max_incomplete_connections="${ip_max_incomplete_conn}"/>
   <limit max_completed_connections="${ip_max_complete_conn}"/>
   <limit auth_timeout="${ip_auth_timeout}"/>
-  <ice>
-    <limit max_incomplete_connections="${ice_max_incomplete_conn}"/>
-    <limit max_completed_connections="${ice_max_complete_conn}"/>
-    <limit auth_timeout="${ice_auth_timeout}"/>
-  </ice>
-  <ice_discovery_manager>
-    <property interfaces="${ice_networks}"/>
-    <property protocol="${ice_protocol}"/>
-    <property server="${ice_server}"/>
-    <property enable_ipv6="false"/>
-  </ice_discovery_manager>
   <property restrict_untrusted_clients="false"/>
   <limit max_untrusted_clients="${ip_max_complete_conn}"/>
 </busconfig>
