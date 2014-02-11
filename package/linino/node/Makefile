@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=node
-PKG_VERSION:=v0.10.22
-PKG_RELEASE:=2
+PKG_VERSION:=v0.10.25
+PKG_RELEASE:=1
 
 PKG_SOURCE:=node-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://nodejs.org/dist/${PKG_VERSION}
-PKG_MD5SUM:=1f1948de2ef50a1d8e2303a6ed6c0e45
+PKG_MD5SUM:=153bdbf77b4473df2600b8ce123ef331
 GIT_SOURCE:=https://github.com/mimmoLinino/v8m-rb.git -b dm-dev-mipsbe
 
 GYP_DEFINES:=v8_use_mips_abi_hardfloat=false v8_can_use_fpu_instructions=false
