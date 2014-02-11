@@ -13,7 +13,7 @@ PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).zip
 #PKG_SOURCE_URL:=http://github.com/linino/luci-webpanel-linino/archive
-PKG_SOURCE_URL:=http://zurich.linino.org/pkg-src
+PKG_SOURCE_URL:=http://download.linino.org/pkg-src
 
 include $(INCLUDE_DIR)/package.mk
 
