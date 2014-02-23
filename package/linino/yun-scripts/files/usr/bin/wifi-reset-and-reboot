@@ -2,9 +2,11 @@
 
 UCI="/sbin/uci"
 
+machine=$(awk '/machine/ {print $3}' /proc/cpuinfo)
+
 $UCI set "wireless.radio0.channel=11"
 $UCI set "wireless.@wifi-iface[0].mode=ap"
-$UCI set "wireless.@wifi-iface[0].ssid=Arduino"
+$UCI set "wireless.@wifi-iface[0].ssid=$machine"
 $UCI set "wireless.@wifi-iface[0].encryption=none"
 $UCI delete "wireless.@wifi-iface[0].key"
 $UCI delete "wireless.radio0.country"
