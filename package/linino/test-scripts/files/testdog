@@ -10,17 +10,8 @@ path2='/mnt/sda1'
 
 dogtest() {	      
 	    if [ -e $1/lininofiles/sketch_SPI.cpp.hex ] && [ -e $1/lininofiles/autotest.py ]
-		    
-		then
-		
-		      python $1/lininofiles/autotest.py
-		      
-		else
-		
-		      echo "Test FILES not found ! ! !" >> $1/errortest.log
-		      echo "timer" > /sys/class/leds/ds:green:wlan/trigger
-		      echo "timer" > /sys/class/leds/ds:green:usb/trigger
-		      
+	
+		then python $1/lininofiles/autotest.py
 	    fi
 }
 
@@ -35,10 +26,5 @@ boot() {
             elif [ -d $path2 ] && `grep -qs $path2 /proc/mounts` && [ -d $path2/lininofiles ] && [ -d $path2/lininologs ]
 	                 
                 then  echo "launching.....from sda1..." && dogtest $path2
-                                                                     
-            else                                                     
-                echo "Both removable devices are not mounted TEST FAILED ! ! !" >> /tmp/errormount.log
-                echo "timer" > /sys/class/leds/ds:green:wlan/trigger
-                echo "timer" > /sys/class/leds/ds:green:usb/trigger                                                                                       
             fi
 }
