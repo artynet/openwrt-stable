@@ -28,8 +28,14 @@
 #define DS_GPIO_LED_WLAN		0
 #define DS_GPIO_LED_USB			1
 
-#define DS_GPIO_OE			21
-#define DS_GPIO_MCU_RESET		18
+#if defined(LININO_CHOW)
+	#define DS_GPIO_OE			13
+	#define DS_GPIO_MCU_RESET	0
+#else
+	#define DS_GPIO_OE			21
+	#define DS_GPIO_MCU_RESET		18
+#endif
+
 
 #define DS_GPIO_UART_ENA	23
 #define DS_GPIO_CONF_BTN	20
@@ -37,6 +43,8 @@
 /* Configure level shifter enable GPIO */
 #if defined(LININO_FREEDOG)
 	#define DS_GPIO_OE2		11
+#elif defined(LININO_CHOW)
+	#define DS_GPIO_OE2		15
 #else	/* YUN */
 	#define DS_GPIO_OE2		22
 #endif
