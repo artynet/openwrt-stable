@@ -26,7 +26,7 @@ endef
 define Package/test-scripts/install
 	$(INSTALL_DIR) $(1)/etc/init.d
 
-	$(INSTALL_BIN) ./files/testdog.sh $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/testdog $(1)/etc/init.d
 endef
 
 $(eval $(call BuildPackage,test-scripts))
