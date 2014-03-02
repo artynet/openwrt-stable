@@ -8,4 +8,4 @@
 
 #include "mach-linino.c"
 
-MIPS_MACHINE(ATH79_MACH_LININO_CHOW, "linino-chow", "Linino Chow", ds_setup);
+MIPS_MACHINE(ATH79_MACH_LININO_CHOWCHOW, "linino-chowchow", "Linino Chowchow", ds_setup);
