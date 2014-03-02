@@ -51,3 +51,15 @@ define Profile/LININO_FREEDOG/Description
 endef
 
 $(eval $(call Profile,LININO_FREEDOG))
+
+define Profile/LININO_CHOWCHOW
+	NAME:=Linino Chowchow
+	PACKAGES:=kmod-usb-core kmod-usb2 luci-webpanel-linino
+endef
+
+define Profile/LININO_CHOWCHOW/Description
+	Package set optimized for the Linino Chowchow based on
+	Atheros AR9331.
+endef
+
+$(eval $(call Profile,LININO_CHOWCHOW))
