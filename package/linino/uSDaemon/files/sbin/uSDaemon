@@ -26,8 +26,8 @@ update_connected_devices()
 	DEVICES=""
 	for sd in `ls -d /sys/bus/scsi/drivers/sd/*/block/sd?`
 	do
-		blkid /dev/$sd_name
 		sd_name=`basename $sd`
+		blkid /dev/$sd_name
 		size=$(cat $sd/size)
 		if [ "$size" != "0" -a "$size" != "" ]
 		then
