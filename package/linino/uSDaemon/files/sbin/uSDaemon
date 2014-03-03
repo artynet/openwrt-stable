@@ -14,12 +14,36 @@
 
 TIME=2
 
+# ERRUMOUNT contains the list of devices to be unmounted as soon as
+# possible
+ERRUMOUNT=""
+
 # $1 must be a valid parameter for sleep
 if [ "x$1" != "x" ];then
 	TIME=$1
 fi
 
 DEVICES=""
+
+umount_partitions()
+{
+	$sd_name = $1
+
+	for dev in $(ls /dev/$sd_name?); do
+		umount $dev
+		if [ $? -eq 1 ]; then
+			echo "cannot umount"
+			# Cannot umount device, if the $sd_name
+			# is not already listed, then add it
+			if [ "$ERRUMOUNT" == "${ERRUMOUNT/$sd_name/}" ]; then
+				ERRUMOUNT="$ERRUMOUNT $sd_name"
+			fi
+			echo "Catch Error $ERRUMOUNT"
+		fi
+	done
+	rmdir /mnt/$sd_name?
+	post_auto_umount
+}
 
 update_connected_devices()
 {
@@ -45,7 +69,9 @@ update_connected_devices
 
 umount_disconnected_devices()
 {
-	for sd_name in $DEVICES
+	devices=$1
+	echo "check umount $devices"
+	for sd_name in $devices
 	do
 		# Check the SD device
 		blkid /dev/$sd_name
@@ -56,18 +82,28 @@ umount_disconnected_devices()
 			# 0, it means that the user un-plugged the uSD card so
 			# we can unmount all uSD partitions and mark the device
 			# as disconnected
-			for dev in $(ls /dev/$sd_name?); do
-				umount $dev
-			done
-			rmdir /mnt/$sd_name?
-			post_auto_umount
+			umount_partitions $sd_name
 		fi
 	done
 }
 
+umount_handle_errors()
+{
+	echo "handle umount errors $ERRUMOUNT"
+	if [ "x$ERRUMOUNT" != "x" ]; then
+		TEMP="$ERRUMOUNT"
+		ERRUMOUNT=""
+		echo "handle error $TEMP"
+		# try to umount again
+		umount_disconnected_devices "$TEMP"
+	fi
+}
+
 while [ true ]; do
-	umount_disconnected_devices
+	umount_disconnected_devices "$DEVICES"
 	update_connected_devices
 	sleep $TIME
+
+	umount_handle_errors
 done
 
