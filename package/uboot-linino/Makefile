@@ -102,7 +102,9 @@ define Package/uboot/install/template
 define Package/uboot-ar71xx-$(1)/install
 	#$(INSTALL_DIR) $$(1)
 	rm -rf $$(1)
-	$(CP) $(PKG_BUILD_DIR)/tuboot.bin $(BIN_DIR)/$(2)
+	## Enable if COMPRESSED_BOOT is enabled
+	#$(CP) $(PKG_BUILD_DIR)/tuboot.bin $(BIN_DIR)/$(2)
+	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(2)
 	$(CP) ./$(PKG_SOURCE) $(DL_DIR)/; $(CP) ./$(CAL_DATA) $(BIN_DIR)/openwrt-ar71xx-generic-linino-caldata.bin && touch $(BIN_DIR)/openwrt-ar71xx-generic-linino-caldata.bin
 endef
 endef
