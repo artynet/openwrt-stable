@@ -99,6 +99,8 @@ umount_handle_errors()
 	fi
 }
 
+echo "uSDaemon ... UP" > /dev/kmsg
+
 while [ true ]; do
 	umount_disconnected_devices "$DEVICES"
 	update_connected_devices
