@@ -1,0 +1,27 @@
+#!/bin/sh
+
+PROGRAM=$1
+OPTIONS=$2
+
+OE_GPIO=12
+OE_PATH=/sys/class/gpio/gpio$OE_GPIO/
+
+
+if [ "x$PROGRAM" == "x" ]; then
+	echo "usage: run-swddude program.bin [options]"
+	exit
+fi
+
+# Enable level shifter
+echo $OE_GPIO > /sys/class/gpio/export
+echo out > $OE_PATH/direction
+echo 1 > $OE_PATH/value
+
+# Program with swddude
+echo "swddude -target kl25 -driver gpio -programmer freedog -flash $PROGRAM $OPTIONS"
+
+swddude -target kl25 -driver gpio -programmer freedog -flash $PROGRAM $OPTIONS
+
+
+# Disable level shifter in order to allow debugging with external debugger
+echo 0 > $OE_PATH/value
