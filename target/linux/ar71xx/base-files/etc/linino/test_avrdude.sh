@@ -30,7 +30,7 @@ fi
 
 # program AVR
 echo 1 > $OE_PATH
-avrdude -c linuxgpio -C /etc/avrdude.conf -p m32u4 -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xFB:m 
+avrdude -c linuxgpio -v -C /etc/avrdude.conf -p m32u4 -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xFB:m 
 
 
 # Restore previous status
