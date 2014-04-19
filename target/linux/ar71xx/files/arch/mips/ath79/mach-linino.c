@@ -38,6 +38,7 @@ static struct gpio_led ds_leds_gpio[] __initdata = {
 		.gpio = DS_GPIO_LED_WLAN,
 		.active_low = 0,
 	},
+#if defined(LININO_CHIWAWA)
 	{
 		.name = "ds:green:lan0",
 		.gpio = DS_GPIO_LED2,
@@ -50,7 +51,7 @@ static struct gpio_led ds_leds_gpio[] __initdata = {
 		.active_low = 0,
 		.default_trigger = "netdev"
 	},
-
+#endif
 };
 
 /* * * * * * * * * * * * * * * * * BUTTONS * * * * * * * * * * * * * * * * * */
