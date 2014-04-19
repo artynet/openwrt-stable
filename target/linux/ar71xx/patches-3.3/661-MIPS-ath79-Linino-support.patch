@@ -1,7 +1,6 @@
-diff -Naur a/arch/mips/ath79/Kconfig b/arch/mips/ath79/Kconfig
---- a/arch/mips/ath79/Kconfig	2013-03-21 23:58:04.641431865 +0800
-+++ b/arch/mips/ath79/Kconfig	2013-03-24 00:08:47.067969507 +0800
-@@ -708,6 +708,45 @@
+--- a/arch/mips/ath79/Kconfig
++++ b/arch/mips/ath79/Kconfig
+@@ -648,6 +648,58 @@ config ATH79_MACH_NBG460N
  	select ATH79_DEV_M25P80
  	select ATH79_DEV_WMAC
  
@@ -44,13 +43,25 @@ diff -Naur a/arch/mips/ath79/Kconfig b/arch/mips/ath79/Kconfig
 +		Say 'Y' here if you want your kernel to support
 +	 	Linino Freedog.
 +
++config ATH79_MACH_LININO_CHIWAWA
++        bool "Linino Chiwawa support"
++        select SOC_AR933X
++        select ATH79_DEV_ETH
++        select ATH79_DEV_GPIO_BUTTONS
++        select ATH79_DEV_LEDS_GPIO
++        select ATH79_DEV_M25P80
++        select ATH79_DEV_USB
++        select ATH79_DEV_WMAC
++        help
++                Say 'Y' here if you want your kernel to support
++                Linino Chiwawa.
++
  endmenu
  
  config SOC_AR71XX
-diff -Naur a/arch/mips/ath79/machtypes.h b/arch/mips/ath79/machtypes.h
---- a/arch/mips/ath79/machtypes.h	2013-03-21 23:58:04.641431865 +0800
-+++ b/arch/mips/ath79/machtypes.h	2013-03-24 00:06:23.479076688 +0800
-@@ -129,6 +129,9 @@
+--- a/arch/mips/ath79/machtypes.h
++++ b/arch/mips/ath79/machtypes.h
+@@ -117,6 +117,9 @@ enum ath79_mach_type {
  	ATH79_MACH_WZR_HP_G450H,	/* Buffalo WZR-HP-G450H */
  	ATH79_MACH_ZCN_1523H_2,		/* Zcomax ZCN-1523H-2-xx */
  	ATH79_MACH_ZCN_1523H_5,		/* Zcomax ZCN-1523H-5-xx */
@@ -60,10 +71,9 @@ diff -Naur a/arch/mips/ath79/machtypes.h b/arch/mips/ath79/machtypes.h
  };
  
  #endif /* _ATH79_MACHTYPE_H */
-diff -Naur a/arch/mips/ath79/Makefile b/arch/mips/ath79/Makefile
---- a/arch/mips/ath79/Makefile	2013-03-21 23:58:04.621435761 +0800
-+++ b/arch/mips/ath79/Makefile	2013-03-24 00:08:38.337417852 +0800
-@@ -61,6 +61,9 @@
+--- a/arch/mips/ath79/Makefile
++++ b/arch/mips/ath79/Makefile
+@@ -59,6 +59,9 @@ obj-$(CONFIG_ATH79_MACH_EAP7660D)	+= mac
  obj-$(CONFIG_ATH79_MACH_JA76PF)		+= mach-ja76pf.o
  obj-$(CONFIG_ATH79_MACH_JWAP003)	+= mach-jwap003.o
  obj-$(CONFIG_ATH79_MACH_HORNET_UB)	+= mach-hornet-ub.o

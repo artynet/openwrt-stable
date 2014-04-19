@@ -38,6 +38,20 @@ static struct gpio_led ds_leds_gpio[] __initdata = {
 		.gpio = DS_GPIO_LED_WLAN,
 		.active_low = 0,
 	},
+#if defined(LININO_CHIWAWA)
+	{
+		.name = "ds:green:lan0",
+		.gpio = DS_GPIO_LED2,
+		.active_low = 0,
+		.default_trigger = "netdev"
+	},
+	{
+		.name = "ds:green:lan1",
+		.gpio = DS_GPIO_LED4,
+		.active_low = 0,
+		.default_trigger = "netdev"
+	},
+#endif
 };
 
 /* * * * * * * * * * * * * * * * * BUTTONS * * * * * * * * * * * * * * * * * */
@@ -195,6 +209,12 @@ static void __init ds_setup(void)
 	ath79_register_gpio_keys_polled(-1, DS_KEYS_POLL_INTERVAL,
 			ARRAY_SIZE(ds_gpio_keys), ds_gpio_keys);
 	ath79_register_usb();
+
+	// use the swtich_led directly form sysfs
+	ath79_gpio_function_disable(AR933X_GPIO_FUNC_ETH_SWITCH_LED0_EN |
+	                            AR933X_GPIO_FUNC_ETH_SWITCH_LED1_EN |
+	                            AR933X_GPIO_FUNC_ETH_SWITCH_LED2_EN |
+	                            AR933X_GPIO_FUNC_ETH_SWITCH_LED3_EN);
 
 	/*
 	 * Disable the Function for some pins to have GPIO functionality active
