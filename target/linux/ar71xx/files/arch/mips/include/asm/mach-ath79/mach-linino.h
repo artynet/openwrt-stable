@@ -72,7 +72,7 @@
 
 #if defined(LININO_FREEDOG)
 	#define LININO_GPIO_SPI_INTERRUPT		23
-#elif defined(CONFIG_ATH79_MACH_LININO_YUN)
+#else
 	#define LININO_GPIO_SPI_INTERRUPT		19
 #endif
 
