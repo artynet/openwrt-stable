@@ -1,0 +1,44 @@
+From b894174d0d9640eddb6e2d79c7066dd144f7e9d8 Mon Sep 17 00:00:00 2001
+From: Federico Vaga <federico.vaga@gmail.com>
+Date: Tue, 3 Dec 2013 21:17:46 +0100
+Subject: [PATCH] error_stack.cpp: use execinfo only if available
+
+Signed-off-by: Federico Vaga <federico.vaga@gmail.com>
+---
+ error_stack.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/error_stack.cpp b/error_stack.cpp
+index 9b0c70e..ffc175a 100644
+--- a/error_stack.cpp
++++ b/error_stack.cpp
+@@ -25,7 +25,9 @@
+  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
++#ifdef HAVE_EXECINFO_H
+ #include <execinfo.h>
++#endif
+ #include <errno.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -154,6 +156,7 @@ bool ErrorStack::empty() const
+ /******************************************************************************/
+ void Err::print_trace()
+ {
++#ifdef HAVE_EXECINFO_H
+     void *      addresses[64];
+     unsigned	length  = backtrace(addresses, 64);
+     char * *    strings = backtrace_symbols(addresses, length);
+@@ -162,5 +165,8 @@ void Err::print_trace()
+ 	fprintf(stderr, "%s\n", strings[i]);
+ 
+     free(strings);
++#else
++    fprintf(stderr, "Cannot print trace\n");
++#endif
+ }
+ /******************************************************************************/
+-- 
+1.8.3.1
+
