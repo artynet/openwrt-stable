@@ -33,7 +33,7 @@ endef
 
 define Build/Prepare
 	wget https://github.com/ideino/ideino-linino-dist/archive/v${PKG_VERSION}.tar.gz
-	mkdir ./files/ideino-linino
+	mkdir -p ./files/ideino-linino
 	tar xvf ./v${PKG_VERSION}.tar.gz -C ./files/ideino-linino --strip-components=1
 	rm -rf v${PKG_VERSION}.tar.gz
 endef
