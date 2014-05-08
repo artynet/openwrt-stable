@@ -10,7 +10,7 @@ PKG_NAME:=swddude
 PKG_VERSION:=1.0
 PKG_RELEASE:=1
 
-PKG_SOURCE_BRANCH:=devel-fede
+PKG_SOURCE_BRANCH:=master
 PKG_SOURCE:=$(PKG_SOURCE_BRANCH).zip
 PKG_SOURCE_SUBDIR:=swddude-$(PKG_VERSION)
 PKG_SOURCE_URL:=https://github.com/linino/swddude/archive/
