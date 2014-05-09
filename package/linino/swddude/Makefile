@@ -45,8 +45,6 @@ define Build/Prepare
 	 cd swddude-src; \
 	 git fetch origin; \
 	 git checkout master; \
-	 git branch -D $(PKG_SOURCE_BRANCH); \
-	 git checkout -b $(PKG_SOURCE_BRANCH) origin/$(PKG_SOURCE_BRANCH); \
 	 cd build; \
 	 git am $(PWD)/package/linino/swddude/patches/build/*; \
 	 cd ../libs/sys; \
