@@ -9,7 +9,11 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ideino
 PKG_VERSION:=0.0.4
-PKG_RELEASE:=3
+PKG_RELEASE:=4
+
+#PKG_SOURCE:=v$(PKG_VERSION).tar.gz
+#PKG_SOURCE_URL:=https://github.com/ideino/ideino-linino-dist/archive/v${PKG_VERSION}
+GIT_SOURCE:=https://github.com/ideino/ideino-linino-dist.git
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -30,18 +34,20 @@ endef
 define Build/Compile
  # NOOP
 endef
+#git clone ${GIT_SOURCE} -b v${PKG_VERSION} ideino-linino)
 
 define Build/Prepare
-	wget https://github.com/ideino/ideino-linino-dist/archive/v${PKG_VERSION}.tar.gz
-	mkdir -p ./files/ideino-linino
-	tar xvf ./v${PKG_VERSION}.tar.gz -C ./files/ideino-linino --strip-components=1
-	rm -rf v${PKG_VERSION}.tar.gz
+	(cd $(PKG_BUILD_DIR);\
+	git clone ${GIT_SOURCE} -b master ideino-linino;\
+	cd ideino-linino;\
+	rm -rf .git;\
+	rm .gitignore);
 endef
 
 define Package/ideino/install
   	$(INSTALL_DIR) $(1)
 
-	$(CP) ./files/* $(1)
+	$(CP) $(PKG_BUILD_DIR)/ideino-linino $(1)
 endef
 
 define Package/ideino/postinst
