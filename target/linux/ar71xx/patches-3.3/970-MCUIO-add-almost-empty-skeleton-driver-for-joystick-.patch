@@ -1,0 +1,125 @@
+From 7f30de4486fac919104595823c3eb831e8129c54 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 9 May 2014 16:23:26 +0200
+Subject: [PATCH 970/973] MCUIO: add almost empty skeleton driver for joystick
+ shield
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/mcuio/Kconfig           |  7 ++++
+ drivers/mcuio/Makefile          |  1 +
+ drivers/mcuio/mcuio-js-shield.c | 78 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 86 insertions(+)
+ create mode 100644 drivers/mcuio/mcuio-js-shield.c
+
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index 4ac2d77..e7f8e53 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -22,3 +22,10 @@ config MCUIO_IRQ_CTRL
+ 	help
+ 	  The MCUIO irq controller is needed by mcuio functions to send
+ 	  interrupts to the MPU. If unsure say yes.
++
++config MCUIO_JS_SHIELD
++        tristate "mcuio joystick shield driver"
++	depends on (MCUIO && MCUIO_IRQ_CTRL)
++	default y
++	help
++	  Adds a driver for a joystick + buttons shield (experimental)
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index 08a588f..bd1b4c2 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -7,3 +7,4 @@ mcuio-y := core.o bus.o sysfs.o
+ obj-$(CONFIG_MCUIO) += mcuio.o mcuio-hc-drv.o mcuio-hc-dev.o mcuio-soft-hc.o
+ obj-$(CONFIG_MCUIO_LDISC_HC) += mcuio-hc-ldisc.o
+ obj-$(CONFIG_MCUIO_IRQ_CTRL) += mcuio-irq-ctrl.o
++obj-$(CONFIG_MCUIO_JS_SHIELD) += mcuio-js-shield.o
+diff --git a/drivers/mcuio/mcuio-js-shield.c b/drivers/mcuio/mcuio-js-shield.c
+new file mode 100644
+index 0000000..51a35e7
+--- /dev/null
++++ b/drivers/mcuio/mcuio-js-shield.c
+@@ -0,0 +1,78 @@
++/*
++ * Copyright 2011 Dog Hunter SA
++ * Author: Davide Ciminaghi <ciminaghi@gnudd.com>
++ *
++ * GNU GPLv2 or later
++ */
++
++#define DEBUG
++
++/* mcuio driver for joystick shield */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/types.h>
++#include <linux/regmap.h>
++#include <linux/workqueue.h>
++#include <linux/kthread.h>
++#include <linux/irq.h>
++#include <linux/interrupt.h>
++#include <linux/gpio.h>
++
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++#include <linux/mcuio-proto.h>
++
++#include "mcuio-internal.h"
++
++static int mcuio_js_probe(struct mcuio_device *mdev)
++{
++	return -ENODEV;
++}
++
++static int mcuio_js_remove(struct mcuio_device *mdev)
++{
++	return 0;
++}
++
++static const struct mcuio_device_id js_drv_ids[] = {
++	{
++		.vendor = MCUIO_VENDOR_DOGHUNTER,
++		.device = MCUIO_DEVICE_JOYSTICK_SHIELD,
++	},
++	/* Terminator */
++	{
++		.device = MCUIO_NO_DEVICE,
++		.class = MCUIO_CLASS_UNDEFINED,
++	},
++};
++
++static struct mcuio_driver mcuio_js_driver = {
++	.driver = {
++		.name = "mcuio-js-shield",
++	},
++	.id_table = js_drv_ids,
++	.probe = mcuio_js_probe,
++	.remove = mcuio_js_remove,
++};
++
++static int __init mcuio_js_init(void)
++{
++	return mcuio_driver_register(&mcuio_js_driver, THIS_MODULE);
++}
++
++static void __exit mcuio_js_exit(void)
++{
++	return mcuio_driver_unregister(&mcuio_js_driver);
++}
++
++subsys_initcall(mcuio_js_init);
++module_exit(mcuio_js_exit);
++
++MODULE_VERSION(GIT_VERSION); /* Defined in local Makefile */
++MODULE_AUTHOR("Davide Ciminaghi");
++MODULE_DESCRIPTION("MCUIO driver for joystick shield");
++MODULE_LICENSE("GPL v2");
+-- 
+1.8.5.2.233.g932f7e4
+

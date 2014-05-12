@@ -1,0 +1,32 @@
+From 84a16386321b1855430747d8d86b3edad153a936 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 7 May 2014 17:03:22 +0200
+Subject: [PATCH 939/973] MCUIO: add private mcuio header
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/mcuio/mcuio-internal.h | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+ create mode 100644 drivers/mcuio/mcuio-internal.h
+
+diff --git a/drivers/mcuio/mcuio-internal.h b/drivers/mcuio/mcuio-internal.h
+new file mode 100644
+index 0000000..3d899d4
+--- /dev/null
++++ b/drivers/mcuio/mcuio-internal.h
+@@ -0,0 +1,12 @@
++#ifndef __MCUIO_INTERNAL_H__
++#define __MCUIO_INTERNAL_H__
++
++#include <linux/version.h>
++
++extern struct bus_type mcuio_bus_type;
++extern struct device mcuio_bus;
++
++int mcuio_get_bus(void);
++void mcuio_put_bus(unsigned bus);
++
++#endif /* __MCUIO_INTERNAL_H__ */
+-- 
+1.8.5.2.233.g932f7e4
+

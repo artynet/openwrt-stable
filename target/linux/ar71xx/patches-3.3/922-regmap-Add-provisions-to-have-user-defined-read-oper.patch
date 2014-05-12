@@ -1,0 +1,106 @@
+From cbeb09cbd580dd2c3c3a81cf2b3ca731406910c6 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 25 Mar 2014 14:59:06 +0100
+Subject: [PATCH 922/973] regmap: Add provisions to have user-defined read
+ operation
+
+This commit is a preparatory commit to provide "no-bus" configuration
+option for regmap API. It adds necessary plumbing needed to have the
+ability to provide user define register read function.
+
+Backported by hand to 3.3.8 Davide Ciminaghi <davide@linino.org>
+
+Signed-off-by: Andrey Smirnov <andrew.smirnov@gmail.com>
+Signed-off-by: Mark Brown <broonie@opensource.wolfsonmicro.com>
+Signed-off-by: Davide Ciminaghi <davide@linino.org>
+---
+ drivers/base/regmap/internal.h |  2 ++
+ drivers/base/regmap/regmap.c   | 30 +++++++++++++++++++++++-------
+ 2 files changed, 25 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/base/regmap/internal.h b/drivers/base/regmap/internal.h
+index e4d6d20..dbe1ce3 100644
+--- a/drivers/base/regmap/internal.h
++++ b/drivers/base/regmap/internal.h
+@@ -52,6 +52,8 @@ struct regmap {
+ 	u8 read_flag_mask;
+ 	u8 write_flag_mask;
+ 
++	int (*reg_read)(void *context, unsigned int reg, unsigned int *val);
++
+ 	/* regcache specific members */
+ 	const struct regcache_ops *cache_ops;
+ 	enum regcache_type cache_type;
+diff --git a/drivers/base/regmap/regmap.c b/drivers/base/regmap/regmap.c
+index 9a59596..968adc0 100644
+--- a/drivers/base/regmap/regmap.c
++++ b/drivers/base/regmap/regmap.c
+@@ -20,6 +20,9 @@
+ 
+ #include "internal.h"
+ 
++static int _regmap_bus_read(void *context, unsigned int reg,
++			    unsigned int *val);
++
+ bool regmap_writeable(struct regmap *map, unsigned int reg)
+ {
+ 	if (map->max_register && reg > map->max_register)
+@@ -172,6 +175,7 @@ struct regmap *regmap_init(struct device *dev,
+ 	map->volatile_reg = config->volatile_reg;
+ 	map->precious_reg = config->precious_reg;
+ 	map->cache_type = config->cache_type;
++	map->reg_read = _regmap_bus_read;
+ 
+ 	if (config->read_flag_mask || config->write_flag_mask) {
+ 		map->read_flag_mask = config->read_flag_mask;
+@@ -491,10 +495,27 @@ static int _regmap_raw_read(struct regmap *map, unsigned int reg, void *val,
+ 	return ret;
+ }
+ 
++static int _regmap_bus_read(void *context, unsigned int reg,
++			   unsigned int *val)
++{
++	int ret;
++	struct regmap *map = context;
++
++	if (!map->format.parse_val)
++		return -EINVAL;
++
++	ret = _regmap_raw_read(map, reg, map->work_buf, map->format.val_bytes);
++	if (ret == 0)
++		*val = map->format.parse_val(map->work_buf);
++
++	return ret;
++}
++
+ static int _regmap_read(struct regmap *map, unsigned int reg,
+ 			unsigned int *val)
+ {
+ 	int ret;
++	BUG_ON(!map->reg_read);
+ 
+ 	if (!map->cache_bypass) {
+ 		ret = regcache_read(map, reg, val);
+@@ -502,17 +523,12 @@ static int _regmap_read(struct regmap *map, unsigned int reg,
+ 			return 0;
+ 	}
+ 
+-	if (!map->format.parse_val)
+-		return -EINVAL;
+-
+ 	if (map->cache_only)
+ 		return -EBUSY;
+ 
+-	ret = _regmap_raw_read(map, reg, map->work_buf, map->format.val_bytes);
+-	if (ret == 0) {
+-		*val = map->format.parse_val(map->work_buf);
++	ret = map->reg_read(map, reg, val);
++	if (ret == 0)
+ 		trace_regmap_reg_read(map->dev, reg, *val);
+-	}
+ 
+ 	return ret;
+ }
+-- 
+1.8.5.2.233.g932f7e4
+

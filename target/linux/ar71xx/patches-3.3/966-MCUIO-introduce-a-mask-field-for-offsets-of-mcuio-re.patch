@@ -1,0 +1,112 @@
+From 761f1ac2808fb8f07a449cd13b5199aa570eca91 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 9 May 2014 16:14:26 +0200
+Subject: [PATCH 966/973] MCUIO: introduce a mask field for offsets of mcuio
+ requests
+
+This is needed to setup a single callback for write queries from mcu's.
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/base/regmap/regmap-mcuio-remote.c |  3 +++
+ drivers/mcuio/mcuio-hc-drv.c              | 10 +++++++---
+ include/linux/mcuio.h                     |  5 ++++-
+ 3 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/base/regmap/regmap-mcuio-remote.c b/drivers/base/regmap/regmap-mcuio-remote.c
+index 7599e24..d6696ed 100644
+--- a/drivers/base/regmap/regmap-mcuio-remote.c
++++ b/drivers/base/regmap/regmap-mcuio-remote.c
+@@ -96,6 +96,7 @@ static int regmap_mcuio_gather_write(void *context,
+ 		r.dev = ctx->dev;
+ 		r.func = ctx->func;
+ 		r.offset = offset;
++		r.fill = 0;
+ 		r.dont_free = 1;
+ 		f(r.data, val);
+ 		ret = mcuio_submit_request(&r);
+@@ -155,8 +156,10 @@ static int regmap_mcuio_read(void *context,
+ 		r.dev = ctx->dev;
+ 		r.func = ctx->func;
+ 		r.offset = offset;
++		r.offset_mask = 0xffff;
+ 		r.status = -ETIMEDOUT;
+ 		r.dont_free = 1;
++		r.fill = 0;
+ 		ret = mcuio_submit_request(&r);
+ 		if (ret)
+ 			break;
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 90b8b48..bb3716f 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -155,7 +155,9 @@ static struct mcuio_request *__make_request(struct mcuio_device *mdev,
+ 					    unsigned dev, unsigned func,
+ 					    unsigned type,
+ 					    int fill,
+-					    unsigned offset, ___request_cb cb)
++					    unsigned offset,
++					    unsigned offset_mask,
++					    ___request_cb cb)
+ {
+ 	struct mcuio_request *out = mcuio_alloc_request(mdev);
+ 	if (!out)
+@@ -165,6 +167,7 @@ static struct mcuio_request *__make_request(struct mcuio_device *mdev,
+ 	out->func = func;
+ 	out->type = type;
+ 	out->offset = offset;
++	out->offset_mask = offset_mask;
+ 	out->status = -ETIMEDOUT;
+ 	out->cb = cb;
+ 	out->fill = fill;
+@@ -304,7 +307,8 @@ static struct mcuio_request *__find_request(struct mcuio_device *hc,
+ 		    mcuio_packet_bus(p) == hc->bus &&
+ 		    mcuio_packet_dev(p) == r->dev &&
+ 		    mcuio_packet_func(p) == r->func &&
+-		    mcuio_packet_offset(p) == r->offset) {
++		    (mcuio_packet_offset(p) & r->offset_mask) ==
++		    (r->offset & r->offset_mask)) {
+ 			mutex_unlock(&data->lock);
+ 			return r;
+ 		}
+@@ -447,7 +451,7 @@ static int __do_one_enum(struct mcuio_device *mdev, unsigned edev,
+ 	int ret;
+ 
+ 	r = __make_request(mdev, edev, efunc,
+-			   mcuio_type_rddw, 1, 0, NULL);
++			   mcuio_type_rddw, 1, 0, 0xffff, NULL);
+ 	if (!r) {
+ 		*out = NULL;
+ 		return -ENOMEM;
+diff --git a/include/linux/mcuio.h b/include/linux/mcuio.h
+index 1f67b4d..0f789e2 100644
+--- a/include/linux/mcuio.h
++++ b/include/linux/mcuio.h
+@@ -71,6 +71,8 @@ typedef void (*request_cb)(struct mcuio_request *);
+  * @dev: destination device
+  * @func: destination function
+  * @offset: offset within function address space
++ * @offset_mask: this mask is applied to incoming packets' offsets when
++ *		 looking for matching pending requests
+  * @type: request type
+  * @cb: pointer to callback function
+  * @cb_data: callback data.
+@@ -81,13 +83,14 @@ typedef void (*request_cb)(struct mcuio_request *);
+  * @priv: private data. FIX THIS
+  * @dont_free: this flag is !0 when request shall not be kfree'd
+  * @fill: if this is !0 the resulting request packet shall have its fill data
+- *        flag set
++ *	  flag set
+  */
+ struct mcuio_request {
+ 	struct mcuio_device *hc;
+ 	unsigned dev;
+ 	unsigned func;
+ 	unsigned offset;
++	unsigned offset_mask;
+ 	unsigned type;
+ 	request_cb cb;
+ 	void *cb_data;
+-- 
+1.8.5.2.233.g932f7e4
+

@@ -1,0 +1,29 @@
+From cda54c3ee2e539891146f7e6581fd7d3f9c1a325 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 25 Mar 2014 17:55:41 +0100
+Subject: [PATCH 925/973] HACK: arch/mips/Kconfig: select REGMAP_SPI &
+ REGMAP_I2C when building for ATH79
+
+This is to force regmap support ON for external mcuio modules
+
+Signed-off-by: Davide Ciminaghi <davide@linino.org>
+---
+ arch/mips/Kconfig | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/mips/Kconfig b/arch/mips/Kconfig
+index 5afca02..9c0e49d 100644
+--- a/arch/mips/Kconfig
++++ b/arch/mips/Kconfig
+@@ -88,6 +88,8 @@ config ATH79
+ 	select SYS_SUPPORTS_32BIT_KERNEL
+ 	select SYS_SUPPORTS_BIG_ENDIAN
+ 	select GENERIC_IRQ_CHIP
++	select REGMAP_I2C
++	select REGMAP_SPI
+ 	help
+ 	  Support for the Atheros AR71XX/AR724X/AR913X SoCs.
+ 
+-- 
+1.8.5.2.233.g932f7e4
+

@@ -1,0 +1,86 @@
+From e7379420d0a9cfd5f335abd7ab1b7c7c41a49800 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 28 Apr 2014 14:03:12 +0200
+Subject: [PATCH 933/973] FIX: this fixes build errors due patches applied in
+ the wrong order
+
+ [PATCH] regmap: allow regmap instances to be named
+
+should be applied before.
+---
+ drivers/base/regmap/regmap-i2c.c | 2 +-
+ drivers/base/regmap/regmap-spi.c | 2 +-
+ drivers/base/regmap/regmap.c     | 4 +++-
+ include/linux/regmap.h           | 1 +
+ 4 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/base/regmap/regmap-i2c.c b/drivers/base/regmap/regmap-i2c.c
+index 5b4c4ff..5f6b247 100644
+--- a/drivers/base/regmap/regmap-i2c.c
++++ b/drivers/base/regmap/regmap-i2c.c
+@@ -127,7 +127,7 @@ EXPORT_SYMBOL_GPL(regmap_init_i2c);
+ struct regmap *devm_regmap_init_i2c(struct i2c_client *i2c,
+ 				    const struct regmap_config *config)
+ {
+-	return devm_regmap_init(&i2c->dev, &regmap_i2c, config);
++	return devm_regmap_init(&i2c->dev, &regmap_i2c, &i2c->dev, config);
+ }
+ EXPORT_SYMBOL_GPL(devm_regmap_init_i2c);
+ 
+diff --git a/drivers/base/regmap/regmap-spi.c b/drivers/base/regmap/regmap-spi.c
+index 3749f6f..ffa46a9 100644
+--- a/drivers/base/regmap/regmap-spi.c
++++ b/drivers/base/regmap/regmap-spi.c
+@@ -86,7 +86,7 @@ EXPORT_SYMBOL_GPL(regmap_init_spi);
+ struct regmap *devm_regmap_init_spi(struct spi_device *spi,
+ 				    const struct regmap_config *config)
+ {
+-	return devm_regmap_init(&spi->dev, &regmap_spi, config);
++	return devm_regmap_init(&spi->dev, &regmap_spi, &spi->dev, config);
+ }
+ EXPORT_SYMBOL_GPL(devm_regmap_init_spi);
+ 
+diff --git a/drivers/base/regmap/regmap.c b/drivers/base/regmap/regmap.c
+index 1729d80..1404d0a 100644
+--- a/drivers/base/regmap/regmap.c
++++ b/drivers/base/regmap/regmap.c
+@@ -319,6 +319,7 @@ static void devm_regmap_release(struct device *dev, void *res)
+  *
+  * @dev: Device that will be interacted with
+  * @bus: Bus-specific callbacks to use with device
++ * @bus_context: Data passed to bus-specific callbacks
+  * @config: Configuration for register map
+  *
+  * The return value will be an ERR_PTR() on error or a valid pointer
+@@ -328,6 +329,7 @@ static void devm_regmap_release(struct device *dev, void *res)
+  */
+ struct regmap *devm_regmap_init(struct device *dev,
+ 				const struct regmap_bus *bus,
++				void *bus_context,
+ 				const struct regmap_config *config)
+ {
+ 	struct regmap **ptr, *regmap;
+@@ -336,7 +338,7 @@ struct regmap *devm_regmap_init(struct device *dev,
+ 	if (!ptr)
+ 		return ERR_PTR(-ENOMEM);
+ 
+-	regmap = regmap_init(dev, bus, config);
++	regmap = regmap_init(dev, bus, bus_context, config);
+ 	if (!IS_ERR(regmap)) {
+ 		*ptr = regmap;
+ 		devres_add(dev, ptr);
+diff --git a/include/linux/regmap.h b/include/linux/regmap.h
+index 66449d1..7f4982b 100644
+--- a/include/linux/regmap.h
++++ b/include/linux/regmap.h
+@@ -146,6 +146,7 @@ struct regmap *regmap_init_spi(struct spi_device *dev,
+ 
+ struct regmap *devm_regmap_init(struct device *dev,
+ 				const struct regmap_bus *bus,
++				void *bus_context,
+ 				const struct regmap_config *config);
+ struct regmap *devm_regmap_init_i2c(struct i2c_client *i2c,
+ 				    const struct regmap_config *config);
+-- 
+1.8.5.2.233.g932f7e4
+

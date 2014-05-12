@@ -1,0 +1,86 @@
+From 459996650e712aac949d41292a955f3a2d0517d1 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 9 May 2014 14:34:33 +0200
+Subject: [PATCH 960/973] MCUIO host controller: add a function for assigning
+ irq numbers to devs.
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/mcuio/mcuio-hc-drv.c | 25 +++++++++++++++++++++++++
+ include/linux/mcuio-hc.h     |  4 ++++
+ 2 files changed, 29 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index b484dde..13f7461 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -59,6 +59,8 @@ struct mcuio_hc_data {
+ 	struct kthread_worker enum_kworker;
+ 	struct task_struct *enum_kworker_task;
+ 	struct kthread_work do_enum;
++
++	int *irqs[MCUIO_DEVS_PER_BUS];
+ };
+ 
+ typedef int (*mcuio_copy)(uint32_t *, const uint32_t *, int, int);
+@@ -407,6 +409,26 @@ int mcuio_submit_request(struct mcuio_request *r)
+ }
+ EXPORT_SYMBOL(mcuio_submit_request);
+ 
++int mcuio_hc_set_irqs(struct mcuio_device *hc, unsigned dev, int __irqs[])
++{
++	struct mcuio_hc_data *data = dev_get_drvdata(&hc->dev);
++	int *irqs, size = sizeof(int) * MCUIO_FUNCS_PER_DEV;
++	if (!data) {
++		WARN_ON(1);
++		return -ENODEV;
++	}
++	irqs = devm_kzalloc(&hc->dev, size, GFP_KERNEL);
++	if (!irqs) {
++		dev_err(&hc->dev, "No memory for irqs for %u:%u\n", hc->bus,
++			dev);
++		return -ENOMEM;
++	}
++	memcpy(irqs, __irqs, size);
++	data->irqs[dev] = irqs;
++	return 0;
++}
++EXPORT_SYMBOL(mcuio_hc_set_irqs);
++
+ static int __do_one_enum(struct mcuio_device *mdev, unsigned edev,
+ 			 unsigned efunc, struct mcuio_request **out)
+ {
+@@ -428,6 +450,7 @@ static void __register_device(struct mcuio_request *r)
+ {
+ 	struct mcuio_func_descriptor d;
+ 	struct mcuio_device *hc = r->hc;
++	struct mcuio_hc_data *data = dev_get_drvdata(&hc->dev);
+ 	struct mcuio_device *new;
+ 	new = kzalloc(sizeof(*new), GFP_KERNEL);
+ 	if (!new) {
+@@ -444,6 +467,8 @@ static void __register_device(struct mcuio_request *r)
+ 	new->bus = hc->bus;
+ 	new->device = r->dev;
+ 	new->fn = r->func;
++	if (data->irqs[r->dev])
++		new->irq = (data->irqs[r->dev])[r->func];
+ 	pr_debug("%s %d, device = 0x%04x, vendor = 0x%04x, "
+ 		 "class = 0x%04x\n", __func__, __LINE__, new->id.device,
+ 		 new->id.vendor, new->id.class);
+diff --git a/include/linux/mcuio-hc.h b/include/linux/mcuio-hc.h
+index a638afe..ee114dd 100644
+--- a/include/linux/mcuio-hc.h
++++ b/include/linux/mcuio-hc.h
+@@ -68,5 +68,9 @@ void mcuio_del_hc_device(struct device *);
+ void mcuio_hc_dev_default_release(struct device *dev);
+ 
+ 
++/*
++ * Set irq numbers for a given bus device (MCUIO_FUNCS_PER_DEV functions)
++ */
++int mcuio_hc_set_irqs(struct mcuio_device *hc, unsigned dev, int irqs[]);
+ 
+ #endif /* __HOST_CONTROLLER_H__ */
+-- 
+1.8.5.2.233.g932f7e4
+
