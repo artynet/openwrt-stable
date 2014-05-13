@@ -192,7 +192,7 @@ static void ds_setup_uart_enable(void)
 
 	pr_info("Setting GPIO UART-ENA %d\n", DS_GPIO_UART_ENA);
 	err = gpio_request_one(DS_GPIO_UART_ENA,
-			       GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED,
+			       DS_GPIO_UART_POL | GPIOF_EXPORT_DIR_FIXED,
 			       "UART-ENA");
 	if (err)
 		pr_err("mach-linino: error setting GPIO Uart Enable\n");
