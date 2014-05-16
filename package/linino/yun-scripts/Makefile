@@ -54,6 +54,7 @@ define Package/yun-scripts/install
 	$(INSTALL_BIN) ./files/etc/init.d/rngd-turn-off $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/alljoynfixboot $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/avahifixboot $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/etc/init.d/mcuio $(1)/etc/init.d
 endef
 
 $(eval $(call BuildPackage,yun-scripts))

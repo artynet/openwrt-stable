@@ -1,0 +1,25 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+STOP=99
+
+start() {
+	# Remove spi-tty-ds if loaded
+	/sbin/lsmod | grep spy-tty && /sbin/rmmod spi-tty-ds
+	# Init serial port
+	stty 115200 -echo raw < /dev/ttyATH0
+	# Enable handshake
+	echo 1 >/sys/class/gpio/gpio22/value 
+	# Make the atmega switch to mcuio mode
+	echo -n -e "\xaa" > /dev/ttyATH0
+	# Start ldattach to set line discipline
+	ldattach  -s 115200 29 /dev/ttyATH0
+	# wait for enum to end
+	sleep 5 
+	# force binding of js shield driver
+	echo 0:1.2 > /sys/bus/mcuio/drivers/mcuio-js-shield/bind
+}
+
+stop() {
+	killall ldattach
+}
