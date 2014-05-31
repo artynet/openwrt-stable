@@ -3,8 +3,10 @@
 PROGRAM=$1
 OPTIONS=$2
 
-OE_GPIO=12
-OE_PATH=/sys/class/gpio/gpio$OE_GPIO/
+DIR_CLK_GPIO=12
+DIR_DIO_GPIO=11
+CLK_PATH=/sys/class/gpio/gpio$DIR_CLK_GPIO/
+DIO_PATH=/sys/class/gpio/gpio$DIR_DIO_GPIO/
 
 
 if [ "x$PROGRAM" == "x" ]; then
@@ -12,16 +14,17 @@ if [ "x$PROGRAM" == "x" ]; then
 	exit
 fi
 
-# Enable level shifter
-echo $OE_GPIO > /sys/class/gpio/export
-echo out > $OE_PATH/direction
-echo 1 > $OE_PATH/value
+# Enable level shifter as output (low for input, high for output)
+echo $DIR_CLK_GPIO > /sys/class/gpio/export
+echo out > $DIR_CLK_PATH/direction
+echo 1 > $DIR_CLK_PATH/value
+
+echo $DIR_DIO_GPIO > /sys/class/gpio/export
+echo out > $DIR_DIO_PATH/direction
+echo 1 > $DIR_DIO_PATH/value
 
 # Program with swddude
 echo "swddude -target kl25 -driver gpio -programmer freedog -flash $PROGRAM $OPTIONS"
 
 swddude -target kl25 -driver gpio -programmer freedog -flash $PROGRAM $OPTIONS
 
-
-# Disable level shifter in order to allow debugging with external debugger
-echo 0 > $OE_PATH/value
