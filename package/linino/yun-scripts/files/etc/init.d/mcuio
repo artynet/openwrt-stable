@@ -6,6 +6,9 @@ STOP=99
 start() {
 	# Remove spi-tty-ds if loaded
 	/sbin/lsmod | grep spi_tty && /sbin/rmmod spi_tty_ds
+	# Reset mcu
+	mcu-reset
+	sleep 2
 	# Init serial port
 	stty 115200 -echo raw < /dev/ttyATH0
 	# Enable handshake
@@ -22,4 +25,5 @@ start() {
 
 stop() {
 	killall ldattach
+	mcu-reset
 }
