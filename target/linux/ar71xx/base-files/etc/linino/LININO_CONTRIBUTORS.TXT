@@ -11,4 +11,5 @@ Tony Jin - Master Chef
 Alessandro Rubini - the original bathos author, random help
 Federico Musto - Sous Chef and bottle washer 
 Davide Ciminaghi - the gui who broke bathos, linux mcuio drivers.
+Aurelio Colosimo - developing on bathos and linux mcuio drivers
 
