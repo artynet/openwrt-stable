@@ -1,0 +1,26 @@
+From 60615dcfeee8133ea2140baeeea2414e7068683e Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Wed, 28 May 2014 14:45:22 +0200
+Subject: [PATCH 974/976] drivers/mcuio/Kconfig: trivial, fix blank space
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/Kconfig |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index e7f8e53..0ec7d89 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -24,7 +24,7 @@ config MCUIO_IRQ_CTRL
+ 	  interrupts to the MPU. If unsure say yes.
+ 
+ config MCUIO_JS_SHIELD
+-        tristate "mcuio joystick shield driver"
++	tristate "mcuio joystick shield driver"
+ 	depends on (MCUIO && MCUIO_IRQ_CTRL)
+ 	default y
+ 	help
+-- 
+1.7.9.5
+
