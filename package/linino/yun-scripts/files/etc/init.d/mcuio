@@ -5,7 +5,7 @@ STOP=99
 
 start() {
 	# Remove spi-tty-ds if loaded
-	/sbin/lsmod | grep spy-tty && /sbin/rmmod spi-tty-ds
+	/sbin/lsmod | grep spi_tty && /sbin/rmmod spi_tty_ds
 	# Init serial port
 	stty 115200 -echo raw < /dev/ttyATH0
 	# Enable handshake
