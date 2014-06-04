@@ -41,7 +41,7 @@
 
 /* Configure level shifter enable GPIO */
 #if defined(LININO_FREEDOG)
-	#define DS_GPIO_OE2		11
+	#define DS_GPIO_OE2		12
 	#define DS_GPIO_UART_POL 	GPIOF_OUT_INIT_HIGH
 #else	/* YUN */
 	#define DS_GPIO_OE2		22
@@ -61,7 +61,7 @@
 
 #if defined(LININO_FREEDOG)
 	#define	LININO_GPIO_SPI_SCK	7
-	#define	LININO_GPIO_SPI_MISO	6
+	#define	LININO_GPIO_SPI_MISO	8
 #else	/* YUN */
 	#define	LININO_GPIO_SPI_SCK	11
 	#define	LININO_GPIO_SPI_MISO	8
@@ -71,11 +71,6 @@
 #define	LININO_N_SPI_CHIP_SELECT	1
 
 #define LININO_GPIO_SPI_CS0	26
-
-#if defined(LININO_FREEDOG)
-	#define LININO_GPIO_SPI_INTERRUPT		23
-#else
-	#define LININO_GPIO_SPI_INTERRUPT		19
-#endif
+#define LININO_GPIO_SPI_INTERRUPT	19
 
 #endif /* MACH_LININO_H_ */
