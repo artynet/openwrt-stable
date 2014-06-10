@@ -8,12 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-webpanel-linino
-PKG_VERSION:=1.0.0
+PKG_VERSION:=1.0.2
 PKG_RELEASE:=1
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).zip
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 #PKG_SOURCE_URL:=http://github.com/linino/luci-webpanel-linino/archive
 PKG_SOURCE_URL:=http://download.linino.org/pkg-src
+PKG_MD5SUM:=3d8489fb6129eeb6f18f4cb13fd270b1
 
 include $(INCLUDE_DIR)/package.mk
 
