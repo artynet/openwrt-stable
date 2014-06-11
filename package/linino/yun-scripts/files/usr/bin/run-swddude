@@ -15,16 +15,15 @@ if [ "x$PROGRAM" == "x" ]; then
 fi
 
 # Enable level shifter as output (low for input, high for output)
-echo $DIR_CLK_GPIO > /sys/class/gpio/export
-echo out > $DIR_CLK_PATH/direction
 echo 1 > $DIR_CLK_PATH/value
-
-echo $DIR_DIO_GPIO > /sys/class/gpio/export
-echo out > $DIR_DIO_PATH/direction
 echo 1 > $DIR_DIO_PATH/value
 
 # Program with swddude
 echo "swddude -target kl25 -driver gpio -programmer freedog -flash $PROGRAM $OPTIONS"
 
 swddude -target kl25 -driver gpio -programmer freedog -flash $PROGRAM $OPTIONS
+
+# Disable level shifter as output (low for input, high for output)
+echo 0 > $DIR_CLK_PATH/value
+echo 0 > $DIR_DIO_PATH/value
 

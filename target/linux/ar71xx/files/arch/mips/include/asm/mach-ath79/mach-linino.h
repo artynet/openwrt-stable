@@ -41,7 +41,8 @@
 
 /* Configure level shifter enable GPIO */
 #if defined(LININO_FREEDOG)
-	#define DS_GPIO_OE2		12
+	#define DS_GPIO_SWD_EN		12
+	#define DS_GPIO_SWD_OE		11
 	#define DS_GPIO_UART_POL 	GPIOF_OUT_INIT_HIGH
 #else	/* YUN */
 	#define DS_GPIO_OE2		22

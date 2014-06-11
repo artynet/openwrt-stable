@@ -115,10 +115,15 @@ static struct spi_board_info linino_spi_info[] = {
 static void ds_register_spi(void) {
 	pr_info("mach-linino: enabling GPIO SPI Controller");
 
+ 	#if defined(LININO_FREEDOG)
+        /* Enable level shifter on SPI signals */
+        gpio_set_value(DS_GPIO_OE, 1);
+	#else	
 	/* Enable level shifter on SPI signals */
 	gpio_set_value(DS_GPIO_OE, 1);
 	/* Enable level shifter on AVR interrupt */
 	gpio_set_value(DS_GPIO_OE2, 1);
+	#endif
 	/* Register SPI devices */
 	spi_register_board_info(linino_spi_info, ARRAY_SIZE(linino_spi_info));
 	/* Register GPIO SPI controller */
@@ -173,13 +178,32 @@ static void __init ds_setup_level_shifter_oe(void)
 	if (err)
 		pr_err("mach-linino: error setting GPIO OE\n");
 
-	/* enable OE2 of level shifter */
-	pr_info("Setting GPIO OE2 %d\n", DS_GPIO_OE2);
-	err= gpio_request_one(DS_GPIO_OE2,
-			      GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED,
-			      "OE-2");
-	if (err)
-		pr_err("mach-linino: error setting GPIO OE2\n");
+	#if defined(LININO_FREEDOG)
+        /* enable SWD_OE to be low as default */
+        pr_info("Setting GPIO SWD OE %d\n", DS_GPIO_SWD_OE);
+        err= gpio_request_one(DS_GPIO_SWD_OE,
+                              GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED,
+                              "SWD_OE");
+        if (err)
+                pr_err("mach-linino: error setting GPIO SWD_OE\n");
+
+        /* enable SWD_EN to be low as default */
+        pr_info("Setting GPIO SWD EN %d\n", DS_GPIO_SWD_EN);
+        err= gpio_request_one(DS_GPIO_SWD_EN,
+                              GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED,
+                              "SWD_EN");
+        if (err)
+                pr_err("mach-linino: error setting GPIO SWD_EN\n");
+	#else
+
+        /* enable OE2 of level shifter */
+        pr_info("Setting GPIO OE2 %d\n", DS_GPIO_OE2);
+        err= gpio_request_one(DS_GPIO_OE2,
+                              GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED,
+                              "OE-2");
+        if (err)
+                pr_err("mach-linino: error setting GPIO OE2\n");
+	#endif
 }
 
 
