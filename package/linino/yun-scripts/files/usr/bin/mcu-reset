@@ -9,3 +9,6 @@ echo 0 > ${RES}value
 echo in > ${RES}/direction
 echo 18 > ${GDIR}unexport
 
+# send a newline on spi console, so that bathos will re-activate it
+sleep 1
+echo > /dev/ttySPI0
