@@ -1,7 +1,7 @@
-From e1bcc32e96df1c76797d2c6871e2c5ea18933634 Mon Sep 17 00:00:00 2001
+From a07f3a0ea2253c800e8010e4328a72aa2ecfebd0 Mon Sep 17 00:00:00 2001
 From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
-Date: Wed, 11 Jun 2014 14:08:07 +0200
-Subject: [PATCH] new drivers/spi/spi-tty-plain module
+Date: Mon, 23 Jun 2014 11:11:54 +0200
+Subject: [PATCH 977/978] new drivers/spi/spi-tty-plain module
 
 Original code was copied from spi-tty-ds.c (thanks to Federico Vaga).
 This driver is a simplification and I called it 'plain', since it
@@ -10,15 +10,15 @@ needs no protocol headers and no interrupts.
 Communication from slave to master is implemented by means of a workqueue
 which polls the slave by sending the ascii "enquiry" byte, that is 0x5.
 
-The obtained tty is slow (see #define SPI_TTY_FREQ_HZ 19200bps) but reliable,
+The obtained tty is slow (see #define SPI_TTY_FREQ_HZ 38400bps) but reliable
 useful for a login shell.
 
 Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
 ---
  drivers/spi/Kconfig         |    6 +
  drivers/spi/Makefile        |    1 +
- drivers/spi/spi-tty-plain.c |  375 +++++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 382 insertions(+)
+ drivers/spi/spi-tty-plain.c |  373 +++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 380 insertions(+)
  create mode 100644 drivers/spi/spi-tty-plain.c
 
 diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
@@ -52,18 +52,16 @@ index 57555ac..a925193 100644
  obj-$(CONFIG_SPI_MPC512x_PSC)		+= spi-mpc512x-psc.o
 diff --git a/drivers/spi/spi-tty-plain.c b/drivers/spi/spi-tty-plain.c
 new file mode 100644
-index 0000000..9fc7c0b
+index 0000000..9faee14
 --- /dev/null
 +++ b/drivers/spi/spi-tty-plain.c
-@@ -0,0 +1,375 @@
+@@ -0,0 +1,373 @@
 +/*
 + * Copyright (c) dog hunter AG - Zug - CH
 + * General Public License version 2 (GPLv2)
 + * Author Aurelio Colosimo <aurelio@aureliocolosimo.it>
 + * Originally copied from spi-tty-bathos-ds.c, by Federico Vaga
 + */
-+#define DEBUG
-+#define VERBOSE_DEBUG
 +
 +#include <linux/kernel.h>
 +#include <linux/module.h>
@@ -81,11 +79,12 @@ index 0000000..9fc7c0b
 +#include <linux/moduleparam.h>
 +#include <linux/jiffies.h>
 +#include <linux/workqueue.h>
++#include <linux/platform_device.h>
 +
 +/* ASCII char 0x5 is 'enquiry' and is here used to poll MCU */
 +#define SPI_TTY_ENQUIRY 0x5
 +#define SPI_TTY_MSG_LEN 16
-+#define SPI_TTY_FREQ_HZ 19200
++#define SPI_TTY_FREQ_HZ 38400
 +static unsigned int dev_count = 0;
 +static spinlock_t lock;
 +
@@ -262,7 +261,6 @@ index 0000000..9fc7c0b
 +
 +static void spi_poll_work_handler(struct work_struct *w)
 +{
-+	int i;
 +	struct spi_tty *stty;
 +
 +	stty = container_of(to_delayed_work(w), struct spi_tty, work);
@@ -284,7 +282,7 @@ index 0000000..9fc7c0b
 +	if (dev_count >= SPI_SERIAL_TTY_MINORS)
 +		return -ENOMEM;
 +
-+	dev_vdbg(&spi->dev, "%s:%d\n", __func__, __LINE__);
++	dev_info(&spi->dev, "%s\n", __func__);
 +
 +	stty = kzalloc(sizeof(struct spi_tty), GFP_KERNEL);
 +	if (!stty)
@@ -346,7 +344,7 @@ index 0000000..9fc7c0b
 +	cancel_delayed_work_sync(&stty->work);
 +	flush_workqueue(stty->wq);
 +
-+	dev_vdbg(&spi->dev, "%s\n");
++	dev_info(&spi->dev, "%s\n", __func__);
 +
 +	stty = spi_get_drvdata(spi);
 +
