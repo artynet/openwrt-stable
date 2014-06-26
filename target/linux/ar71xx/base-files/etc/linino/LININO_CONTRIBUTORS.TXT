@@ -8,6 +8,8 @@ Fabio M. Di Nitto - for integrating opkg/gpg support with Linino build system
 Federico Vaga - scriptings and SPI 
 Sam Lin - Number "ONE"
 Tony Jin - Master Chef
-Alessandro Rubini - random help
+Alessandro Rubini - the original bathos author, random help
 Federico Musto - Sous Chef and bottle washer 
+Davide Ciminaghi - the gui who broke bathos, linux mcuio drivers.
+Aurelio Colosimo - developing on bathos and linux mcuio drivers
 

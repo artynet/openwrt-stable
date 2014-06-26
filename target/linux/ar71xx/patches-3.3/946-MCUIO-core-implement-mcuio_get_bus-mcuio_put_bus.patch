@@ -1,0 +1,61 @@
+From 146b682a37e3f4a60d01b3dbac2bb7e89970c81c Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 8 May 2014 16:21:05 +0200
+Subject: [PATCH 946/973] MCUIO, core: implement mcuio_get_bus(),
+ mcuio_put_bus()
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/mcuio/core.c | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/drivers/mcuio/core.c b/drivers/mcuio/core.c
+index 82bb50b..42cae57 100644
+--- a/drivers/mcuio/core.c
++++ b/drivers/mcuio/core.c
+@@ -13,11 +13,42 @@
+ #include <linux/device.h>
+ #include <linux/slab.h>
+ #include <linux/mcuio.h>
++#include <linux/completion.h>
++#include <linux/spinlock.h>
++#include <linux/bitops.h>
+ #include "mcuio-internal.h"
+ 
++unsigned long int busnum;
++spinlock_t busnum_lock;
++
++int mcuio_get_bus(void)
++{
++	int out;
++	spin_lock(&busnum_lock);
++	if (busnum == 0xffffffff) {
++		out = -ENOMEM;
++		goto end;
++	}
++	out = find_last_bit(&busnum, sizeof(busnum));
++	if (out == sizeof(busnum))
++		out = 0;
++	set_bit(out, &busnum);
++end:
++	spin_unlock(&busnum_lock);
++	return out;
++}
++EXPORT_SYMBOL(mcuio_get_bus);
++
++void mcuio_put_bus(unsigned n)
++{
++	clear_bit(n, &busnum);
++}
++EXPORT_SYMBOL(mcuio_put_bus);
++
+ static int __init mcuio_init(void)
+ {
+ 	int ret;
++	spin_lock_init(&busnum_lock);
+ 	ret = device_register(&mcuio_bus);
+ 	if (ret)
+ 		return ret;
+-- 
+1.8.5.2.233.g932f7e4
+

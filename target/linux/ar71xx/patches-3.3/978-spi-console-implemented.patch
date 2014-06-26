@@ -1,0 +1,85 @@
+From 10fbb3ef3e3edb09a14f0a70cb8c8a978da64b4f Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 23 Jun 2014 11:07:11 +0200
+Subject: [PATCH 978/978] spi console implemented
+
+This patch makes drivers/spi/spi-gpio.c register a kernel console, named
+spicons. Just add console=spicons to your cmd line to use it.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/spi/spi-gpio.c |   39 +++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 39 insertions(+)
+
+diff --git a/drivers/spi/spi-gpio.c b/drivers/spi/spi-gpio.c
+index 378c3c8..39358cc 100644
+--- a/drivers/spi/spi-gpio.c
++++ b/drivers/spi/spi-gpio.c
+@@ -28,6 +28,7 @@
+ #include <linux/spi/spi_bitbang.h>
+ #include <linux/spi/spi_gpio.h>
+ 
++#include <linux/console.h>
+ 
+ /*
+  * This bitbanging SPI master driver should help make systems usable
+@@ -233,11 +234,47 @@ static void spi_gpio_chipselect(struct spi_device *spi, int is_active)
+ 	}
+ }
+ 
++/* --- support for console on SPI ----------------- */
++
++/* SPICONS_DLY (ns) is half the duration of a bit. 10us -> ~ 50kbps */
++#define SPICONS_DLY 10000
++
++static void spi_console_write (struct console *co, const char *s,
++			      unsigned count)
++{
++	struct spi_device *spi_dev = (struct spi_device*)co->data;
++	spi_gpio_chipselect(spi_dev, 1);
++
++	if (!spi_dev)
++		return;
++
++	while(count) {
++		if (((*s) & 0xff) == '\n')
++			spi_gpio_txrx_word_mode0(spi_dev, SPICONS_DLY, '\r', 8);
++		spi_gpio_txrx_word_mode0(spi_dev, SPICONS_DLY, *s, 8);
++		s++;
++		count--;
++	}
++}
++
++static struct console spicons = {
++	.name		= "spicons",
++	.write		= spi_console_write,
++	.flags		= CON_PRINTBUFFER,
++};
++
++/* --- End console on SPI ------------------------------------- */
++
+ static int spi_gpio_setup(struct spi_device *spi)
+ {
+ 	unsigned long	cs = (unsigned long) spi->controller_data;
+ 	int		status = 0;
+ 
++	if (!spicons.data)
++		spicons.data = spi;
++
++	register_console(&spicons);
++
+ 	if (spi->bits_per_word > 32)
+ 		return -EINVAL;
+ 
+@@ -265,6 +302,8 @@ static void spi_gpio_cleanup(struct spi_device *spi)
+ 	if (cs != SPI_GPIO_NO_CHIPSELECT)
+ 		gpio_free(cs);
+ 	spi_bitbang_cleanup(spi);
++
++	unregister_console(&spicons);
+ }
+ 
+ static int __devinit spi_gpio_alloc(unsigned pin, const char *label, bool is_in)
+-- 
+1.7.9.5
+

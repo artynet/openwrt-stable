@@ -1,0 +1,112 @@
+From b83a38b452ab879603efa5078910c285e1a8253d Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 8 May 2014 16:28:49 +0200
+Subject: [PATCH 947/973] MCUIO: add host controller device related functions
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/mcuio/Makefile       |  2 +-
+ drivers/mcuio/mcuio-hc-dev.c | 60 ++++++++++++++++++++++++++++++++++++++++++++
+ include/linux/mcuio-hc.h     | 10 ++++++++
+ 3 files changed, 71 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/mcuio/mcuio-hc-dev.c
+
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index 51f3d4c..5d663e8 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -4,5 +4,5 @@ LINUX ?= /lib/modules/$(shell uname -r)/build
+ 
+ mcuio-y := core.o bus.o
+ 
+-obj-$(CONFIG_MCUIO) = mcuio.o mcuio-hc-drv.o
++obj-$(CONFIG_MCUIO) = mcuio.o mcuio-hc-drv.o mcuio-hc-dev.o
+ 
+diff --git a/drivers/mcuio/mcuio-hc-dev.c b/drivers/mcuio/mcuio-hc-dev.c
+new file mode 100644
+index 0000000..3bb7b73
+--- /dev/null
++++ b/drivers/mcuio/mcuio-hc-dev.c
+@@ -0,0 +1,60 @@
++/*
++ * Copyright 2011 Dog Hunter SA
++ * Author: Davide Ciminaghi <ciminaghi@gnudd.com>
++ *
++ * GNU GPLv2 or later
++ */
++
++/* mcuio host controller functions */
++
++#include <linux/mcuio.h>
++#include <linux/circ_buf.h>
++#include <linux/slab.h>
++#include <linux/sched.h>
++#include <linux/regmap.h>
++#include <linux/err.h>
++#include <linux/workqueue.h>
++#include <linux/circ_buf.h>
++#include <linux/mcuio_ids.h>
++#include <linux/mcuio-hc.h>
++#include "mcuio-internal.h"
++
++static struct mcuio_device_id default_hc_id = {
++	.device = 0,
++	.vendor = 0,
++	.class = MCUIO_CLASS_HOST_CONTROLLER,
++};
++
++struct device *mcuio_add_hc_device(struct mcuio_device_id *id,
++				   struct mcuio_hc_platform_data *plat)
++{
++	int b, ret = -ENOMEM;
++	struct mcuio_device *d = kzalloc(sizeof(*d), GFP_KERNEL);
++	if (!d)
++		return ERR_PTR(-ENOMEM);
++	b = mcuio_get_bus();
++	if (b < 0) {
++		ret = b;
++		goto err0;
++	}
++	d->bus = b;
++	d->device = 0;
++	d->fn = 0;
++	d->id = id ? *id : default_hc_id;
++	d->dev.platform_data = plat;
++	ret = mcuio_device_register(d, NULL, NULL);
++	if (ret < 0)
++		goto err1;
++	return &d->dev;
++
++err1:
++	mcuio_put_bus(b);
++err0:
++	kfree(d);
++	return ERR_PTR(ret);
++}
++EXPORT_SYMBOL(mcuio_add_hc_device);
++
++MODULE_AUTHOR("Davide Ciminaghi");
++MODULE_DESCRIPTION("MCUIO host controller code");
++MODULE_LICENSE("GPL v2");
+diff --git a/include/linux/mcuio-hc.h b/include/linux/mcuio-hc.h
+index 621a396..f942b68 100644
+--- a/include/linux/mcuio-hc.h
++++ b/include/linux/mcuio-hc.h
+@@ -38,4 +38,14 @@ struct mcuio_hc_platform_data {
+ 	void *data;
+ };
+ 
++/*
++ * mcuio_add_hc_device() : add host controller device
++ *
++ * @id: pointer to mcuio device's id
++ * @plat: pointer to platform data structure
++ */
++struct device *mcuio_add_hc_device(struct mcuio_device_id *id,
++				   struct mcuio_hc_platform_data *plat);
++
++
+ #endif /* __HOST_CONTROLLER_H__ */
+-- 
+1.8.5.2.233.g932f7e4
+

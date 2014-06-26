@@ -1,0 +1,28 @@
+From 407b4f01a59b2651d4e0b841240d7df5ad938321 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 9 May 2014 14:22:49 +0200
+Subject: [PATCH 957/973] MCUIO ids: introduce irq controller classes
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ include/linux/mcuio_ids.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/include/linux/mcuio_ids.h b/include/linux/mcuio_ids.h
+index b6eba9e..4223742 100644
+--- a/include/linux/mcuio_ids.h
++++ b/include/linux/mcuio_ids.h
+@@ -16,6 +16,10 @@
+ #define MCUIO_CLASS_TEXT_DISPLAY    0x0007
+ #define MCUIO_CLASS_I2C_CONTROLLER  0x0008
+ #define MCUIO_CLASS_SPI_CONTROLLER  0x0009
++/* Send irqs from MCU via communication protocol */
++#define MCUIO_CLASS_IRQ_CONTROLLER_PROTO  0x000a
++/* Send irqs from MCU via gpio */
++#define MCUIO_CLASS_IRQ_CONTROLLER_WIRE   0x000b
+ 
+ /* Invalid device id (used for id table termination */
+ #define MCUIO_NO_DEVICE		    0x0000
+-- 
+1.8.5.2.233.g932f7e4
+

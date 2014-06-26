@@ -1,0 +1,111 @@
+From 40fc1b3342268ad9cc846512dd1f0b56971cfca5 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 9 May 2014 15:53:11 +0200
+Subject: [PATCH 965/973] MCUIO: host controller: add basic support for write
+ requests from MCUs.
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/mcuio/mcuio-hc-drv.c | 35 +++++++++++++++++++++++------------
+ include/linux/mcuio.h        |  6 ++++++
+ 2 files changed, 29 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 13f7461..90b8b48 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -334,12 +334,14 @@ static int __receive_messages(void *__data)
+ 			continue;
+ 		}
+ 		p = (struct mcuio_packet *)buf;
+-		if (!mcuio_packet_is_reply(p))
+-			/*
+-			  Packet is a request, we do not handle requests at
+-			  the moment
+-			*/
+-			continue;
++		if (!mcuio_packet_is_reply(p)) {
++			if (mcuio_packet_is_read(p))
++				/*
++				  Packet is a read request, we do not handle
++				  read requests at the moment
++				*/
++				continue;
++		}
+ 		r = __find_request(hc, p);
+ 		if (!r) {
+ 			dev_err(&hc->dev, "unexpected reply");
+@@ -365,15 +367,18 @@ static void __send_messages(struct kthread_work *work)
+ 
+ static void __enqueue_request(struct mcuio_device *mdev,
+ 			      struct mcuio_hc_data *data,
+-			      struct mcuio_request *r)
++			      struct mcuio_request *r,
++			      int outgoing)
+ {
+ 	mutex_lock(&data->lock);
+-	list_add_tail(&r->list, &data->request_queue);
++	list_add_tail(&r->list, outgoing ? &data->request_queue :
++		      &data->pending_requests);
+ 	mutex_unlock(&data->lock);
+-	queue_kthread_work(&data->tx_kworker, &data->send_messages);
++	if (outgoing)
++		queue_kthread_work(&data->tx_kworker, &data->send_messages);
+ }
+ 
+-static int mcuio_hc_enqueue_request(struct mcuio_request *r)
++static int mcuio_hc_enqueue_request(struct mcuio_request *r, int outgoing)
+ {
+ 	struct mcuio_hc_data *data;
+ 	if (!r || !r->hc)
+@@ -383,7 +388,7 @@ static int mcuio_hc_enqueue_request(struct mcuio_request *r)
+ 		return -EINVAL;
+ 	if (atomic_read(&data->removing))
+ 		return -ENODEV;
+-	__enqueue_request(r->hc, data, r);
++	__enqueue_request(r->hc, data, r, outgoing);
+ 	return 0;
+ }
+ 
+@@ -400,7 +405,7 @@ int mcuio_submit_request(struct mcuio_request *r)
+ 	r->cb = __request_cb;
+ 	r->cb_data = &request_complete;
+ 	r->status = -ETIMEDOUT;
+-	ret = mcuio_hc_enqueue_request(r);
++	ret = mcuio_hc_enqueue_request(r, 1);
+ 	if (!ret)
+ 		ret = wait_for_completion_interruptible(&request_complete);
+ 	if (ret)
+@@ -409,6 +414,12 @@ int mcuio_submit_request(struct mcuio_request *r)
+ }
+ EXPORT_SYMBOL(mcuio_submit_request);
+ 
++int mcuio_setup_cb(struct mcuio_request *r)
++{
++	return mcuio_hc_enqueue_request(r, 0);
++}
++EXPORT_SYMBOL(mcuio_setup_cb);
++
+ int mcuio_hc_set_irqs(struct mcuio_device *hc, unsigned dev, int __irqs[])
+ {
+ 	struct mcuio_hc_data *data = dev_get_drvdata(&hc->dev);
+diff --git a/include/linux/mcuio.h b/include/linux/mcuio.h
+index 0616a0a..1f67b4d 100644
+--- a/include/linux/mcuio.h
++++ b/include/linux/mcuio.h
+@@ -107,6 +107,12 @@ struct mcuio_request {
+  */
+ int mcuio_submit_request(struct mcuio_request *r);
+ 
++/*
++ * Setup a callback for an incoming request
++ *
++ * @r: pointer to corresponding request
++ */
++int mcuio_setup_cb(struct mcuio_request *r);
+ 
+ #endif /* __KERNEL__ */
+ 
+-- 
+1.8.5.2.233.g932f7e4
+

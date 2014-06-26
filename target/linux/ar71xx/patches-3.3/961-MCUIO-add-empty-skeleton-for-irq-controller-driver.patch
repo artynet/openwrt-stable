@@ -1,0 +1,123 @@
+From 9dfc7daecb2356285a8ed2f23fc73613434044af Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 9 May 2014 14:44:10 +0200
+Subject: [PATCH 961/973] MCUIO: add empty skeleton for irq controller driver
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/mcuio/Kconfig          |  8 +++++
+ drivers/mcuio/Makefile         |  2 +-
+ drivers/mcuio/mcuio-irq-ctrl.c | 75 ++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 84 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/mcuio/mcuio-irq-ctrl.c
+
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index 8c76f8a..4ac2d77 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -14,3 +14,11 @@ config MCUIO_LDISC_HC
+ 	help
+ 	  This adds a line-discipline based MCUIO host controller, which is
+ 	  the only host controller at present. Say Y if in doubt.
++
++config MCUIO_IRQ_CTRL
++        tristate "mcuio irq controller driver"
++	depends on MCUIO
++	default y
++	help
++	  The MCUIO irq controller is needed by mcuio functions to send
++	  interrupts to the MPU. If unsure say yes.
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index 614507a..08a588f 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -6,4 +6,4 @@ mcuio-y := core.o bus.o sysfs.o
+ 
+ obj-$(CONFIG_MCUIO) += mcuio.o mcuio-hc-drv.o mcuio-hc-dev.o mcuio-soft-hc.o
+ obj-$(CONFIG_MCUIO_LDISC_HC) += mcuio-hc-ldisc.o
+-
++obj-$(CONFIG_MCUIO_IRQ_CTRL) += mcuio-irq-ctrl.o
+diff --git a/drivers/mcuio/mcuio-irq-ctrl.c b/drivers/mcuio/mcuio-irq-ctrl.c
+new file mode 100644
+index 0000000..4cbd10e
+--- /dev/null
++++ b/drivers/mcuio/mcuio-irq-ctrl.c
+@@ -0,0 +1,75 @@
++/*
++ * Copyright 2011 Dog Hunter SA
++ * Author: Davide Ciminaghi <ciminaghi@gnudd.com>
++ *
++ * GNU GPLv2 or later
++ */
++
++/* MCUIO irq controller driver */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/types.h>
++#include <linux/regmap.h>
++#include <linux/interrupt.h>
++#include <linux/workqueue.h>
++#include <linux/kthread.h>
++#include <linux/mutex.h>
++
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++#include <linux/mcuio-proto.h>
++
++#include "mcuio-internal.h"
++
++static int mcuio_irq_controller_probe(struct mcuio_device *mdev)
++{
++	return -ENODEV;
++}
++
++static int mcuio_irq_controller_remove(struct mcuio_device *mdev)
++{
++	return 0;
++}
++
++static const struct mcuio_device_id irq_ctrl_drv_ids[] = {
++	{
++		.class = MCUIO_CLASS_IRQ_CONTROLLER_WIRE,
++		.class_mask = 0xffff,
++	},
++	/* Terminator */
++	{
++		.device = MCUIO_NO_DEVICE,
++		.class = MCUIO_CLASS_UNDEFINED,
++	},
++};
++
++static struct mcuio_driver mcuio_irq_controller_driver = {
++	.driver = {
++		.name = "mcuio-irqc",
++	},
++	.id_table = irq_ctrl_drv_ids,
++	.probe = mcuio_irq_controller_probe,
++	.remove = mcuio_irq_controller_remove,
++};
++
++static int __init mcuio_irq_controller_init(void)
++{
++	return mcuio_driver_register(&mcuio_irq_controller_driver,
++				     THIS_MODULE);
++}
++
++static void __exit mcuio_irq_controller_exit(void)
++{
++	return mcuio_driver_unregister(&mcuio_irq_controller_driver);
++}
++
++subsys_initcall(mcuio_irq_controller_init);
++module_exit(mcuio_irq_controller_exit);
++
++MODULE_AUTHOR("Davide Ciminaghi");
++MODULE_DESCRIPTION("MCUIO irq controller driver");
++MODULE_LICENSE("GPL v2");
+-- 
+1.8.5.2.233.g932f7e4
+

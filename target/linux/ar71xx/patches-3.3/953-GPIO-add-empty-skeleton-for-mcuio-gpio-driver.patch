@@ -1,0 +1,120 @@
+From abcaed9a341e1de27169874e13f9f74bb440641f Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 9 May 2014 12:23:57 +0200
+Subject: [PATCH 953/973] GPIO: add empty skeleton for mcuio-gpio driver
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/gpio/Kconfig      |  6 ++++
+ drivers/gpio/Makefile     |  1 +
+ drivers/gpio/gpio-mcuio.c | 72 +++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 79 insertions(+)
+ create mode 100644 drivers/gpio/gpio-mcuio.c
+
+diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
+index 454b13a..1ed8029 100644
+--- a/drivers/gpio/Kconfig
++++ b/drivers/gpio/Kconfig
+@@ -96,6 +96,12 @@ config GPIO_EP93XX
+ 	depends on ARCH_EP93XX
+ 	select GPIO_GENERIC
+ 
++config GPIO_MCUIO
++        tristate "MCUIO gpio driver"
++        depends on MCUIO
++	help
++	  This enables an MCUIO driver for MCUIO GPIO devices
++
+ config GPIO_MPC5200
+ 	def_bool y
+ 	depends on PPC_MPC52xx
+diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
+index f3f1eec..8feb7bf 100644
+--- a/drivers/gpio/Makefile
++++ b/drivers/gpio/Makefile
+@@ -62,3 +62,4 @@ obj-$(CONFIG_GPIO_WM831X)	+= gpio-wm831x.o
+ obj-$(CONFIG_GPIO_WM8350)	+= gpio-wm8350.o
+ obj-$(CONFIG_GPIO_WM8994)	+= gpio-wm8994.o
+ obj-$(CONFIG_GPIO_XILINX)	+= gpio-xilinx.o
++obj-$(CONFIG_GPIO_MCUIO)	+= gpio-mcuio.o
+diff --git a/drivers/gpio/gpio-mcuio.c b/drivers/gpio/gpio-mcuio.c
+new file mode 100644
+index 0000000..6b4d6ff
+--- /dev/null
++++ b/drivers/gpio/gpio-mcuio.c
+@@ -0,0 +1,72 @@
++/*
++ * Copyright 2011 Dog Hunter SA
++ * Author: Davide Ciminaghi <ciminaghi@gnudd.com>
++ *
++ * GNU GPLv2 or later
++ */
++
++#define DEBUG
++
++/* mcuio host controller driver */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/types.h>
++#include <linux/regmap.h>
++#include <linux/workqueue.h>
++#include <linux/kthread.h>
++
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++#include <linux/mcuio-proto.h>
++
++static int mcuio_gpio_probe(struct mcuio_device *mdev)
++{
++	return -ENODEV;
++}
++
++static int mcuio_gpio_remove(struct mcuio_device *mdev)
++{
++	return 0;
++}
++
++static const struct mcuio_device_id gpio_drv_ids[] = {
++	{
++		.class = MCUIO_CLASS_GPIO,
++		.class_mask = 0xffff,
++	},
++	/* Terminator */
++	{
++		.device = MCUIO_NO_DEVICE,
++		.class = MCUIO_CLASS_UNDEFINED,
++	},
++};
++
++static struct mcuio_driver mcuio_gpio_driver = {
++	.driver = {
++		.name = "mcuio-gpio",
++	},
++	.id_table = gpio_drv_ids,
++	.probe = mcuio_gpio_probe,
++	.remove = mcuio_gpio_remove,
++};
++
++static int __init mcuio_gpio_init(void)
++{
++	return mcuio_driver_register(&mcuio_gpio_driver, THIS_MODULE);
++}
++
++static void __exit mcuio_gpio_exit(void)
++{
++	return mcuio_driver_unregister(&mcuio_gpio_driver);
++}
++
++subsys_initcall(mcuio_gpio_init);
++module_exit(mcuio_gpio_exit);
++
++MODULE_AUTHOR("Davide Ciminaghi");
++MODULE_DESCRIPTION("MCUIO gpio generic driver");
++MODULE_LICENSE("GPL v2");
+-- 
+1.8.5.2.233.g932f7e4
+

@@ -1,0 +1,201 @@
+From ba35e4c83b5d08937f0494cf2d3ed209aa936968 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 9 May 2014 12:01:48 +0200
+Subject: [PATCH 951/973] MCUIO: add functions for removing host controller
+ devices
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/mcuio/Kconfig          |   8 +++
+ drivers/mcuio/Makefile         |   3 +-
+ drivers/mcuio/mcuio-hc-ldisc.c | 150 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 160 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/mcuio/mcuio-hc-ldisc.c
+
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index 95f209a..8c76f8a 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -6,3 +6,11 @@ menuconfig MCUIO
+ 	  (MPU = MicroProcessor Unit) control an MCU's peripherals
+ 	  (MCU = Micro Controller Unit, some kind of tiny microcontroller
+ 	  running a tiny OS or no OS at all).
++
++config MCUIO_LDISC_HC
++	tristate "mcuio line discipline host controller"
++	depends on MCUIO
++	default y
++	help
++	  This adds a line-discipline based MCUIO host controller, which is
++	  the only host controller at present. Say Y if in doubt.
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index f356c8d..614507a 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -4,5 +4,6 @@ LINUX ?= /lib/modules/$(shell uname -r)/build
+ 
+ mcuio-y := core.o bus.o sysfs.o
+ 
+-obj-$(CONFIG_MCUIO) = mcuio.o mcuio-hc-drv.o mcuio-hc-dev.o mcuio-soft-hc.o
++obj-$(CONFIG_MCUIO) += mcuio.o mcuio-hc-drv.o mcuio-hc-dev.o mcuio-soft-hc.o
++obj-$(CONFIG_MCUIO_LDISC_HC) += mcuio-hc-ldisc.o
+ 
+diff --git a/drivers/mcuio/mcuio-hc-ldisc.c b/drivers/mcuio/mcuio-hc-ldisc.c
+new file mode 100644
+index 0000000..15a53fe
+--- /dev/null
++++ b/drivers/mcuio/mcuio-hc-ldisc.c
+@@ -0,0 +1,150 @@
++/*
++ * Copyright 2013 Dog Hunter SA
++ *
++ * Author Davide Ciminaghi
++ * GNU GPLv2
++ */
++
++/* Line discipline based mcuio host controller */
++
++#include <linux/module.h>
++#include <linux/tty.h>
++#include <linux/errno.h>
++#include <linux/circ_buf.h>
++
++#include <linux/mcuio.h>
++
++#include <linux/mcuio-proto.h>
++#include <linux/mcuio-hc.h>
++#include <linux/mcuio-soft-hc.h>
++
++#include "mcuio-internal.h"
++
++/*
++ * FIXME
++ */
++#define N_MCUIO 29
++
++struct ldisc_priv_data {
++	struct device *dev;
++	struct circ_buf cbuf;
++	char buf[sizeof(struct mcuio_packet) * 4];
++};
++
++
++
++static int mcuio_ldisc_shc_write(struct mcuio_soft_hc *shc,
++				 const u8 *ptr, unsigned int len)
++{
++	int stat;
++	struct tty_struct *tty = shc->priv;
++	/* FIXME: CHECK FOR FREE SPACE IN BUFFER */
++	stat = tty->ops->write(tty, (char *)ptr, len);
++	return stat == len ? 0 : stat;
++}
++
++static const struct mcuio_soft_hc_ops ops = {
++	.write = mcuio_ldisc_shc_write,
++};
++
++/*
++ * Open ldisc: register an mcuio controller
++ */
++static int mcuio_ldisc_open(struct tty_struct *tty)
++{
++	struct ldisc_priv_data *priv;
++	struct device *dev;
++	dev = mcuio_add_soft_hc(NULL, &ops, tty);
++	if (IS_ERR(dev))
++		return (PTR_ERR(dev));
++	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
++	if (!priv)
++		return -ENOMEM;
++	priv->dev = dev;
++	priv->cbuf.buf = priv->buf;
++	tty->disc_data = priv;
++	return 0;
++}
++
++static void mcuio_ldisc_close(struct tty_struct *tty)
++{
++	struct ldisc_priv_data *priv = tty->disc_data;
++	if (!priv)
++		return;
++	if (!priv->dev)
++		return;
++	mcuio_del_hc_device(priv->dev);
++	tty->disc_data = NULL;
++}
++
++static int mcuio_ldisc_hangup(struct tty_struct *tty)
++{
++	mcuio_ldisc_close(tty);
++	return 0;
++}
++
++static void mcuio_ldisc_receive_buf(struct tty_struct *tty,
++				    const unsigned char *cp,
++				    char *fp, int count)
++{
++	struct ldisc_priv_data *priv = tty->disc_data;
++	struct mcuio_hc_platform_data *plat;
++	struct device *dev;
++	int i, space, cnt;
++	if (!priv)
++		return;
++	dev = priv->dev;
++	plat = dev_get_platdata(dev);
++	if (!plat) {
++		WARN_ON(1);
++		return;
++	}
++	space = CIRC_SPACE(priv->cbuf.head, priv->cbuf.tail,
++			   sizeof(priv->buf));
++	if (count > space)
++		pr_debug("not enough space\n");
++	for (i = 0; i < min(count, space); i++) {
++		priv->buf[priv->cbuf.head] = cp[i];
++		priv->cbuf.head = (priv->cbuf.head + 1) &
++			(sizeof(priv->buf) - 1);
++	}
++	for (i = 0; ; i += sizeof(struct mcuio_packet)) {
++		cnt = CIRC_CNT(priv->cbuf.head, priv->cbuf.tail,
++			       sizeof(priv->buf));
++		if (cnt < sizeof(struct mcuio_packet))
++			break;
++		mcuio_soft_hc_push_chars(plat->data,
++					 &priv->buf[priv->cbuf.tail],
++					 sizeof(struct mcuio_packet));
++		priv->cbuf.tail =
++			(priv->cbuf.tail + sizeof(struct mcuio_packet)) &
++			(sizeof(priv->buf) - 1);
++	}
++}
++
++static struct tty_ldisc_ops mcuio_ldisc = {
++	.owner 		= THIS_MODULE,
++	.magic 		= TTY_LDISC_MAGIC,
++	.name 		= "mcuio",
++	.open 		= mcuio_ldisc_open,
++	.close	 	= mcuio_ldisc_close,
++	.hangup	 	= mcuio_ldisc_hangup,
++	.receive_buf	= mcuio_ldisc_receive_buf,
++};
++
++static int __init mcuio_ldisc_init(void)
++{
++	return tty_register_ldisc(N_MCUIO, &mcuio_ldisc);
++}
++
++static void __exit mcuio_ldisc_exit(void)
++{
++	tty_unregister_ldisc(N_MCUIO);
++}
++
++module_init(mcuio_ldisc_init);
++module_exit(mcuio_ldisc_exit);
++
++MODULE_LICENSE("GPL v2");
++MODULE_ALIAS_LDISC(N_MCUIO);
++MODULE_AUTHOR("Davide Ciminaghi, derived from slip ldisc implementation");
+-- 
+1.8.5.2.233.g932f7e4
+
