@@ -157,9 +157,7 @@ define Build/Clean
 endef
 
 
-linino_mtdlayout_4M=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,2752k(rootfs),896k(kernel),64k(nvram),64k(art),3648k@0x50000(firmware)
-linino_mtdlayout_8M=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,6464k(rootfs),1280k(kernel),64k(nvram),64k(art),7744k@0x50000(firmware)
-linino_mtdlayout_16M=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,14656k(rootfs),1280k(kernel),64k(nvram),64k(art),15936k@0x50000(firmware)
+linino_mtdlayout_16M=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),14656k(rootfs),1280k(kernel),64k(nvram),64k(art),15936k@0x50000(firmware)
 alfa_ap96_mtdlayout=mtdparts=spi0.0:256k(u-boot)ro,256k(u-boot-env)ro,13312k(rootfs),2048k(kernel),512k(caldata)ro,15360k@0x80000(firmware)
 alfa_mtdlayout_8M=mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,6144k(rootfs),1600k(kernel),64k(nvram),64k(art)ro,7744k@0x50000(firmware)
 all0258n_mtdlayout=mtdparts=spi0.0:256k(u-boot),64k(u-boot-env),1024k(kernel),5248k(rootfs),1536k(failsafe),64k(art),6272k@0x50000(firmware)
@@ -812,17 +810,14 @@ endef
 #    TODO : 1310720,15007744
 #    TODO : RKuImage
 
-$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_YUN_16M_250k,linino-yun-16M-250k,linino-yun,ttyATH0,250000,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
-$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_YUN_16M,linino-yun-16M,linino-yun,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
-$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_ONE_16M_250k,linino-one-16M-250k,linino-one,ttyATH0,250000,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
-$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_ONE_16M,linino-one-16M,linino-one,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
-$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_FREEDOG_16M,linino-freedog-16M,linino-freedog,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
-$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_FREEDOG_16M_250k,linino-freedog-16M-250k,linino-freedog,ttyATH0,250000,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
-$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_CHIWAWA_16M,linino-chiwawa,linino-chiwawa,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
+$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_YUN,linino-yun,linino-yun,ttySPI0,250000,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
+$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_ONE,linino-one,linino-one,ttySPI0,250000,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
+$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_FREEDOG,linino-freedog,linino-freedog,ttySPI0,250000,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
+$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_CHIWAWA,linino-chiwawa,linino-chiwawa,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
 
 
 # LININO_SINGLE_PROFILES is the list of all available Linino's profiles
-LININO_SINGLE_PROFILES:=LININO_YUN_16M LININO_YUN_16M_250k LININO_ONE_16M_250k LININO_ONE_16M LININO_FREEDOG_16M LININO_CHIWAWA_16M LININO_FREEDOG_16M_250k
+LININO_SINGLE_PROFILES:=LININO_YUN LININO_ONE LININO_FREEDOG LININO_CHIWAWA
 
 $(eval $(call SingleProfile,ALFA,$(fs_64k),ALFANX,alfa-nx,ALFA-NX,ttyS0,115200,$$(alfa_mtdlayout_8M),1638400,6291456,vmlinux.gz.uImage,pb9x-2.6.31-jffs2))
 $(eval $(call SingleProfile,ALFA,$(fs_64k),HORNETUB,hornet-ub,HORNET-UB,ttyATH0,115200,$$(alfa_mtdlayout_8M),1638400,6291456,kernel_image,rootfs_image))
@@ -970,10 +965,6 @@ $(eval $(call SingleProfile,ZyXEL,$(fs_64k),NBG_460N_550N_550NH,nbg460n_550n_550
 #                          the SingleProfile names space separated.
 
 $(eval $(call MultiProfile,LININO_ALL_PROFILE, $(LININO_SINGLE_PROFILES)))
-$(eval $(call MultiProfile,LININO_YUN,LININO_YUN_16M LININO_YUN_16M_250k))
-$(eval $(call MultiProfile,LININO_ONE,LININO_ONE_16M LININO_ONE_16M_250k))
-$(eval $(call MultiProfile,LININO_FREEDOG,LININO_FREEDOG_16M LININO_FREEDOG_16M_250k))
-$(eval $(call MultiProfile,LININO_CHIWAWA,LININO_CHIWAWA_16M))
 
 $(eval $(call MultiProfile,AP121,AP121_2M AP121_4M))
 $(eval $(call MultiProfile,EWDORIN, EWDORINAP EWDORINRT))
