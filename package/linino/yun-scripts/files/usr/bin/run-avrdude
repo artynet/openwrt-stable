@@ -20,11 +20,15 @@ if [ "x$GPIO_DS" != "x" ]; then
 	fi
 fi
 
+# unbind spi_gpio driver
+echo spi_gpio.1 > /sys/bus/platform/drivers/spi_gpio/unbind 
 
 # program AVR
 echo 1 > $OE_PATH
 avrdude -c linuxgpio -C /etc/avrdude.conf -p m32u4 -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xFB:m -Uflash:w:$1:i $2
 
+# bind spi_gpio driver
+echo spi_gpio.1 > /sys/bus/platform/drivers/spi_gpio/bind 
 
 # Restore previous status
 echo $OE_VALUE > $OE_PATH
