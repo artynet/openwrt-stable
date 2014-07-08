@@ -8,8 +8,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ideino
-PKG_VERSION:=0.0.4
-PKG_RELEASE:=5
+PKG_VERSION:=0.0.5
+PKG_RELEASE:=1
 
 #PKG_SOURCE:=v$(PKG_VERSION).tar.gz
 #PKG_SOURCE_URL:=https://github.com/ideino/ideino-linino-dist/archive/v${PKG_VERSION}
