@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ideino
 PKG_VERSION:=0.0.5
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 #PKG_SOURCE:=v$(PKG_VERSION).tar.gz
 #PKG_SOURCE_URL:=https://github.com/ideino/ideino-linino-dist/archive/v${PKG_VERSION}
@@ -77,6 +77,7 @@ define Package/ideino/prerm
 # # check if we are on real system
 if [ -x /etc/init.d/ideino ] && [ -x /etc/init.d/ideinoautorun ]
 then
+	ps www | grep -i [n]ode | awk {'print $1'} | xargs kill -9
 	echo "Disabling rc.d symlink for ideino"
 	/etc/init.d/ideino disable
  	/etc/init.d/ideinoautorun disable
