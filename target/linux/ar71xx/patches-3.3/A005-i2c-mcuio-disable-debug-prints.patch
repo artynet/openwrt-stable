@@ -1,0 +1,25 @@
+From 6787e1b1bfe710d5b00a47efbbb37094586c59b2 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 8 Jul 2014 05:41:51 +0200
+Subject: [PATCH 1006/1009] i2c-mcuio: disable debug prints
+
+---
+ drivers/i2c/busses/i2c-mcuio.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index 72441ed..4ccb727 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -2,7 +2,7 @@
+  * mcuio I2c controller driver
+  * Some code from drivers/i2c/busses/i2c-nomadik
+  */
+-#define DEBUG 1
++/* #define DEBUG 1 */
+ 
+ #include <linux/kernel.h>
+ #include <linux/module.h>
+-- 
+1.7.9.5
+

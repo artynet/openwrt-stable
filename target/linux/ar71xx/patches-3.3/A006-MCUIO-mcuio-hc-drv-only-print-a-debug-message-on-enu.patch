@@ -1,0 +1,40 @@
+From f109e7008fb8849d925cd2fde4756d99623f3dbf Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 8 Jul 2014 05:52:31 +0200
+Subject: [PATCH 1007/1009] MCUIO, mcuio-hc-drv: only print a debug message on
+ enum timeout (thanks aurelio)
+
+---
+ drivers/mcuio/mcuio-hc-drv.c |   11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index bb3716f..de627d0 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -556,15 +556,18 @@ static void __do_enum(struct kthread_work *work)
+ 		if (stat < 0) {
+ 			if (!r)
+ 				continue;
+-			dev_err(&mdev->dev,
+-				"error %d on enum of %u.%u\n",
+-				r->status == -ETIMEDOUT ? r->status :
+-				r->data[0], edev, efunc);
+ 			if (r->status == -ETIMEDOUT) {
+ 				/* No reply from target */
+ 				retry = retry == -1 ? MAX_ENUM_RETRIES :
+ 					retry - 1;
++				dev_dbg(&mdev->dev, "enum timeout %u.%u\n",
++					edev, efunc);
++				continue;
+ 			}
++			dev_err(&mdev->dev,
++				"error %d on enum of %u.%u\n",
++				r->status == -ETIMEDOUT ? r->status :
++				r->data[0], edev, efunc);
+ 			continue;
+ 		}
+ 		retry = -1;
+-- 
+1.7.9.5
+

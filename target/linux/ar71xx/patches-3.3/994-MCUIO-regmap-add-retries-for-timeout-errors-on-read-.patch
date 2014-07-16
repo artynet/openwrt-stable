@@ -1,0 +1,82 @@
+From a1656ff8a317d5168d7365b4846d6518a6146490 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 21 May 2014 16:22:43 +0200
+Subject: [PATCH 0995/1009] MCUIO, regmap: add retries for timeout errors on
+ read/write
+
+---
+ drivers/base/regmap/regmap-mcuio-remote.c |   16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/base/regmap/regmap-mcuio-remote.c b/drivers/base/regmap/regmap-mcuio-remote.c
+index d6696ed..854a2f5 100644
+--- a/drivers/base/regmap/regmap-mcuio-remote.c
++++ b/drivers/base/regmap/regmap-mcuio-remote.c
+@@ -14,6 +14,8 @@
+ #include <linux/mcuio.h>
+ #include <linux/mcuio-proto.h>
+ 
++#define MAX_RETRIES 3
++
+ /**
+  * mcuio bus context
+  * @hc: pointer to host controller
+@@ -59,6 +61,7 @@ static int regmap_mcuio_gather_write(void *context,
+ 	unsigned t;
+ 	int ret;
+ 	copyf f;
++	int retries = MAX_RETRIES;
+ 
+ 	BUG_ON(reg_size != 4);
+ 
+@@ -90,7 +93,7 @@ static int regmap_mcuio_gather_write(void *context,
+ 		BUG();
+ 	}
+ 
+-	while (val_size) {
++	while (val_size && retries) {
+ 		r.type = t;
+ 		r.hc = ctx->hc;
+ 		r.dev = ctx->dev;
+@@ -100,6 +103,10 @@ static int regmap_mcuio_gather_write(void *context,
+ 		r.dont_free = 1;
+ 		f(r.data, val);
+ 		ret = mcuio_submit_request(&r);
++		if (ret == -ETIMEDOUT) {
++			retries--;
++			continue;
++		}
+ 		if (ret)
+ 			break;
+ 		val_size -= ctx->val_bytes;
+@@ -127,6 +134,7 @@ static int regmap_mcuio_read(void *context,
+ 	int ret;
+ 	copyf f;
+ 	unsigned t;
++	int retries = MAX_RETRIES;
+ 
+ 	BUG_ON(reg_size != 4);
+ 	
+@@ -150,7 +158,7 @@ static int regmap_mcuio_read(void *context,
+ 	default:
+ 		return -EINVAL;
+ 	}
+-	while (val_size) {
++	while (val_size && retries) {
+ 		r.type = t;
+ 		r.hc = ctx->hc;
+ 		r.dev = ctx->dev;
+@@ -161,6 +169,10 @@ static int regmap_mcuio_read(void *context,
+ 		r.dont_free = 1;
+ 		r.fill = 0;
+ 		ret = mcuio_submit_request(&r);
++		if (ret == -ETIMEDOUT) {
++			retries--;
++			continue;
++		}
+ 		if (ret)
+ 			break;
+ 		f(val, r.data);
+-- 
+1.7.9.5
+
