@@ -1,0 +1,32 @@
+From a77c137652daebe072b18dbb2fea0b021afbfbb1 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Wed, 23 Jul 2014 11:51:27 +0200
+Subject: [PATCH] drivers/mcuio/mcuio-pwm.c: added D9 and D10 outputs
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-pwm.c |    8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-pwm.c b/drivers/mcuio/mcuio-pwm.c
+index 8038bc1..9556ba2 100644
+--- a/drivers/mcuio/mcuio-pwm.c
++++ b/drivers/mcuio/mcuio-pwm.c
+@@ -56,6 +56,14 @@ struct mcuio_pwm_out linino_one_out[] = {
+ 		.mcu_idx = 1,
+ 	},
+ 	{
++		.name = "D9",
++		.mcu_idx = 2,
++	},
++	{
++		.name = "D10",
++		.mcu_idx = 3,
++	},
++	{
+ 		.name = NULL,
+ 	}
+ };
+-- 
+1.7.9.5
+
