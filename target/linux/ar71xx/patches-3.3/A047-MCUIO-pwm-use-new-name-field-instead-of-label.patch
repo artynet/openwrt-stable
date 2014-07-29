@@ -1,0 +1,26 @@
+From b8ab711573517a75e57eab74096270a2b458d1dc Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Tue, 29 Jul 2014 08:17:46 +0200
+Subject: [PATCH 47/47] MCUIO pwm: use new 'name' field instead of label
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/pwm-mcuio.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pwm/pwm-mcuio.c b/drivers/pwm/pwm-mcuio.c
+index b9f83ee..4208fb2 100644
+--- a/drivers/pwm/pwm-mcuio.c
++++ b/drivers/pwm/pwm-mcuio.c
+@@ -203,7 +203,7 @@ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ 		regmap_read(data->map, 0x040 * (i + 1), (u32*)&names[i * 8]);
+ 		dev_dbg(&mdev->dev, "found pwm %d: %s\n", i, &names[i * 8]);
+ 
+-		data->chip.pwms[i].label = &names[i * 8];
++		data->chip.pwms[i].name = &names[i * 8];
+ 
+ 		regmap_read(data->map, 0x040 * (i + 1) + 0x04,
+ 			    &data->chip.pwms[i].resolution);
+-- 
+1.7.9.5
+

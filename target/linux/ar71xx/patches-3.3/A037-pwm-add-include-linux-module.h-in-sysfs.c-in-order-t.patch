@@ -1,0 +1,26 @@
+From c1f6554be69e39ba7ed7039abfa9fee912150401 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 28 Jul 2014 10:07:02 +0200
+Subject: [PATCH 37/47] pwm: add include <linux/module.h> in sysfs.c, in order
+ to have THIS_MODULE defined
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/sysfs.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/pwm/sysfs.c b/drivers/pwm/sysfs.c
+index 8ca5de3..13b9ce1 100644
+--- a/drivers/pwm/sysfs.c
++++ b/drivers/pwm/sysfs.c
+@@ -22,6 +22,7 @@
+ #include <linux/slab.h>
+ #include <linux/kdev_t.h>
+ #include <linux/pwm.h>
++#include <linux/module.h>
+ 
+ struct pwm_export {
+ 	struct device child;
+-- 
+1.7.9.5
+

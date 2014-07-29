@@ -1,0 +1,36 @@
+From 08f328f6b79c208c065207ee940f7e3a7fa5507c Mon Sep 17 00:00:00 2001
+From: Thierry Reding <thierry.reding@avionic-design.de>
+Date: Wed, 30 Jan 2013 09:22:24 +0100
+Subject: [PATCH 26/47] pwm: Export pwm_{set,get}_chip_data()
+
+When building a driver as a module, these functions need to be exported
+for linking to succeed.
+
+Signed-off-by: Thierry Reding <thierry.reding@avionic-design.de>
+---
+ drivers/pwm/core.c |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/pwm/core.c b/drivers/pwm/core.c
+index e0d7665..6188555 100644
+--- a/drivers/pwm/core.c
++++ b/drivers/pwm/core.c
+@@ -143,6 +143,7 @@ int pwm_set_chip_data(struct pwm_device *pwm, void *data)
+ 
+ 	return 0;
+ }
++EXPORT_SYMBOL_GPL(pwm_set_chip_data);
+ 
+ /**
+  * pwm_get_chip_data() - get private chip data for a PWM
+@@ -152,6 +153,7 @@ void *pwm_get_chip_data(struct pwm_device *pwm)
+ {
+ 	return pwm ? pwm->chip_data : NULL;
+ }
++EXPORT_SYMBOL_GPL(pwm_get_chip_data);
+ 
+ /**
+  * pwmchip_add() - register a new PWM chip
+-- 
+1.7.9.5
+

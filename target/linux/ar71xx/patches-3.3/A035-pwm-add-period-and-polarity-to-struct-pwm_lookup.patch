@@ -1,0 +1,54 @@
+From d814fe7f00ae1564c2a5074f2c1e7a528f33c05f Mon Sep 17 00:00:00 2001
+From: Alexandre Belloni <alexandre.belloni@free-electrons.com>
+Date: Mon, 19 May 2014 22:42:32 +0200
+Subject: [PATCH 35/47] pwm: add period and polarity to struct pwm_lookup
+
+Add period and polarity members to struct pwm_lookup so that platforms
+using the lookup table can be treated the same way as those using the
+device tree.
+
+Signed-off-by: Alexandre Belloni <alexandre.belloni@free-electrons.com>
+Signed-off-by: Thierry Reding <thierry.reding@gmail.com>
+---
+ drivers/pwm/core.c  |    8 +++++++-
+ include/linux/pwm.h |    2 ++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pwm/core.c b/drivers/pwm/core.c
+index cfb449d..de023c3 100644
+--- a/drivers/pwm/core.c
++++ b/drivers/pwm/core.c
+@@ -489,10 +489,16 @@ struct pwm_device *pwm_get(struct device *dev, const char *con_id)
+ 		}
+ 	}
+ 
++	mutex_unlock(&pwm_lookup_lock);
++
+ 	if (chip)
+ 		pwm = pwm_request_from_chip(chip, index, con_id ?: dev_id);
++	if (IS_ERR(pwm))
++		return pwm;
++
++	pwm_set_period(pwm, p->period);
++	pwm_set_polarity(pwm, p->polarity);
+ 
+-	mutex_unlock(&pwm_lookup_lock);
+ 
+ 	return pwm;
+ }
+diff --git a/include/linux/pwm.h b/include/linux/pwm.h
+index 9a2b9d1..f838466 100644
+--- a/include/linux/pwm.h
++++ b/include/linux/pwm.h
+@@ -238,6 +238,8 @@ struct pwm_lookup {
+ 	unsigned int index;
+ 	const char *dev_id;
+ 	const char *con_id;
++	unsigned int period;
++	enum pwm_polarity polarity;
+ };
+ 
+ #define PWM_LOOKUP(_provider, _index, _dev_id, _con_id)	\
+-- 
+1.7.9.5
+

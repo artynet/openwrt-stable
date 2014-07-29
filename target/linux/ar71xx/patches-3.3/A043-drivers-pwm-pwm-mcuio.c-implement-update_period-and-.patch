@@ -1,0 +1,63 @@
+From c50f05c3cad7f1e1d165b45a8920fa8af2cdfb56 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 28 Jul 2014 17:34:11 +0200
+Subject: [PATCH 43/47] drivers/pwm/pwm-mcuio.c: implement update_period and
+ update_duty
+
+These two functions are needed because AVR chip shares the same timer
+among various pwm outputs: a change to the period of one of them causes
+a change in the others as well. Since pwm framework was not aware of
+this situation, I patched it and used the new functions.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/pwm-mcuio.c |   28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/drivers/pwm/pwm-mcuio.c b/drivers/pwm/pwm-mcuio.c
+index eaa69e2..74884e5 100644
+--- a/drivers/pwm/pwm-mcuio.c
++++ b/drivers/pwm/pwm-mcuio.c
+@@ -107,11 +107,39 @@ static void mcuio_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
+ 			 idx);
+ }
+ 
++static int mcuio_pwm_update_period(struct pwm_chip *chip,
++				    struct pwm_device *pwm)
++{
++	struct mcuio_pwm_data *data = to_mcuio_pwm_data(chip);
++	int idx = pwm_idx(pwm);
++	u32 val;
++	if (regmap_read(data->map, 0x040 * (idx + 1) + 0x10, &val))
++		return -EIO;
++
++	pwm->period = val * data->ticks_ns[idx];
++	return 0;
++}
++
++static int mcuio_pwm_update_duty(struct pwm_chip *chip,
++				 struct pwm_device *pwm)
++{
++	struct mcuio_pwm_data *data = to_mcuio_pwm_data(chip);
++	int idx = pwm_idx(pwm);
++	u32 val;
++	if (regmap_read(data->map, 0x040 * (idx + 1) + 0x14, &val))
++		return -EIO;
++
++	pwm->duty_cycle = val * data->ticks_ns[idx];
++	return 0;
++}
++
+ static const struct pwm_ops mcuio_pwm_ops = {
+ 	.config = mcuio_pwm_config,
+ 	.set_polarity = mcuio_pwm_set_polarity,
+ 	.enable = mcuio_pwm_enable,
+ 	.disable = mcuio_pwm_disable,
++	.update_period = mcuio_pwm_update_period,
++	.update_duty = mcuio_pwm_update_duty,
+ 	.owner = THIS_MODULE,
+ };
+ 
+-- 
+1.7.9.5
+
