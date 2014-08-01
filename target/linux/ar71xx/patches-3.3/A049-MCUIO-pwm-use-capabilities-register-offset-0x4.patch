@@ -1,0 +1,86 @@
+From 1c4ced7f9fd15d80c33566694f81580b247e7db2 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 31 Jul 2014 14:07:48 +0200
+Subject: [PATCH 49/51] MCUIO pwm: use capabilities register (offset 0x4)
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/pwm-mcuio.c |   26 +++++++++++++++++++++++++-
+ 1 file changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pwm/pwm-mcuio.c b/drivers/pwm/pwm-mcuio.c
+index 4208fb2..3a6e017 100644
+--- a/drivers/pwm/pwm-mcuio.c
++++ b/drivers/pwm/pwm-mcuio.c
+@@ -24,6 +24,10 @@
+ #include <linux/mcuio_ids.h>
+ #include <linux/mcuio-proto.h>
+ 
++#define CAP_RES(x)     (x & 0x00ffffff)
++#define CAP_CH_PER(x)  ((x >> 24) & 0x1)
++#define CAP_CH_DC(x)   ((x >> 25) & 0x1)
++
+ static const struct regmap_config mcuio_pwm_regmap_config = {
+ 	.reg_bits = 32,
+ 	.val_bits = 32,
+@@ -34,6 +38,7 @@ static const struct regmap_config mcuio_pwm_regmap_config = {
+ struct mcuio_pwm_data {
+ 	struct pwm_chip chip;
+ 	struct regmap *map;
++	u32 *capab;
+ };
+ 
+ static inline struct mcuio_pwm_data *to_mcuio_pwm_data(struct pwm_chip *chip)
+@@ -52,14 +57,22 @@ static int mcuio_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 	struct mcuio_pwm_data *data = to_mcuio_pwm_data(chip);
+ 	int idx = pwm_idx(pwm);
+ 
++	if (!CAP_CH_PER(data->capab[idx]))
++		goto set_duty;
++
+ 	if (regmap_write(data->map, 0x040 * (idx + 1) + 0x10,
+ 		period_ns / pwm->resolution))
+ 		return -EIO;
+ 
++set_duty:
++	if (!CAP_CH_DC(data->capab[idx]))
++		goto done;
++
+ 	if (regmap_write(data->map, 0x040 * (idx + 1) + 0x14,
+ 		duty_ns / pwm->resolution))
+ 		return -EIO;
+ 
++done:
+ 	return 0;
+ }
+ 
+@@ -198,6 +211,15 @@ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ 		goto fail1;
+ 	}
+ 
++	data->capab = devm_kzalloc(&mdev->dev,
++		sizeof(*data->capab) * data->chip.npwm,
++		GFP_KERNEL);
++
++	if (!data->capab) {
++		ret = -ENOMEM;
++		goto fail1;
++	}
++
+ 	for (i = 0; i < data->chip.npwm; i++) {
+ 
+ 		regmap_read(data->map, 0x040 * (i + 1), (u32*)&names[i * 8]);
+@@ -206,7 +228,9 @@ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ 		data->chip.pwms[i].name = &names[i * 8];
+ 
+ 		regmap_read(data->map, 0x040 * (i + 1) + 0x04,
+-			    &data->chip.pwms[i].resolution);
++			    &data->capab[i]);
++
++		data->chip.pwms[i].resolution = CAP_RES(data->capab[i]);
+ 
+ 		regmap_read(data->map, 0x040 * (i + 1) + 0x08,
+ 			    &max_ticks);
+-- 
+1.7.9.5
+
