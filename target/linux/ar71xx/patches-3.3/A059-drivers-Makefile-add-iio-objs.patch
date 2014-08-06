@@ -1,0 +1,22 @@
+From f9d2f7e6a3f3245f117e4700362942db63b435aa Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 1 Aug 2014 23:11:10 +0200
+Subject: [PATCH 59/61] drivers/Makefile: add iio objs
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/Makefile b/drivers/Makefile
+index 3dcf98d..46f8157 100644
+--- a/drivers/Makefile
++++ b/drivers/Makefile
+@@ -134,3 +134,4 @@ obj-$(CONFIG_HYPERV)		+= hv/
+ 
+ obj-$(CONFIG_PM_DEVFREQ)	+= devfreq/
+ obj-$(CONFIG_MCUIO)		+= mcuio/
++obj-$(CONFIG_IIO)		+= iio/
+-- 
+1.9.1
+

@@ -1,0 +1,40 @@
+From aecba6f1f9f52984b5745fa63abed06827a63b1a Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 1 Aug 2014 23:37:15 +0200
+Subject: [PATCH 52/61] include/linux/sysfs.h: define ATTRIBUTE_GROUPS as in
+ mainline, commit 6f092803
+
+This macro is needed by iio.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ include/linux/sysfs.h | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/include/linux/sysfs.h b/include/linux/sysfs.h
+index 0010009..87114f6 100644
+--- a/include/linux/sysfs.h
++++ b/include/linux/sysfs.h
+@@ -82,6 +82,19 @@ struct attribute_group {
+ 
+ #define attr_name(_attr) (_attr).attr.name
+ 
++#define __ATTRIBUTE_GROUPS(_name)                               \
++static const struct attribute_group *_name##_groups[] = {       \
++	&_name##_group,                                         \
++	NULL,                                                   \
++}
++
++#define ATTRIBUTE_GROUPS(_name)                                 \
++static const struct attribute_group _name##_group = {           \
++	.attrs = _name##_attrs,                                 \
++};                                                              \
++__ATTRIBUTE_GROUPS(_name)
++
++
+ struct file;
+ struct vm_area_struct;
+ 
+-- 
+1.9.1
+

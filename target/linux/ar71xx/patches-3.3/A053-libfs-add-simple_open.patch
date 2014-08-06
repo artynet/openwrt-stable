@@ -1,0 +1,61 @@
+From 7db3c2095f4bd793b85c6445bf3e27197a5022ba Mon Sep 17 00:00:00 2001
+From: Stephen Boyd <sboyd@codeaurora.org>
+Date: Thu, 5 Apr 2012 14:25:09 -0700
+Subject: [PATCH 53/61] libfs: add simple_open()
+
+debugfs and a few other drivers use an open-coded version of
+simple_open() to pass a pointer from the file to the read/write file
+ops.  Add support for this simple case to libfs so that we can remove
+the many duplicate copies of this simple function.
+
+Signed-off-by: Stephen Boyd <sboyd@codeaurora.org>
+Cc: Al Viro <viro@zeniv.linux.org.uk>
+Cc: Julia Lawall <Julia.Lawall@lip6.fr>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ fs/libfs.c         | 8 ++++++++
+ include/linux/fs.h | 1 +
+ 2 files changed, 9 insertions(+)
+
+diff --git a/fs/libfs.c b/fs/libfs.c
+index 5b2dbb3..2a897ee 100644
+--- a/fs/libfs.c
++++ b/fs/libfs.c
+@@ -264,6 +264,13 @@ Enomem:
+ 	return ERR_PTR(-ENOMEM);
+ }
+ 
++int simple_open(struct inode *inode, struct file *file)
++{
++	if (inode->i_private)
++		file->private_data = inode->i_private;
++	return 0;
++}
++
+ int simple_link(struct dentry *old_dentry, struct inode *dir, struct dentry *dentry)
+ {
+ 	struct inode *inode = old_dentry->d_inode;
+@@ -986,6 +993,7 @@ EXPORT_SYMBOL(simple_dir_operations);
+ EXPORT_SYMBOL(simple_empty);
+ EXPORT_SYMBOL(simple_fill_super);
+ EXPORT_SYMBOL(simple_getattr);
++EXPORT_SYMBOL(simple_open);
+ EXPORT_SYMBOL(simple_link);
+ EXPORT_SYMBOL(simple_lookup);
+ EXPORT_SYMBOL(simple_pin_fs);
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index d2a201e..3e78e05 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -2530,6 +2530,7 @@ extern int dcache_readdir(struct file *, void *, filldir_t);
+ extern int simple_setattr(struct dentry *, struct iattr *);
+ extern int simple_getattr(struct vfsmount *, struct dentry *, struct kstat *);
+ extern int simple_statfs(struct dentry *, struct kstatfs *);
++extern int simple_open(struct inode *inode, struct file *file);
+ extern int simple_link(struct dentry *, struct inode *, struct dentry *);
+ extern int simple_unlink(struct inode *, struct dentry *);
+ extern int simple_rmdir(struct inode *, struct dentry *);
+-- 
+1.9.1
+
