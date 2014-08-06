@@ -25,13 +25,17 @@
 	#define GPIO_FUNC2_CLEAR (0)
 #endif
 
-#define DS_GPIO_LED_WLAN		0
-#define DS_GPIO_LED_USB			1
-
+#define DS_GPIO_LED0			0
+#define DS_GPIO_LED1			1
 #define DS_GPIO_LED2			13
 #define DS_GPIO_LED3			14
 #define DS_GPIO_LED4			15
 #define DS_GPIO_LED5			16
+
+#define DS_GPIO_RGB_LED_BLUE            DS_GPIO_LED0       
+#define DS_GPIO_RGB_LED_RED             DS_GPIO_LED1
+#define DS_GPIO_RGB_LED_GREEN           DS_GPIO_LED3
+
 
 #define DS_GPIO_OE			21
 #define DS_GPIO_MCU_RESET		18
