@@ -1,0 +1,3265 @@
+From 96f3cd078f3fb155b918cab9319a8611a48a1ed6 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 1 Aug 2014 23:12:37 +0200
+Subject: [PATCH 56/61] iio: include/linux/iio from linux-mainline, commit
+ 6f0928036b
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ include/linux/iio/adc/ad_sigma_delta.h    | 173 ++++++++
+ include/linux/iio/buffer.h                | 250 ++++++++++++
+ include/linux/iio/common/st_sensors.h     | 300 ++++++++++++++
+ include/linux/iio/common/st_sensors_i2c.h |  20 +
+ include/linux/iio/common/st_sensors_spi.h |  20 +
+ include/linux/iio/consumer.h              | 199 ++++++++++
+ include/linux/iio/dac/ad5421.h            |  28 ++
+ include/linux/iio/dac/ad5504.h            |  16 +
+ include/linux/iio/dac/ad5791.h            |  25 ++
+ include/linux/iio/dac/max517.h            |  15 +
+ include/linux/iio/dac/mcp4725.h           |  16 +
+ include/linux/iio/driver.h                |  31 ++
+ include/linux/iio/events.h                |  87 ++++
+ include/linux/iio/frequency/ad9523.h      | 195 +++++++++
+ include/linux/iio/frequency/adf4350.h     | 128 ++++++
+ include/linux/iio/gyro/itg3200.h          | 154 ++++++++
+ include/linux/iio/iio.h                   | 631 ++++++++++++++++++++++++++++++
+ include/linux/iio/imu/adis.h              | 280 +++++++++++++
+ include/linux/iio/kfifo_buf.h             |  11 +
+ include/linux/iio/machine.h               |  31 ++
+ include/linux/iio/sysfs.h                 | 127 ++++++
+ include/linux/iio/trigger.h               | 148 +++++++
+ include/linux/iio/trigger_consumer.h      |  63 +++
+ include/linux/iio/triggered_buffer.h      |  15 +
+ include/linux/iio/types.h                 |  89 +++++
+ 25 files changed, 3052 insertions(+)
+ create mode 100644 include/linux/iio/adc/ad_sigma_delta.h
+ create mode 100644 include/linux/iio/buffer.h
+ create mode 100644 include/linux/iio/common/st_sensors.h
+ create mode 100644 include/linux/iio/common/st_sensors_i2c.h
+ create mode 100644 include/linux/iio/common/st_sensors_spi.h
+ create mode 100644 include/linux/iio/consumer.h
+ create mode 100644 include/linux/iio/dac/ad5421.h
+ create mode 100644 include/linux/iio/dac/ad5504.h
+ create mode 100644 include/linux/iio/dac/ad5791.h
+ create mode 100644 include/linux/iio/dac/max517.h
+ create mode 100644 include/linux/iio/dac/mcp4725.h
+ create mode 100644 include/linux/iio/driver.h
+ create mode 100644 include/linux/iio/events.h
+ create mode 100644 include/linux/iio/frequency/ad9523.h
+ create mode 100644 include/linux/iio/frequency/adf4350.h
+ create mode 100644 include/linux/iio/gyro/itg3200.h
+ create mode 100644 include/linux/iio/iio.h
+ create mode 100644 include/linux/iio/imu/adis.h
+ create mode 100644 include/linux/iio/kfifo_buf.h
+ create mode 100644 include/linux/iio/machine.h
+ create mode 100644 include/linux/iio/sysfs.h
+ create mode 100644 include/linux/iio/trigger.h
+ create mode 100644 include/linux/iio/trigger_consumer.h
+ create mode 100644 include/linux/iio/triggered_buffer.h
+ create mode 100644 include/linux/iio/types.h
+
+diff --git a/include/linux/iio/adc/ad_sigma_delta.h b/include/linux/iio/adc/ad_sigma_delta.h
+new file mode 100644
+index 0000000..e7fdec4
+--- /dev/null
++++ b/include/linux/iio/adc/ad_sigma_delta.h
+@@ -0,0 +1,173 @@
++/*
++ * Support code for Analog Devices Sigma-Delta ADCs
++ *
++ * Copyright 2012 Analog Devices Inc.
++ *  Author: Lars-Peter Clausen <lars@metafoo.de>
++ *
++ * Licensed under the GPL-2.
++ */
++#ifndef __AD_SIGMA_DELTA_H__
++#define __AD_SIGMA_DELTA_H__
++
++enum ad_sigma_delta_mode {
++	AD_SD_MODE_CONTINUOUS = 0,
++	AD_SD_MODE_SINGLE = 1,
++	AD_SD_MODE_IDLE = 2,
++	AD_SD_MODE_POWERDOWN = 3,
++};
++
++/**
++ * struct ad_sigma_delta_calib_data - Calibration data for Sigma Delta devices
++ * @mode: Calibration mode.
++ * @channel: Calibration channel.
++ */
++struct ad_sd_calib_data {
++	unsigned int mode;
++	unsigned int channel;
++};
++
++struct ad_sigma_delta;
++struct iio_dev;
++
++/**
++ * struct ad_sigma_delta_info - Sigma Delta driver specific callbacks and options
++ * @set_channel: Will be called to select the current channel, may be NULL.
++ * @set_mode: Will be called to select the current mode, may be NULL.
++ * @postprocess_sample: Is called for each sampled data word, can be used to
++ *		modify or drop the sample data, it, may be NULL.
++ * @has_registers: true if the device has writable and readable registers, false
++ *		if there is just one read-only sample data shift register.
++ * @addr_shift: Shift of the register address in the communications register.
++ * @read_mask: Mask for the communications register having the read bit set.
++ */
++struct ad_sigma_delta_info {
++	int (*set_channel)(struct ad_sigma_delta *, unsigned int channel);
++	int (*set_mode)(struct ad_sigma_delta *, enum ad_sigma_delta_mode mode);
++	int (*postprocess_sample)(struct ad_sigma_delta *, unsigned int raw_sample);
++	bool has_registers;
++	unsigned int addr_shift;
++	unsigned int read_mask;
++};
++
++/**
++ * struct ad_sigma_delta - Sigma Delta device struct
++ * @spi: The spi device associated with the Sigma Delta device.
++ * @trig: The IIO trigger associated with the Sigma Delta device.
++ *
++ * Most of the fields are private to the sigma delta library code and should not
++ * be accessed by individual drivers.
++ */
++struct ad_sigma_delta {
++	struct spi_device	*spi;
++	struct iio_trigger	*trig;
++
++/* private: */
++	struct completion	completion;
++	bool			irq_dis;
++
++	bool			bus_locked;
++
++	uint8_t			comm;
++
++	const struct ad_sigma_delta_info *info;
++
++	/*
++	 * DMA (thus cache coherency maintenance) requires the
++	 * transfer buffers to live in their own cache lines.
++	 */
++	uint8_t				data[4] ____cacheline_aligned;
++};
++
++static inline int ad_sigma_delta_set_channel(struct ad_sigma_delta *sd,
++	unsigned int channel)
++{
++	if (sd->info->set_channel)
++		return sd->info->set_channel(sd, channel);
++
++	return 0;
++}
++
++static inline int ad_sigma_delta_set_mode(struct ad_sigma_delta *sd,
++	unsigned int mode)
++{
++	if (sd->info->set_mode)
++		return sd->info->set_mode(sd, mode);
++
++	return 0;
++}
++
++static inline int ad_sigma_delta_postprocess_sample(struct ad_sigma_delta *sd,
++	unsigned int raw_sample)
++{
++	if (sd->info->postprocess_sample)
++		return sd->info->postprocess_sample(sd, raw_sample);
++
++	return 0;
++}
++
++void ad_sd_set_comm(struct ad_sigma_delta *sigma_delta, uint8_t comm);
++int ad_sd_write_reg(struct ad_sigma_delta *sigma_delta, unsigned int reg,
++	unsigned int size, unsigned int val);
++int ad_sd_read_reg(struct ad_sigma_delta *sigma_delta, unsigned int reg,
++	unsigned int size, unsigned int *val);
++
++int ad_sigma_delta_single_conversion(struct iio_dev *indio_dev,
++	const struct iio_chan_spec *chan, int *val);
++int ad_sd_calibrate_all(struct ad_sigma_delta *sigma_delta,
++	const struct ad_sd_calib_data *cd, unsigned int n);
++int ad_sd_init(struct ad_sigma_delta *sigma_delta, struct iio_dev *indio_dev,
++	struct spi_device *spi, const struct ad_sigma_delta_info *info);
++
++int ad_sd_setup_buffer_and_trigger(struct iio_dev *indio_dev);
++void ad_sd_cleanup_buffer_and_trigger(struct iio_dev *indio_dev);
++
++int ad_sd_validate_trigger(struct iio_dev *indio_dev, struct iio_trigger *trig);
++
++#define __AD_SD_CHANNEL(_si, _channel1, _channel2, _address, _bits, \
++	_storagebits, _shift, _extend_name, _type) \
++	{ \
++		.type = (_type), \
++		.differential = (_channel2 == -1 ? 0 : 1), \
++		.indexed = 1, \
++		.channel = (_channel1), \
++		.channel2 = (_channel2), \
++		.address = (_address), \
++		.extend_name = (_extend_name), \
++		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) | \
++			BIT(IIO_CHAN_INFO_OFFSET), \
++		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE), \
++		.scan_index = (_si), \
++		.scan_type = { \
++			.sign = 'u', \
++			.realbits = (_bits), \
++			.storagebits = (_storagebits), \
++			.shift = (_shift), \
++			.endianness = IIO_BE, \
++		}, \
++	}
++
++#define AD_SD_DIFF_CHANNEL(_si, _channel1, _channel2, _address, _bits, \
++	_storagebits, _shift) \
++	__AD_SD_CHANNEL(_si, _channel1, _channel2, _address, _bits, \
++		_storagebits, _shift, NULL, IIO_VOLTAGE)
++
++#define AD_SD_SHORTED_CHANNEL(_si, _channel, _address, _bits, \
++	_storagebits, _shift) \
++	__AD_SD_CHANNEL(_si, _channel, _channel, _address, _bits, \
++		_storagebits, _shift, "shorted", IIO_VOLTAGE)
++
++#define AD_SD_CHANNEL(_si, _channel, _address, _bits, \
++	_storagebits, _shift) \
++	__AD_SD_CHANNEL(_si, _channel, -1, _address, _bits, \
++		_storagebits, _shift, NULL, IIO_VOLTAGE)
++
++#define AD_SD_TEMP_CHANNEL(_si, _address, _bits, _storagebits, _shift) \
++	__AD_SD_CHANNEL(_si, 0, -1, _address, _bits, \
++		_storagebits, _shift, NULL, IIO_TEMP)
++
++#define AD_SD_SUPPLY_CHANNEL(_si, _channel, _address, _bits, _storagebits, \
++	_shift) \
++	__AD_SD_CHANNEL(_si, _channel, -1, _address, _bits, \
++		_storagebits, _shift, "supply", IIO_VOLTAGE)
++
++#endif
+diff --git a/include/linux/iio/buffer.h b/include/linux/iio/buffer.h
+new file mode 100644
+index 0000000..5193927
+--- /dev/null
++++ b/include/linux/iio/buffer.h
+@@ -0,0 +1,250 @@
++/* The industrial I/O core - generic buffer interfaces.
++ *
++ * Copyright (c) 2008 Jonathan Cameron
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 as published by
++ * the Free Software Foundation.
++ */
++
++#ifndef _IIO_BUFFER_GENERIC_H_
++#define _IIO_BUFFER_GENERIC_H_
++#include <linux/sysfs.h>
++#include <linux/iio/iio.h>
++#include <linux/kref.h>
++
++#ifdef CONFIG_IIO_BUFFER
++
++struct iio_buffer;
++
++/**
++ * struct iio_buffer_access_funcs - access functions for buffers.
++ * @store_to:		actually store stuff to the buffer
++ * @read_first_n:	try to get a specified number of bytes (must exist)
++ * @data_available:	indicates whether data for reading from the buffer is
++ *			available.
++ * @request_update:	if a parameter change has been marked, update underlying
++ *			storage.
++ * @get_bytes_per_datum:get current bytes per datum
++ * @set_bytes_per_datum:set number of bytes per datum
++ * @get_length:		get number of datums in buffer
++ * @set_length:		set number of datums in buffer
++ * @release:		called when the last reference to the buffer is dropped,
++ *			should free all resources allocated by the buffer.
++ *
++ * The purpose of this structure is to make the buffer element
++ * modular as event for a given driver, different usecases may require
++ * different buffer designs (space efficiency vs speed for example).
++ *
++ * It is worth noting that a given buffer implementation may only support a
++ * small proportion of these functions.  The core code 'should' cope fine with
++ * any of them not existing.
++ **/
++struct iio_buffer_access_funcs {
++	int (*store_to)(struct iio_buffer *buffer, const void *data);
++	int (*read_first_n)(struct iio_buffer *buffer,
++			    size_t n,
++			    char __user *buf);
++	bool (*data_available)(struct iio_buffer *buffer);
++
++	int (*request_update)(struct iio_buffer *buffer);
++
++	int (*get_bytes_per_datum)(struct iio_buffer *buffer);
++	int (*set_bytes_per_datum)(struct iio_buffer *buffer, size_t bpd);
++	int (*get_length)(struct iio_buffer *buffer);
++	int (*set_length)(struct iio_buffer *buffer, int length);
++
++	void (*release)(struct iio_buffer *buffer);
++};
++
++/**
++ * struct iio_buffer - general buffer structure
++ * @length:		[DEVICE] number of datums in buffer
++ * @bytes_per_datum:	[DEVICE] size of individual datum including timestamp
++ * @scan_el_attrs:	[DRIVER] control of scan elements if that scan mode
++ *			control method is used
++ * @scan_mask:		[INTERN] bitmask used in masking scan mode elements
++ * @scan_timestamp:	[INTERN] does the scan mode include a timestamp
++ * @access:		[DRIVER] buffer access functions associated with the
++ *			implementation.
++ * @scan_el_dev_attr_list:[INTERN] list of scan element related attributes.
++ * @scan_el_group:	[DRIVER] attribute group for those attributes not
++ *			created from the iio_chan_info array.
++ * @pollq:		[INTERN] wait queue to allow for polling on the buffer.
++ * @stufftoread:	[INTERN] flag to indicate new data.
++ * @demux_list:		[INTERN] list of operations required to demux the scan.
++ * @demux_bounce:	[INTERN] buffer for doing gather from incoming scan.
++ * @buffer_list:	[INTERN] entry in the devices list of current buffers.
++ * @ref:		[INTERN] reference count of the buffer.
++ */
++struct iio_buffer {
++	int					length;
++	int					bytes_per_datum;
++	struct attribute_group			*scan_el_attrs;
++	long					*scan_mask;
++	bool					scan_timestamp;
++	const struct iio_buffer_access_funcs	*access;
++	struct list_head			scan_el_dev_attr_list;
++	struct attribute_group			scan_el_group;
++	wait_queue_head_t			pollq;
++	bool					stufftoread;
++	const struct attribute_group *attrs;
++	struct list_head			demux_list;
++	void					*demux_bounce;
++	struct list_head			buffer_list;
++	struct kref				ref;
++};
++
++/**
++ * iio_update_buffers() - add or remove buffer from active list
++ * @indio_dev:		device to add buffer to
++ * @insert_buffer:	buffer to insert
++ * @remove_buffer:	buffer_to_remove
++ *
++ * Note this will tear down the all buffering and build it up again
++ */
++int iio_update_buffers(struct iio_dev *indio_dev,
++		       struct iio_buffer *insert_buffer,
++		       struct iio_buffer *remove_buffer);
++
++/**
++ * iio_buffer_init() - Initialize the buffer structure
++ * @buffer:		buffer to be initialized
++ **/
++void iio_buffer_init(struct iio_buffer *buffer);
++
++int iio_scan_mask_query(struct iio_dev *indio_dev,
++			struct iio_buffer *buffer, int bit);
++
++/**
++ * iio_scan_mask_set() - set particular bit in the scan mask
++ * @indio_dev		IIO device structure
++ * @buffer:		the buffer whose scan mask we are interested in
++ * @bit:		the bit to be set.
++ **/
++int iio_scan_mask_set(struct iio_dev *indio_dev,
++		      struct iio_buffer *buffer, int bit);
++
++/**
++ * iio_push_to_buffers() - push to a registered buffer.
++ * @indio_dev:		iio_dev structure for device.
++ * @data:		Full scan.
++ */
++int iio_push_to_buffers(struct iio_dev *indio_dev, const void *data);
++
++/*
++ * iio_push_to_buffers_with_timestamp() - push data and timestamp to buffers
++ * @indio_dev:		iio_dev structure for device.
++ * @data:		sample data
++ * @timestamp:		timestamp for the sample data
++ *
++ * Pushes data to the IIO device's buffers. If timestamps are enabled for the
++ * device the function will store the supplied timestamp as the last element in
++ * the sample data buffer before pushing it to the device buffers. The sample
++ * data buffer needs to be large enough to hold the additional timestamp
++ * (usually the buffer should be indio->scan_bytes bytes large).
++ *
++ * Returns 0 on success, a negative error code otherwise.
++ */
++static inline int iio_push_to_buffers_with_timestamp(struct iio_dev *indio_dev,
++	void *data, int64_t timestamp)
++{
++	if (indio_dev->scan_timestamp) {
++		size_t ts_offset = indio_dev->scan_bytes / sizeof(int64_t) - 1;
++		((int64_t *)data)[ts_offset] = timestamp;
++	}
++
++	return iio_push_to_buffers(indio_dev, data);
++}
++
++int iio_update_demux(struct iio_dev *indio_dev);
++
++/**
++ * iio_buffer_register() - register the buffer with IIO core
++ * @indio_dev:		device with the buffer to be registered
++ * @channels:		the channel descriptions used to construct buffer
++ * @num_channels:	the number of channels
++ **/
++int iio_buffer_register(struct iio_dev *indio_dev,
++			const struct iio_chan_spec *channels,
++			int num_channels);
++
++/**
++ * iio_buffer_unregister() - unregister the buffer from IIO core
++ * @indio_dev:		the device with the buffer to be unregistered
++ **/
++void iio_buffer_unregister(struct iio_dev *indio_dev);
++
++/**
++ * iio_buffer_read_length() - attr func to get number of datums in the buffer
++ **/
++ssize_t iio_buffer_read_length(struct device *dev,
++			       struct device_attribute *attr,
++			       char *buf);
++/**
++ * iio_buffer_write_length() - attr func to set number of datums in the buffer
++ **/
++ssize_t iio_buffer_write_length(struct device *dev,
++			      struct device_attribute *attr,
++			      const char *buf,
++			      size_t len);
++/**
++ * iio_buffer_store_enable() - attr to turn the buffer on
++ **/
++ssize_t iio_buffer_store_enable(struct device *dev,
++				struct device_attribute *attr,
++				const char *buf,
++				size_t len);
++/**
++ * iio_buffer_show_enable() - attr to see if the buffer is on
++ **/
++ssize_t iio_buffer_show_enable(struct device *dev,
++			       struct device_attribute *attr,
++			       char *buf);
++#define IIO_BUFFER_LENGTH_ATTR DEVICE_ATTR(length, S_IRUGO | S_IWUSR,	\
++					   iio_buffer_read_length,	\
++					   iio_buffer_write_length)
++
++#define IIO_BUFFER_ENABLE_ATTR DEVICE_ATTR(enable, S_IRUGO | S_IWUSR,	\
++					   iio_buffer_show_enable,	\
++					   iio_buffer_store_enable)
++
++bool iio_validate_scan_mask_onehot(struct iio_dev *indio_dev,
++	const unsigned long *mask);
++
++struct iio_buffer *iio_buffer_get(struct iio_buffer *buffer);
++void iio_buffer_put(struct iio_buffer *buffer);
++
++/**
++ * iio_device_attach_buffer - Attach a buffer to a IIO device
++ * @indio_dev: The device the buffer should be attached to
++ * @buffer: The buffer to attach to the device
++ *
++ * This function attaches a buffer to a IIO device. The buffer stays attached to
++ * the device until the device is freed. The function should only be called at
++ * most once per device.
++ */
++static inline void iio_device_attach_buffer(struct iio_dev *indio_dev,
++	struct iio_buffer *buffer)
++{
++	indio_dev->buffer = iio_buffer_get(buffer);
++}
++
++#else /* CONFIG_IIO_BUFFER */
++
++static inline int iio_buffer_register(struct iio_dev *indio_dev,
++					   const struct iio_chan_spec *channels,
++					   int num_channels)
++{
++	return 0;
++}
++
++static inline void iio_buffer_unregister(struct iio_dev *indio_dev)
++{}
++
++static inline void iio_buffer_get(struct iio_buffer *buffer) {}
++static inline void iio_buffer_put(struct iio_buffer *buffer) {}
++
++#endif /* CONFIG_IIO_BUFFER */
++
++#endif /* _IIO_BUFFER_GENERIC_H_ */
+diff --git a/include/linux/iio/common/st_sensors.h b/include/linux/iio/common/st_sensors.h
+new file mode 100644
+index 0000000..96f51f0
+--- /dev/null
++++ b/include/linux/iio/common/st_sensors.h
+@@ -0,0 +1,300 @@
++/*
++ * STMicroelectronics sensors library driver
++ *
++ * Copyright 2012-2013 STMicroelectronics Inc.
++ *
++ * Denis Ciocca <denis.ciocca@st.com>
++ *
++ * Licensed under the GPL-2.
++ */
++
++#ifndef ST_SENSORS_H
++#define ST_SENSORS_H
++
++#include <linux/i2c.h>
++#include <linux/spi/spi.h>
++#include <linux/irqreturn.h>
++#include <linux/iio/trigger.h>
++#include <linux/bitops.h>
++#include <linux/regulator/consumer.h>
++
++#include <linux/platform_data/st_sensors_pdata.h>
++
++#define ST_SENSORS_TX_MAX_LENGTH		2
++#define ST_SENSORS_RX_MAX_LENGTH		6
++
++#define ST_SENSORS_ODR_LIST_MAX			10
++#define ST_SENSORS_FULLSCALE_AVL_MAX		10
++
++#define ST_SENSORS_NUMBER_ALL_CHANNELS		4
++#define ST_SENSORS_ENABLE_ALL_AXIS		0x07
++#define ST_SENSORS_SCAN_X			0
++#define ST_SENSORS_SCAN_Y			1
++#define ST_SENSORS_SCAN_Z			2
++#define ST_SENSORS_DEFAULT_POWER_ON_VALUE	0x01
++#define ST_SENSORS_DEFAULT_POWER_OFF_VALUE	0x00
++#define ST_SENSORS_DEFAULT_WAI_ADDRESS		0x0f
++#define ST_SENSORS_DEFAULT_AXIS_ADDR		0x20
++#define ST_SENSORS_DEFAULT_AXIS_MASK		0x07
++#define ST_SENSORS_DEFAULT_AXIS_N_BIT		3
++
++#define ST_SENSORS_MAX_NAME			17
++#define ST_SENSORS_MAX_4WAI			7
++
++#define ST_SENSORS_LSM_CHANNELS(device_type, mask, index, mod, \
++					ch2, s, endian, rbits, sbits, addr) \
++{ \
++	.type = device_type, \
++	.modified = mod, \
++	.info_mask_separate = mask, \
++	.scan_index = index, \
++	.channel2 = ch2, \
++	.address = addr, \
++	.scan_type = { \
++		.sign = s, \
++		.realbits = rbits, \
++		.shift = sbits - rbits, \
++		.storagebits = sbits, \
++		.endianness = endian, \
++	}, \
++}
++
++#define ST_SENSOR_DEV_ATTR_SAMP_FREQ() \
++		IIO_DEV_ATTR_SAMP_FREQ(S_IWUSR | S_IRUGO, \
++			st_sensors_sysfs_get_sampling_frequency, \
++			st_sensors_sysfs_set_sampling_frequency)
++
++#define ST_SENSORS_DEV_ATTR_SAMP_FREQ_AVAIL() \
++		IIO_DEV_ATTR_SAMP_FREQ_AVAIL( \
++			st_sensors_sysfs_sampling_frequency_avail)
++
++#define ST_SENSORS_DEV_ATTR_SCALE_AVAIL(name) \
++		IIO_DEVICE_ATTR(name, S_IRUGO, \
++			st_sensors_sysfs_scale_avail, NULL , 0);
++
++struct st_sensor_odr_avl {
++	unsigned int hz;
++	u8 value;
++};
++
++struct st_sensor_odr {
++	u8 addr;
++	u8 mask;
++	struct st_sensor_odr_avl odr_avl[ST_SENSORS_ODR_LIST_MAX];
++};
++
++struct st_sensor_power {
++	u8 addr;
++	u8 mask;
++	u8 value_off;
++	u8 value_on;
++};
++
++struct st_sensor_axis {
++	u8 addr;
++	u8 mask;
++};
++
++struct st_sensor_fullscale_avl {
++	unsigned int num;
++	u8 value;
++	unsigned int gain;
++	unsigned int gain2;
++};
++
++struct st_sensor_fullscale {
++	u8 addr;
++	u8 mask;
++	struct st_sensor_fullscale_avl fs_avl[ST_SENSORS_FULLSCALE_AVL_MAX];
++};
++
++/**
++ * struct st_sensor_bdu - ST sensor device block data update
++ * @addr: address of the register.
++ * @mask: mask to write the block data update flag.
++ */
++struct st_sensor_bdu {
++	u8 addr;
++	u8 mask;
++};
++
++/**
++ * struct st_sensor_data_ready_irq - ST sensor device data-ready interrupt
++ * @addr: address of the register.
++ * @mask_int1: mask to enable/disable IRQ on INT1 pin.
++ * @mask_int2: mask to enable/disable IRQ on INT2 pin.
++ * struct ig1 - represents the Interrupt Generator 1 of sensors.
++ * @en_addr: address of the enable ig1 register.
++ * @en_mask: mask to write the on/off value for enable.
++ */
++struct st_sensor_data_ready_irq {
++	u8 addr;
++	u8 mask_int1;
++	u8 mask_int2;
++	struct {
++		u8 en_addr;
++		u8 en_mask;
++	} ig1;
++};
++
++/**
++ * struct st_sensor_transfer_buffer - ST sensor device I/O buffer
++ * @buf_lock: Mutex to protect rx and tx buffers.
++ * @tx_buf: Buffer used by SPI transfer function to send data to the sensors.
++ *	This buffer is used to avoid DMA not-aligned issue.
++ * @rx_buf: Buffer used by SPI transfer to receive data from sensors.
++ *	This buffer is used to avoid DMA not-aligned issue.
++ */
++struct st_sensor_transfer_buffer {
++	struct mutex buf_lock;
++	u8 rx_buf[ST_SENSORS_RX_MAX_LENGTH];
++	u8 tx_buf[ST_SENSORS_TX_MAX_LENGTH] ____cacheline_aligned;
++};
++
++/**
++ * struct st_sensor_transfer_function - ST sensor device I/O function
++ * @read_byte: Function used to read one byte.
++ * @write_byte: Function used to write one byte.
++ * @read_multiple_byte: Function used to read multiple byte.
++ */
++struct st_sensor_transfer_function {
++	int (*read_byte) (struct st_sensor_transfer_buffer *tb,
++				struct device *dev, u8 reg_addr, u8 *res_byte);
++	int (*write_byte) (struct st_sensor_transfer_buffer *tb,
++				struct device *dev, u8 reg_addr, u8 data);
++	int (*read_multiple_byte) (struct st_sensor_transfer_buffer *tb,
++		struct device *dev, u8 reg_addr, int len, u8 *data,
++							bool multiread_bit);
++};
++
++/**
++ * struct st_sensors - ST sensors list
++ * @wai: Contents of WhoAmI register.
++ * @sensors_supported: List of supported sensors by struct itself.
++ * @ch: IIO channels for the sensor.
++ * @odr: Output data rate register and ODR list available.
++ * @pw: Power register of the sensor.
++ * @enable_axis: Enable one or more axis of the sensor.
++ * @fs: Full scale register and full scale list available.
++ * @bdu: Block data update register.
++ * @drdy_irq: Data ready register of the sensor.
++ * @multi_read_bit: Use or not particular bit for [I2C/SPI] multi-read.
++ * @bootime: samples to discard when sensor passing from power-down to power-up.
++ */
++struct st_sensors {
++	u8 wai;
++	char sensors_supported[ST_SENSORS_MAX_4WAI][ST_SENSORS_MAX_NAME];
++	struct iio_chan_spec *ch;
++	int num_ch;
++	struct st_sensor_odr odr;
++	struct st_sensor_power pw;
++	struct st_sensor_axis enable_axis;
++	struct st_sensor_fullscale fs;
++	struct st_sensor_bdu bdu;
++	struct st_sensor_data_ready_irq drdy_irq;
++	bool multi_read_bit;
++	unsigned int bootime;
++};
++
++/**
++ * struct st_sensor_data - ST sensor device status
++ * @dev: Pointer to instance of struct device (I2C or SPI).
++ * @trig: The trigger in use by the core driver.
++ * @sensor: Pointer to the current sensor struct in use.
++ * @current_fullscale: Maximum range of measure by the sensor.
++ * @vdd: Pointer to sensor's Vdd power supply
++ * @vdd_io: Pointer to sensor's Vdd-IO power supply
++ * @enabled: Status of the sensor (false->off, true->on).
++ * @multiread_bit: Use or not particular bit for [I2C/SPI] multiread.
++ * @buffer_data: Data used by buffer part.
++ * @odr: Output data rate of the sensor [Hz].
++ * num_data_channels: Number of data channels used in buffer.
++ * @drdy_int_pin: Redirect DRDY on pin 1 (1) or pin 2 (2).
++ * @get_irq_data_ready: Function to get the IRQ used for data ready signal.
++ * @tf: Transfer function structure used by I/O operations.
++ * @tb: Transfer buffers and mutex used by I/O operations.
++ */
++struct st_sensor_data {
++	struct device *dev;
++	struct iio_trigger *trig;
++	struct st_sensors *sensor;
++	struct st_sensor_fullscale_avl *current_fullscale;
++	struct regulator *vdd;
++	struct regulator *vdd_io;
++
++	bool enabled;
++	bool multiread_bit;
++
++	char *buffer_data;
++
++	unsigned int odr;
++	unsigned int num_data_channels;
++
++	u8 drdy_int_pin;
++
++	unsigned int (*get_irq_data_ready) (struct iio_dev *indio_dev);
++
++	const struct st_sensor_transfer_function *tf;
++	struct st_sensor_transfer_buffer tb;
++};
++
++#ifdef CONFIG_IIO_BUFFER
++irqreturn_t st_sensors_trigger_handler(int irq, void *p);
++
++int st_sensors_get_buffer_element(struct iio_dev *indio_dev, u8 *buf);
++#endif
++
++#ifdef CONFIG_IIO_TRIGGER
++int st_sensors_allocate_trigger(struct iio_dev *indio_dev,
++				const struct iio_trigger_ops *trigger_ops);
++
++void st_sensors_deallocate_trigger(struct iio_dev *indio_dev);
++
++#else
++static inline int st_sensors_allocate_trigger(struct iio_dev *indio_dev,
++				const struct iio_trigger_ops *trigger_ops)
++{
++	return 0;
++}
++static inline void st_sensors_deallocate_trigger(struct iio_dev *indio_dev)
++{
++	return;
++}
++#endif
++
++int st_sensors_init_sensor(struct iio_dev *indio_dev,
++					struct st_sensors_platform_data *pdata);
++
++int st_sensors_set_enable(struct iio_dev *indio_dev, bool enable);
++
++int st_sensors_set_axis_enable(struct iio_dev *indio_dev, u8 axis_enable);
++
++void st_sensors_power_enable(struct iio_dev *indio_dev);
++
++void st_sensors_power_disable(struct iio_dev *indio_dev);
++
++int st_sensors_set_odr(struct iio_dev *indio_dev, unsigned int odr);
++
++int st_sensors_set_dataready_irq(struct iio_dev *indio_dev, bool enable);
++
++int st_sensors_set_fullscale_by_gain(struct iio_dev *indio_dev, int scale);
++
++int st_sensors_read_info_raw(struct iio_dev *indio_dev,
++				struct iio_chan_spec const *ch, int *val);
++
++int st_sensors_check_device_support(struct iio_dev *indio_dev,
++			int num_sensors_list, const struct st_sensors *sensors);
++
++ssize_t st_sensors_sysfs_get_sampling_frequency(struct device *dev,
++				struct device_attribute *attr, char *buf);
++
++ssize_t st_sensors_sysfs_set_sampling_frequency(struct device *dev,
++		struct device_attribute *attr, const char *buf, size_t size);
++
++ssize_t st_sensors_sysfs_sampling_frequency_avail(struct device *dev,
++				struct device_attribute *attr, char *buf);
++
++ssize_t st_sensors_sysfs_scale_avail(struct device *dev,
++				struct device_attribute *attr, char *buf);
++
++#endif /* ST_SENSORS_H */
+diff --git a/include/linux/iio/common/st_sensors_i2c.h b/include/linux/iio/common/st_sensors_i2c.h
+new file mode 100644
+index 0000000..67d8453
+--- /dev/null
++++ b/include/linux/iio/common/st_sensors_i2c.h
+@@ -0,0 +1,20 @@
++/*
++ * STMicroelectronics sensors i2c library driver
++ *
++ * Copyright 2012-2013 STMicroelectronics Inc.
++ *
++ * Denis Ciocca <denis.ciocca@st.com>
++ *
++ * Licensed under the GPL-2.
++ */
++
++#ifndef ST_SENSORS_I2C_H
++#define ST_SENSORS_I2C_H
++
++#include <linux/i2c.h>
++#include <linux/iio/common/st_sensors.h>
++
++void st_sensors_i2c_configure(struct iio_dev *indio_dev,
++		struct i2c_client *client, struct st_sensor_data *sdata);
++
++#endif /* ST_SENSORS_I2C_H */
+diff --git a/include/linux/iio/common/st_sensors_spi.h b/include/linux/iio/common/st_sensors_spi.h
+new file mode 100644
+index 0000000..d964a35
+--- /dev/null
++++ b/include/linux/iio/common/st_sensors_spi.h
+@@ -0,0 +1,20 @@
++/*
++ * STMicroelectronics sensors spi library driver
++ *
++ * Copyright 2012-2013 STMicroelectronics Inc.
++ *
++ * Denis Ciocca <denis.ciocca@st.com>
++ *
++ * Licensed under the GPL-2.
++ */
++
++#ifndef ST_SENSORS_SPI_H
++#define ST_SENSORS_SPI_H
++
++#include <linux/spi/spi.h>
++#include <linux/iio/common/st_sensors.h>
++
++void st_sensors_spi_configure(struct iio_dev *indio_dev,
++			struct spi_device *spi, struct st_sensor_data *sdata);
++
++#endif /* ST_SENSORS_SPI_H */
+diff --git a/include/linux/iio/consumer.h b/include/linux/iio/consumer.h
+new file mode 100644
+index 0000000..651f9a0
+--- /dev/null
++++ b/include/linux/iio/consumer.h
+@@ -0,0 +1,199 @@
++/*
++ * Industrial I/O in kernel consumer interface
++ *
++ * Copyright (c) 2011 Jonathan Cameron
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 as published by
++ * the Free Software Foundation.
++ */
++#ifndef _IIO_INKERN_CONSUMER_H_
++#define _IIO_INKERN_CONSUMER_H_
++
++#include <linux/types.h>
++#include <linux/iio/types.h>
++
++struct iio_dev;
++struct iio_chan_spec;
++struct device;
++
++/**
++ * struct iio_channel - everything needed for a consumer to use a channel
++ * @indio_dev:		Device on which the channel exists.
++ * @channel:		Full description of the channel.
++ * @data:		Data about the channel used by consumer.
++ */
++struct iio_channel {
++	struct iio_dev *indio_dev;
++	const struct iio_chan_spec *channel;
++	void *data;
++};
++
++/**
++ * iio_channel_get() - get description of all that is needed to access channel.
++ * @dev:		Pointer to consumer device. Device name must match
++ *			the name of the device as provided in the iio_map
++ *			with which the desired provider to consumer mapping
++ *			was registered.
++ * @consumer_channel:	Unique name to identify the channel on the consumer
++ *			side. This typically describes the channels use within
++ *			the consumer. E.g. 'battery_voltage'
++ */
++struct iio_channel *iio_channel_get(struct device *dev,
++				    const char *consumer_channel);
++
++/**
++ * iio_channel_release() - release channels obtained via iio_channel_get
++ * @chan:		The channel to be released.
++ */
++void iio_channel_release(struct iio_channel *chan);
++
++/**
++ * iio_channel_get_all() - get all channels associated with a client
++ * @dev:		Pointer to consumer device.
++ *
++ * Returns an array of iio_channel structures terminated with one with
++ * null iio_dev pointer.
++ * This function is used by fairly generic consumers to get all the
++ * channels registered as having this consumer.
++ */
++struct iio_channel *iio_channel_get_all(struct device *dev);
++
++/**
++ * iio_channel_release_all() - reverse iio_channel_get_all
++ * @chan:		Array of channels to be released.
++ */
++void iio_channel_release_all(struct iio_channel *chan);
++
++struct iio_cb_buffer;
++/**
++ * iio_channel_get_all_cb() - register callback for triggered capture
++ * @dev:		Pointer to client device.
++ * @cb:			Callback function.
++ * @private:		Private data passed to callback.
++ *
++ * NB right now we have no ability to mux data from multiple devices.
++ * So if the channels requested come from different devices this will
++ * fail.
++ */
++struct iio_cb_buffer *iio_channel_get_all_cb(struct device *dev,
++					     int (*cb)(const void *data,
++						       void *private),
++					     void *private);
++/**
++ * iio_channel_release_all_cb() - release and unregister the callback.
++ * @cb_buffer:		The callback buffer that was allocated.
++ */
++void iio_channel_release_all_cb(struct iio_cb_buffer *cb_buffer);
++
++/**
++ * iio_channel_start_all_cb() - start the flow of data through callback.
++ * @cb_buff:		The callback buffer we are starting.
++ */
++int iio_channel_start_all_cb(struct iio_cb_buffer *cb_buff);
++
++/**
++ * iio_channel_stop_all_cb() - stop the flow of data through the callback.
++ * @cb_buff:		The callback buffer we are stopping.
++ */
++void iio_channel_stop_all_cb(struct iio_cb_buffer *cb_buff);
++
++/**
++ * iio_channel_cb_get_channels() - get access to the underlying channels.
++ * @cb_buff:		The callback buffer from whom we want the channel
++ *			information.
++ *
++ * This function allows one to obtain information about the channels.
++ * Whilst this may allow direct reading if all buffers are disabled, the
++ * primary aim is to allow drivers that are consuming a channel to query
++ * things like scaling of the channel.
++ */
++struct iio_channel
++*iio_channel_cb_get_channels(const struct iio_cb_buffer *cb_buffer);
++
++/**
++ * iio_read_channel_raw() - read from a given channel
++ * @chan:		The channel being queried.
++ * @val:		Value read back.
++ *
++ * Note raw reads from iio channels are in adc counts and hence
++ * scale will need to be applied if standard units required.
++ */
++int iio_read_channel_raw(struct iio_channel *chan,
++			 int *val);
++
++/**
++ * iio_read_channel_average_raw() - read from a given channel
++ * @chan:		The channel being queried.
++ * @val:		Value read back.
++ *
++ * Note raw reads from iio channels are in adc counts and hence
++ * scale will need to be applied if standard units required.
++ *
++ * In opposit to the normal iio_read_channel_raw this function
++ * returns the average of multiple reads.
++ */
++int iio_read_channel_average_raw(struct iio_channel *chan, int *val);
++
++/**
++ * iio_read_channel_processed() - read processed value from a given channel
++ * @chan:		The channel being queried.
++ * @val:		Value read back.
++ *
++ * Returns an error code or 0.
++ *
++ * This function will read a processed value from a channel. A processed value
++ * means that this value will have the correct unit and not some device internal
++ * representation. If the device does not support reporting a processed value
++ * the function will query the raw value and the channels scale and offset and
++ * do the appropriate transformation.
++ */
++int iio_read_channel_processed(struct iio_channel *chan, int *val);
++
++/**
++ * iio_get_channel_type() - get the type of a channel
++ * @channel:		The channel being queried.
++ * @type:		The type of the channel.
++ *
++ * returns the enum iio_chan_type of the channel
++ */
++int iio_get_channel_type(struct iio_channel *channel,
++			 enum iio_chan_type *type);
++
++/**
++ * iio_read_channel_scale() - read the scale value for a channel
++ * @chan:		The channel being queried.
++ * @val:		First part of value read back.
++ * @val2:		Second part of value read back.
++ *
++ * Note returns a description of what is in val and val2, such
++ * as IIO_VAL_INT_PLUS_MICRO telling us we have a value of val
++ * + val2/1e6
++ */
++int iio_read_channel_scale(struct iio_channel *chan, int *val,
++			   int *val2);
++
++/**
++ * iio_convert_raw_to_processed() - Converts a raw value to a processed value
++ * @chan:		The channel being queried
++ * @raw:		The raw IIO to convert
++ * @processed:		The result of the conversion
++ * @scale:		Scale factor to apply during the conversion
++ *
++ * Returns an error code or 0.
++ *
++ * This function converts a raw value to processed value for a specific channel.
++ * A raw value is the device internal representation of a sample and the value
++ * returned by iio_read_channel_raw, so the unit of that value is device
++ * depended. A processed value on the other hand is value has a normed unit
++ * according with the IIO specification.
++ *
++ * The scale factor allows to increase the precession of the returned value. For
++ * a scale factor of 1 the function will return the result in the normal IIO
++ * unit for the channel type. E.g. millivolt for voltage channels, if you want
++ * nanovolts instead pass 1000 as the scale factor.
++ */
++int iio_convert_raw_to_processed(struct iio_channel *chan, int raw,
++	int *processed, unsigned int scale);
++
++#endif
+diff --git a/include/linux/iio/dac/ad5421.h b/include/linux/iio/dac/ad5421.h
+new file mode 100644
+index 0000000..8fd8f05
+--- /dev/null
++++ b/include/linux/iio/dac/ad5421.h
+@@ -0,0 +1,28 @@
++#ifndef __IIO_DAC_AD5421_H__
++#define __IIO_DAC_AD5421_H__
++
++/**
++ * enum ad5421_current_range - Current range the AD5421 is configured for.
++ * @AD5421_CURRENT_RANGE_4mA_20mA: 4 mA to 20 mA (RANGE1,0 pins = 00)
++ * @AD5421_CURRENT_RANGE_3mA8_21mA: 3.8 mA to 21 mA (RANGE1,0 pins = x1)
++ * @AD5421_CURRENT_RANGE_3mA2_24mA: 3.2 mA to 24 mA (RANGE1,0 pins = 10)
++ */
++
++enum ad5421_current_range {
++	AD5421_CURRENT_RANGE_4mA_20mA,
++	AD5421_CURRENT_RANGE_3mA8_21mA,
++	AD5421_CURRENT_RANGE_3mA2_24mA,
++};
++
++/**
++ * struct ad5421_platform_data - AD5421 DAC driver platform data
++ * @external_vref: whether an external reference voltage is used or not
++ * @current_range: Current range the AD5421 is configured for
++ */
++
++struct ad5421_platform_data {
++	bool external_vref;
++	enum ad5421_current_range current_range;
++};
++
++#endif
+diff --git a/include/linux/iio/dac/ad5504.h b/include/linux/iio/dac/ad5504.h
+new file mode 100644
+index 0000000..4389537
+--- /dev/null
++++ b/include/linux/iio/dac/ad5504.h
+@@ -0,0 +1,16 @@
++/*
++ * AD5504 SPI DAC driver
++ *
++ * Copyright 2011 Analog Devices Inc.
++ *
++ * Licensed under the GPL-2.
++ */
++
++#ifndef SPI_AD5504_H_
++#define SPI_AD5504_H_
++
++struct ad5504_platform_data {
++	u16				vref_mv;
++};
++
++#endif /* SPI_AD5504_H_ */
+diff --git a/include/linux/iio/dac/ad5791.h b/include/linux/iio/dac/ad5791.h
+new file mode 100644
+index 0000000..45ee281
+--- /dev/null
++++ b/include/linux/iio/dac/ad5791.h
+@@ -0,0 +1,25 @@
++/*
++ * AD5791 SPI DAC driver
++ *
++ * Copyright 2011 Analog Devices Inc.
++ *
++ * Licensed under the GPL-2.
++ */
++
++#ifndef SPI_AD5791_H_
++#define SPI_AD5791_H_
++
++/**
++ * struct ad5791_platform_data - platform specific information
++ * @vref_pos_mv:	Vdd Positive Analog Supply Volatge (mV)
++ * @vref_neg_mv:	Vdd Negative Analog Supply Volatge (mV)
++ * @use_rbuf_gain2:	ext. amplifier connected in gain of two configuration
++ */
++
++struct ad5791_platform_data {
++	u16				vref_pos_mv;
++	u16				vref_neg_mv;
++	bool				use_rbuf_gain2;
++};
++
++#endif /* SPI_AD5791_H_ */
+diff --git a/include/linux/iio/dac/max517.h b/include/linux/iio/dac/max517.h
+new file mode 100644
+index 0000000..f6d1d25
+--- /dev/null
++++ b/include/linux/iio/dac/max517.h
+@@ -0,0 +1,15 @@
++/*
++ * MAX517 DAC driver
++ *
++ * Copyright 2011 Roland Stigge <stigge@antcom.de>
++ *
++ * Licensed under the GPL-2 or later.
++ */
++#ifndef IIO_DAC_MAX517_H_
++#define IIO_DAC_MAX517_H_
++
++struct max517_platform_data {
++	u16				vref_mv[2];
++};
++
++#endif /* IIO_DAC_MAX517_H_ */
+diff --git a/include/linux/iio/dac/mcp4725.h b/include/linux/iio/dac/mcp4725.h
+new file mode 100644
+index 0000000..91530e6
+--- /dev/null
++++ b/include/linux/iio/dac/mcp4725.h
+@@ -0,0 +1,16 @@
++/*
++ * MCP4725 DAC driver
++ *
++ * Copyright (C) 2012 Peter Meerwald <pmeerw@pmeerw.net>
++ *
++ * Licensed under the GPL-2 or later.
++ */
++
++#ifndef IIO_DAC_MCP4725_H_
++#define IIO_DAC_MCP4725_H_
++
++struct mcp4725_platform_data {
++	u16 vref_mv;
++};
++
++#endif /* IIO_DAC_MCP4725_H_ */
+diff --git a/include/linux/iio/driver.h b/include/linux/iio/driver.h
+new file mode 100644
+index 0000000..7dfb10e
+--- /dev/null
++++ b/include/linux/iio/driver.h
+@@ -0,0 +1,31 @@
++/*
++ * Industrial I/O in kernel access map interface.
++ *
++ * Copyright (c) 2011 Jonathan Cameron
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 as published by
++ * the Free Software Foundation.
++ */
++
++#ifndef _IIO_INKERN_H_
++#define _IIO_INKERN_H_
++
++struct iio_map;
++
++/**
++ * iio_map_array_register() - tell the core about inkernel consumers
++ * @indio_dev:	provider device
++ * @map:	array of mappings specifying association of channel with client
++ */
++int iio_map_array_register(struct iio_dev *indio_dev,
++			   struct iio_map *map);
++
++/**
++ * iio_map_array_unregister() - tell the core to remove consumer mappings for
++ *				the given provider device
++ * @indio_dev:	provider device
++ */
++int iio_map_array_unregister(struct iio_dev *indio_dev);
++
++#endif
+diff --git a/include/linux/iio/events.h b/include/linux/iio/events.h
+new file mode 100644
+index 0000000..8bbd7bc
+--- /dev/null
++++ b/include/linux/iio/events.h
+@@ -0,0 +1,87 @@
++/* The industrial I/O - event passing to userspace
++ *
++ * Copyright (c) 2008-2011 Jonathan Cameron
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 as published by
++ * the Free Software Foundation.
++ */
++#ifndef _IIO_EVENTS_H_
++#define _IIO_EVENTS_H_
++
++#include <linux/ioctl.h>
++#include <linux/types.h>
++#include <linux/iio/types.h>
++
++/**
++ * struct iio_event_data - The actual event being pushed to userspace
++ * @id:		event identifier
++ * @timestamp:	best estimate of time of event occurrence (often from
++ *		the interrupt handler)
++ */
++struct iio_event_data {
++	__u64	id;
++	__s64	timestamp;
++};
++
++#define IIO_GET_EVENT_FD_IOCTL _IOR('i', 0x90, int)
++
++/**
++ * IIO_EVENT_CODE() - create event identifier
++ * @chan_type:	Type of the channel. Should be one of enum iio_chan_type.
++ * @diff:	Whether the event is for an differential channel or not.
++ * @modifier:	Modifier for the channel. Should be one of enum iio_modifier.
++ * @direction:	Direction of the event. One of enum iio_event_direction.
++ * @type:	Type of the event. Should be one of enum iio_event_type.
++ * @chan:	Channel number for non-differential channels.
++ * @chan1:	First channel number for differential channels.
++ * @chan2:	Second channel number for differential channels.
++ */
++
++#define IIO_EVENT_CODE(chan_type, diff, modifier, direction,		\
++		       type, chan, chan1, chan2)			\
++	(((u64)type << 56) | ((u64)diff << 55) |			\
++	 ((u64)direction << 48) | ((u64)modifier << 40) |		\
++	 ((u64)chan_type << 32) | (((u16)chan2) << 16) | ((u16)chan1) | \
++	 ((u16)chan))
++
++
++/**
++ * IIO_MOD_EVENT_CODE() - create event identifier for modified channels
++ * @chan_type:	Type of the channel. Should be one of enum iio_chan_type.
++ * @number:	Channel number.
++ * @modifier:	Modifier for the channel. Should be one of enum iio_modifier.
++ * @type:	Type of the event. Should be one of enum iio_event_type.
++ * @direction:	Direction of the event. One of enum iio_event_direction.
++ */
++
++#define IIO_MOD_EVENT_CODE(chan_type, number, modifier,		\
++			   type, direction)				\
++	IIO_EVENT_CODE(chan_type, 0, modifier, direction, type, number, 0, 0)
++
++/**
++ * IIO_UNMOD_EVENT_CODE() - create event identifier for unmodified channels
++ * @chan_type:	Type of the channel. Should be one of enum iio_chan_type.
++ * @number:	Channel number.
++ * @type:	Type of the event. Should be one of enum iio_event_type.
++ * @direction:	Direction of the event. One of enum iio_event_direction.
++ */
++
++#define IIO_UNMOD_EVENT_CODE(chan_type, number, type, direction)	\
++	IIO_EVENT_CODE(chan_type, 0, 0, direction, type, number, 0, 0)
++
++#define IIO_EVENT_CODE_EXTRACT_TYPE(mask) ((mask >> 56) & 0xFF)
++
++#define IIO_EVENT_CODE_EXTRACT_DIR(mask) ((mask >> 48) & 0xCF)
++
++#define IIO_EVENT_CODE_EXTRACT_CHAN_TYPE(mask) ((mask >> 32) & 0xFF)
++
++/* Event code number extraction depends on which type of event we have.
++ * Perhaps review this function in the future*/
++#define IIO_EVENT_CODE_EXTRACT_CHAN(mask) ((__s16)(mask & 0xFFFF))
++#define IIO_EVENT_CODE_EXTRACT_CHAN2(mask) ((__s16)(((mask) >> 16) & 0xFFFF))
++
++#define IIO_EVENT_CODE_EXTRACT_MODIFIER(mask) ((mask >> 40) & 0xFF)
++#define IIO_EVENT_CODE_EXTRACT_DIFF(mask) (((mask) >> 55) & 0x1)
++
++#endif
+diff --git a/include/linux/iio/frequency/ad9523.h b/include/linux/iio/frequency/ad9523.h
+new file mode 100644
+index 0000000..12ce3ee
+--- /dev/null
++++ b/include/linux/iio/frequency/ad9523.h
+@@ -0,0 +1,195 @@
++/*
++ * AD9523 SPI Low Jitter Clock Generator
++ *
++ * Copyright 2012 Analog Devices Inc.
++ *
++ * Licensed under the GPL-2.
++ */
++
++#ifndef IIO_FREQUENCY_AD9523_H_
++#define IIO_FREQUENCY_AD9523_H_
++
++enum outp_drv_mode {
++	TRISTATE,
++	LVPECL_8mA,
++	LVDS_4mA,
++	LVDS_7mA,
++	HSTL0_16mA,
++	HSTL1_8mA,
++	CMOS_CONF1,
++	CMOS_CONF2,
++	CMOS_CONF3,
++	CMOS_CONF4,
++	CMOS_CONF5,
++	CMOS_CONF6,
++	CMOS_CONF7,
++	CMOS_CONF8,
++	CMOS_CONF9
++};
++
++enum ref_sel_mode {
++	NONEREVERTIVE_STAY_ON_REFB,
++	REVERT_TO_REFA,
++	SELECT_REFA,
++	SELECT_REFB,
++	EXT_REF_SEL
++};
++
++/**
++ * struct ad9523_channel_spec - Output channel configuration
++ *
++ * @channel_num: Output channel number.
++ * @divider_output_invert_en: Invert the polarity of the output clock.
++ * @sync_ignore_en: Ignore chip-level SYNC signal.
++ * @low_power_mode_en: Reduce power used in the differential output modes.
++ * @use_alt_clock_src: Channel divider uses alternative clk source.
++ * @output_dis: Disables, powers down the entire channel.
++ * @driver_mode: Output driver mode (logic level family).
++ * @divider_phase: Divider initial phase after a SYNC. Range 0..63
++		   LSB = 1/2 of a period of the divider input clock.
++ * @channel_divider: 10-bit channel divider.
++ * @extended_name: Optional descriptive channel name.
++ */
++
++struct ad9523_channel_spec {
++	unsigned		channel_num;
++	bool			divider_output_invert_en;
++	bool			sync_ignore_en;
++	bool			low_power_mode_en;
++				 /* CH0..CH3 VCXO, CH4..CH9 VCO2 */
++	bool			use_alt_clock_src;
++	bool			output_dis;
++	enum outp_drv_mode	driver_mode;
++	unsigned char		divider_phase;
++	unsigned short		channel_divider;
++	char			extended_name[16];
++};
++
++enum pll1_rzero_resistor {
++	RZERO_883_OHM,
++	RZERO_677_OHM,
++	RZERO_341_OHM,
++	RZERO_135_OHM,
++	RZERO_10_OHM,
++	RZERO_USE_EXT_RES = 8,
++};
++
++enum rpole2_resistor {
++	RPOLE2_900_OHM,
++	RPOLE2_450_OHM,
++	RPOLE2_300_OHM,
++	RPOLE2_225_OHM,
++};
++
++enum rzero_resistor {
++	RZERO_3250_OHM,
++	RZERO_2750_OHM,
++	RZERO_2250_OHM,
++	RZERO_2100_OHM,
++	RZERO_3000_OHM,
++	RZERO_2500_OHM,
++	RZERO_2000_OHM,
++	RZERO_1850_OHM,
++};
++
++enum cpole1_capacitor {
++	CPOLE1_0_PF,
++	CPOLE1_8_PF,
++	CPOLE1_16_PF,
++	CPOLE1_24_PF,
++	_CPOLE1_24_PF, /* place holder */
++	CPOLE1_32_PF,
++	CPOLE1_40_PF,
++	CPOLE1_48_PF,
++};
++
++/**
++ * struct ad9523_platform_data - platform specific information
++ *
++ * @vcxo_freq: External VCXO frequency in Hz
++ * @refa_diff_rcv_en: REFA differential/single-ended input selection.
++ * @refb_diff_rcv_en: REFB differential/single-ended input selection.
++ * @zd_in_diff_en: Zero Delay differential/single-ended input selection.
++ * @osc_in_diff_en: OSC differential/ single-ended input selection.
++ * @refa_cmos_neg_inp_en: REFA single-ended neg./pos. input enable.
++ * @refb_cmos_neg_inp_en: REFB single-ended neg./pos. input enable.
++ * @zd_in_cmos_neg_inp_en: Zero Delay single-ended neg./pos. input enable.
++ * @osc_in_cmos_neg_inp_en: OSC single-ended neg./pos. input enable.
++ * @refa_r_div: PLL1 10-bit REFA R divider.
++ * @refb_r_div: PLL1 10-bit REFB R divider.
++ * @pll1_feedback_div: PLL1 10-bit Feedback N divider.
++ * @pll1_charge_pump_current_nA: Magnitude of PLL1 charge pump current (nA).
++ * @zero_delay_mode_internal_en: Internal, external Zero Delay mode selection.
++ * @osc_in_feedback_en: PLL1 feedback path, local feedback from
++ *			the OSC_IN receiver or zero delay mode
++ * @pll1_loop_filter_rzero: PLL1 Loop Filter Zero Resistor selection.
++ * @ref_mode: Reference selection mode.
++ * @pll2_charge_pump_current_nA: Magnitude of PLL2 charge pump current (nA).
++ * @pll2_ndiv_a_cnt: PLL2 Feedback N-divider, A Counter, range 0..4.
++ * @pll2_ndiv_b_cnt: PLL2 Feedback N-divider, B Counter, range 0..63.
++ * @pll2_freq_doubler_en: PLL2 frequency doubler enable.
++ * @pll2_r2_div: PLL2 R2 divider, range 0..31.
++ * @pll2_vco_diff_m1: VCO1 divider, range 3..5.
++ * @pll2_vco_diff_m2: VCO2 divider, range 3..5.
++ * @rpole2: PLL2 loop filter Rpole resistor value.
++ * @rzero: PLL2 loop filter Rzero resistor value.
++ * @cpole1: PLL2 loop filter Cpole capacitor value.
++ * @rzero_bypass_en: PLL2 loop filter Rzero bypass enable.
++ * @num_channels: Array size of struct ad9523_channel_spec.
++ * @channels: Pointer to channel array.
++ * @name: Optional alternative iio device name.
++ */
++
++struct ad9523_platform_data {
++	unsigned long vcxo_freq;
++
++	/* Differential/ Single-Ended Input Configuration */
++	bool				refa_diff_rcv_en;
++	bool				refb_diff_rcv_en;
++	bool				zd_in_diff_en;
++	bool				osc_in_diff_en;
++
++	/*
++	 * Valid if differential input disabled
++	 * if false defaults to pos input
++	 */
++	bool				refa_cmos_neg_inp_en;
++	bool				refb_cmos_neg_inp_en;
++	bool				zd_in_cmos_neg_inp_en;
++	bool				osc_in_cmos_neg_inp_en;
++
++	/* PLL1 Setting */
++	unsigned short			refa_r_div;
++	unsigned short			refb_r_div;
++	unsigned short			pll1_feedback_div;
++	unsigned short			pll1_charge_pump_current_nA;
++	bool				zero_delay_mode_internal_en;
++	bool				osc_in_feedback_en;
++	enum pll1_rzero_resistor	pll1_loop_filter_rzero;
++
++	/* Reference */
++	enum ref_sel_mode		ref_mode;
++
++	/* PLL2 Setting */
++	unsigned int			pll2_charge_pump_current_nA;
++	unsigned char			pll2_ndiv_a_cnt;
++	unsigned char			pll2_ndiv_b_cnt;
++	bool				pll2_freq_doubler_en;
++	unsigned char			pll2_r2_div;
++	unsigned char			pll2_vco_diff_m1; /* 3..5 */
++	unsigned char			pll2_vco_diff_m2; /* 3..5 */
++
++	/* Loop Filter PLL2 */
++	enum rpole2_resistor		rpole2;
++	enum rzero_resistor		rzero;
++	enum cpole1_capacitor		cpole1;
++	bool				rzero_bypass_en;
++
++	/* Output Channel Configuration */
++	int				num_channels;
++	struct ad9523_channel_spec	*channels;
++
++	char				name[SPI_NAME_SIZE];
++};
++
++#endif /* IIO_FREQUENCY_AD9523_H_ */
+diff --git a/include/linux/iio/frequency/adf4350.h b/include/linux/iio/frequency/adf4350.h
+new file mode 100644
+index 0000000..ffd8c8f
+--- /dev/null
++++ b/include/linux/iio/frequency/adf4350.h
+@@ -0,0 +1,128 @@
++/*
++ * ADF4350/ADF4351 SPI PLL driver
++ *
++ * Copyright 2012-2013 Analog Devices Inc.
++ *
++ * Licensed under the GPL-2.
++ */
++
++#ifndef IIO_PLL_ADF4350_H_
++#define IIO_PLL_ADF4350_H_
++
++/* Registers */
++#define ADF4350_REG0	0
++#define ADF4350_REG1	1
++#define ADF4350_REG2	2
++#define ADF4350_REG3	3
++#define ADF4350_REG4	4
++#define ADF4350_REG5	5
++
++/* REG0 Bit Definitions */
++#define ADF4350_REG0_FRACT(x)			(((x) & 0xFFF) << 3)
++#define ADF4350_REG0_INT(x)			(((x) & 0xFFFF) << 15)
++
++/* REG1 Bit Definitions */
++#define ADF4350_REG1_MOD(x)			(((x) & 0xFFF) << 3)
++#define ADF4350_REG1_PHASE(x)			(((x) & 0xFFF) << 15)
++#define ADF4350_REG1_PRESCALER			(1 << 27)
++
++/* REG2 Bit Definitions */
++#define ADF4350_REG2_COUNTER_RESET_EN		(1 << 3)
++#define ADF4350_REG2_CP_THREESTATE_EN		(1 << 4)
++#define ADF4350_REG2_POWER_DOWN_EN		(1 << 5)
++#define ADF4350_REG2_PD_POLARITY_POS		(1 << 6)
++#define ADF4350_REG2_LDP_6ns			(1 << 7)
++#define ADF4350_REG2_LDP_10ns			(0 << 7)
++#define ADF4350_REG2_LDF_FRACT_N		(0 << 8)
++#define ADF4350_REG2_LDF_INT_N			(1 << 8)
++#define ADF4350_REG2_CHARGE_PUMP_CURR_uA(x)	(((((x)-312) / 312) & 0xF) << 9)
++#define ADF4350_REG2_DOUBLE_BUFF_EN		(1 << 13)
++#define ADF4350_REG2_10BIT_R_CNT(x)		((x) << 14)
++#define ADF4350_REG2_RDIV2_EN			(1 << 24)
++#define ADF4350_REG2_RMULT2_EN			(1 << 25)
++#define ADF4350_REG2_MUXOUT(x)			((x) << 26)
++#define ADF4350_REG2_NOISE_MODE(x)		(((unsigned)(x)) << 29)
++#define ADF4350_MUXOUT_THREESTATE		0
++#define ADF4350_MUXOUT_DVDD			1
++#define ADF4350_MUXOUT_GND			2
++#define ADF4350_MUXOUT_R_DIV_OUT		3
++#define ADF4350_MUXOUT_N_DIV_OUT		4
++#define ADF4350_MUXOUT_ANALOG_LOCK_DETECT	5
++#define ADF4350_MUXOUT_DIGITAL_LOCK_DETECT	6
++
++/* REG3 Bit Definitions */
++#define ADF4350_REG3_12BIT_CLKDIV(x)		((x) << 3)
++#define ADF4350_REG3_12BIT_CLKDIV_MODE(x)	((x) << 16)
++#define ADF4350_REG3_12BIT_CSR_EN		(1 << 18)
++#define ADF4351_REG3_CHARGE_CANCELLATION_EN	(1 << 21)
++#define ADF4351_REG3_ANTI_BACKLASH_3ns_EN	(1 << 22)
++#define ADF4351_REG3_BAND_SEL_CLOCK_MODE_HIGH	(1 << 23)
++
++/* REG4 Bit Definitions */
++#define ADF4350_REG4_OUTPUT_PWR(x)		((x) << 3)
++#define ADF4350_REG4_RF_OUT_EN			(1 << 5)
++#define ADF4350_REG4_AUX_OUTPUT_PWR(x)		((x) << 6)
++#define ADF4350_REG4_AUX_OUTPUT_EN		(1 << 8)
++#define ADF4350_REG4_AUX_OUTPUT_FUND		(1 << 9)
++#define ADF4350_REG4_AUX_OUTPUT_DIV		(0 << 9)
++#define ADF4350_REG4_MUTE_TILL_LOCK_EN		(1 << 10)
++#define ADF4350_REG4_VCO_PWRDOWN_EN		(1 << 11)
++#define ADF4350_REG4_8BIT_BAND_SEL_CLKDIV(x)	((x) << 12)
++#define ADF4350_REG4_RF_DIV_SEL(x)		((x) << 20)
++#define ADF4350_REG4_FEEDBACK_DIVIDED		(0 << 23)
++#define ADF4350_REG4_FEEDBACK_FUND		(1 << 23)
++
++/* REG5 Bit Definitions */
++#define ADF4350_REG5_LD_PIN_MODE_LOW		(0 << 22)
++#define ADF4350_REG5_LD_PIN_MODE_DIGITAL	(1 << 22)
++#define ADF4350_REG5_LD_PIN_MODE_HIGH		(3 << 22)
++
++/* Specifications */
++#define ADF4350_MAX_OUT_FREQ		4400000000ULL /* Hz */
++#define ADF4350_MIN_OUT_FREQ		137500000 /* Hz */
++#define ADF4351_MIN_OUT_FREQ		34375000 /* Hz */
++#define ADF4350_MIN_VCO_FREQ		2200000000ULL /* Hz */
++#define ADF4350_MAX_FREQ_45_PRESC	3000000000ULL /* Hz */
++#define ADF4350_MAX_FREQ_PFD		32000000 /* Hz */
++#define ADF4350_MAX_BANDSEL_CLK		125000 /* Hz */
++#define ADF4350_MAX_FREQ_REFIN		250000000 /* Hz */
++#define ADF4350_MAX_MODULUS		4095
++#define ADF4350_MAX_R_CNT		1023
++
++
++/**
++ * struct adf4350_platform_data - platform specific information
++ * @name:		Optional device name.
++ * @clkin:		REFin frequency in Hz.
++ * @channel_spacing:	Channel spacing in Hz (influences MODULUS).
++ * @power_up_frequency:	Optional, If set in Hz the PLL tunes to the desired
++ *			frequency on probe.
++ * @ref_div_factor:	Optional, if set the driver skips dynamic calculation
++ *			and uses this default value instead.
++ * @ref_doubler_en:	Enables reference doubler.
++ * @ref_div2_en:	Enables reference divider.
++ * @r2_user_settings:	User defined settings for ADF4350/1 REGISTER_2.
++ * @r3_user_settings:	User defined settings for ADF4350/1 REGISTER_3.
++ * @r4_user_settings:	User defined settings for ADF4350/1 REGISTER_4.
++ * @gpio_lock_detect:	Optional, if set with a valid GPIO number,
++ *			pll lock state is tested upon read.
++ *			If not used - set to -1.
++ */
++
++struct adf4350_platform_data {
++	char			name[32];
++	unsigned long		clkin;
++	unsigned long		channel_spacing;
++	unsigned long long	power_up_frequency;
++
++	unsigned short		ref_div_factor; /* 10-bit R counter */
++	bool			ref_doubler_en;
++	bool			ref_div2_en;
++
++	unsigned		r2_user_settings;
++	unsigned		r3_user_settings;
++	unsigned		r4_user_settings;
++	int			gpio_lock_detect;
++};
++
++#endif /* IIO_PLL_ADF4350_H_ */
+diff --git a/include/linux/iio/gyro/itg3200.h b/include/linux/iio/gyro/itg3200.h
+new file mode 100644
+index 0000000..2a82085
+--- /dev/null
++++ b/include/linux/iio/gyro/itg3200.h
+@@ -0,0 +1,154 @@
++/*
++ * itg3200.h -- support InvenSense ITG3200
++ *              Digital 3-Axis Gyroscope driver
++ *
++ * Copyright (c) 2011 Christian Strobel <christian.strobel@iis.fraunhofer.de>
++ * Copyright (c) 2011 Manuel Stahl <manuel.stahl@iis.fraunhofer.de>
++ * Copyright (c) 2012 Thorsten Nowak <thorsten.nowak@iis.fraunhofer.de>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
++
++#ifndef I2C_ITG3200_H_
++#define I2C_ITG3200_H_
++
++#include <linux/iio/iio.h>
++
++/* Register with I2C address (34h) */
++#define ITG3200_REG_ADDRESS		0x00
++
++/* Sample rate divider
++ * Range: 0 to 255
++ * Default value: 0x00 */
++#define ITG3200_REG_SAMPLE_RATE_DIV	0x15
++
++/* Digital low pass filter settings */
++#define ITG3200_REG_DLPF		0x16
++/* DLPF full scale range */
++#define ITG3200_DLPF_FS_SEL_2000	0x18
++/* Bandwidth (Hz) and internal sample rate
++ * (kHz) of DLPF */
++#define ITG3200_DLPF_256_8		0x00
++#define ITG3200_DLPF_188_1		0x01
++#define ITG3200_DLPF_98_1		0x02
++#define ITG3200_DLPF_42_1		0x03
++#define ITG3200_DLPF_20_1		0x04
++#define ITG3200_DLPF_10_1		0x05
++#define ITG3200_DLPF_5_1		0x06
++
++#define ITG3200_DLPF_CFG_MASK		0x07
++
++/* Configuration for interrupt operations */
++#define ITG3200_REG_IRQ_CONFIG		0x17
++/* Logic level */
++#define ITG3200_IRQ_ACTIVE_LOW		0x80
++#define ITG3200_IRQ_ACTIVE_HIGH		0x00
++/* Drive type */
++#define ITG3200_IRQ_OPEN_DRAIN		0x40
++#define ITG3200_IRQ_PUSH_PULL		0x00
++/* Latch mode */
++#define ITG3200_IRQ_LATCH_UNTIL_CLEARED	0x20
++#define ITG3200_IRQ_LATCH_50US_PULSE	0x00
++/* Latch clear method */
++#define ITG3200_IRQ_LATCH_CLEAR_ANY	0x10
++#define ITG3200_IRQ_LATCH_CLEAR_STATUS	0x00
++/* Enable interrupt when device is ready */
++#define ITG3200_IRQ_DEVICE_RDY_ENABLE	0x04
++/* Enable interrupt when data is available */
++#define ITG3200_IRQ_DATA_RDY_ENABLE	0x01
++
++/* Determine the status of ITG-3200 interrupts */
++#define ITG3200_REG_IRQ_STATUS		0x1A
++/* Status of 'device is ready'-interrupt */
++#define ITG3200_IRQ_DEVICE_RDY_STATUS	0x04
++/* Status of 'data is available'-interrupt */
++#define ITG3200_IRQ_DATA_RDY_STATUS	0x01
++
++/* Sensor registers */
++#define ITG3200_REG_TEMP_OUT_H		0x1B
++#define ITG3200_REG_TEMP_OUT_L		0x1C
++#define ITG3200_REG_GYRO_XOUT_H		0x1D
++#define ITG3200_REG_GYRO_XOUT_L		0x1E
++#define ITG3200_REG_GYRO_YOUT_H		0x1F
++#define ITG3200_REG_GYRO_YOUT_L		0x20
++#define ITG3200_REG_GYRO_ZOUT_H		0x21
++#define ITG3200_REG_GYRO_ZOUT_L		0x22
++
++/* Power management */
++#define ITG3200_REG_POWER_MANAGEMENT	0x3E
++/* Reset device and internal registers to the
++ * power-up-default settings */
++#define ITG3200_RESET			0x80
++/* Enable low power sleep mode */
++#define ITG3200_SLEEP			0x40
++/* Put according gyroscope in standby mode */
++#define ITG3200_STANDBY_GYRO_X		0x20
++#define ITG3200_STANDBY_GYRO_Y		0x10
++#define ITG3200_STANDBY_GYRO_Z		0x08
++/* Determine the device clock source */
++#define ITG3200_CLK_INTERNAL		0x00
++#define ITG3200_CLK_GYRO_X		0x01
++#define ITG3200_CLK_GYRO_Y		0x02
++#define ITG3200_CLK_GYRO_Z		0x03
++#define ITG3200_CLK_EXT_32K		0x04
++#define ITG3200_CLK_EXT_19M		0x05
++
++
++/**
++ * struct itg3200 - device instance specific data
++ * @i2c:    actual i2c_client
++ * @trig:   data ready trigger from itg3200 pin
++ **/
++struct itg3200 {
++	struct i2c_client	*i2c;
++	struct iio_trigger	*trig;
++};
++
++enum ITG3200_SCAN_INDEX {
++	ITG3200_SCAN_TEMP,
++	ITG3200_SCAN_GYRO_X,
++	ITG3200_SCAN_GYRO_Y,
++	ITG3200_SCAN_GYRO_Z,
++	ITG3200_SCAN_ELEMENTS,
++};
++
++int itg3200_write_reg_8(struct iio_dev *indio_dev,
++		u8 reg_address, u8 val);
++
++int itg3200_read_reg_8(struct iio_dev *indio_dev,
++		u8 reg_address, u8 *val);
++
++
++#ifdef CONFIG_IIO_BUFFER
++
++void itg3200_remove_trigger(struct iio_dev *indio_dev);
++int itg3200_probe_trigger(struct iio_dev *indio_dev);
++
++int itg3200_buffer_configure(struct iio_dev *indio_dev);
++void itg3200_buffer_unconfigure(struct iio_dev *indio_dev);
++
++#else /* CONFIG_IIO_BUFFER */
++
++static inline void itg3200_remove_trigger(struct iio_dev *indio_dev)
++{
++}
++
++static inline int itg3200_probe_trigger(struct iio_dev *indio_dev)
++{
++	return 0;
++}
++
++static inline int itg3200_buffer_configure(struct iio_dev *indio_dev)
++{
++	return 0;
++}
++
++static inline void itg3200_buffer_unconfigure(struct iio_dev *indio_dev)
++{
++}
++
++#endif  /* CONFIG_IIO_BUFFER */
++
++#endif /* ITG3200_H_ */
+diff --git a/include/linux/iio/iio.h b/include/linux/iio/iio.h
+new file mode 100644
+index 0000000..ccde917
+--- /dev/null
++++ b/include/linux/iio/iio.h
+@@ -0,0 +1,631 @@
++
++/* The industrial I/O core
++ *
++ * Copyright (c) 2008 Jonathan Cameron
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 as published by
++ * the Free Software Foundation.
++ */
++#ifndef _INDUSTRIAL_IO_H_
++#define _INDUSTRIAL_IO_H_
++
++#include <linux/device.h>
++#include <linux/cdev.h>
++#include <linux/iio/types.h>
++/* IIO TODO LIST */
++/*
++ * Provide means of adjusting timer accuracy.
++ * Currently assumes nano seconds.
++ */
++
++enum iio_chan_info_enum {
++	IIO_CHAN_INFO_RAW = 0,
++	IIO_CHAN_INFO_PROCESSED,
++	IIO_CHAN_INFO_SCALE,
++	IIO_CHAN_INFO_OFFSET,
++	IIO_CHAN_INFO_CALIBSCALE,
++	IIO_CHAN_INFO_CALIBBIAS,
++	IIO_CHAN_INFO_PEAK,
++	IIO_CHAN_INFO_PEAK_SCALE,
++	IIO_CHAN_INFO_QUADRATURE_CORRECTION_RAW,
++	IIO_CHAN_INFO_AVERAGE_RAW,
++	IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY,
++	IIO_CHAN_INFO_SAMP_FREQ,
++	IIO_CHAN_INFO_FREQUENCY,
++	IIO_CHAN_INFO_PHASE,
++	IIO_CHAN_INFO_HARDWAREGAIN,
++	IIO_CHAN_INFO_HYSTERESIS,
++	IIO_CHAN_INFO_INT_TIME,
++};
++
++enum iio_shared_by {
++	IIO_SEPARATE,
++	IIO_SHARED_BY_TYPE,
++	IIO_SHARED_BY_DIR,
++	IIO_SHARED_BY_ALL
++};
++
++enum iio_endian {
++	IIO_CPU,
++	IIO_BE,
++	IIO_LE,
++};
++
++struct iio_chan_spec;
++struct iio_dev;
++
++/**
++ * struct iio_chan_spec_ext_info - Extended channel info attribute
++ * @name:	Info attribute name
++ * @shared:	Whether this attribute is shared between all channels.
++ * @read:	Read callback for this info attribute, may be NULL.
++ * @write:	Write callback for this info attribute, may be NULL.
++ * @private:	Data private to the driver.
++ */
++struct iio_chan_spec_ext_info {
++	const char *name;
++	enum iio_shared_by shared;
++	ssize_t (*read)(struct iio_dev *, uintptr_t private,
++			struct iio_chan_spec const *, char *buf);
++	ssize_t (*write)(struct iio_dev *, uintptr_t private,
++			 struct iio_chan_spec const *, const char *buf,
++			 size_t len);
++	uintptr_t private;
++};
++
++/**
++ * struct iio_enum - Enum channel info attribute
++ * @items:	An array of strings.
++ * @num_items:	Length of the item array.
++ * @set:	Set callback function, may be NULL.
++ * @get:	Get callback function, may be NULL.
++ *
++ * The iio_enum struct can be used to implement enum style channel attributes.
++ * Enum style attributes are those which have a set of strings which map to
++ * unsigned integer values. The IIO enum helper code takes care of mapping
++ * between value and string as well as generating a "_available" file which
++ * contains a list of all available items. The set callback will be called when
++ * the attribute is updated. The last parameter is the index to the newly
++ * activated item. The get callback will be used to query the currently active
++ * item and is supposed to return the index for it.
++ */
++struct iio_enum {
++	const char * const *items;
++	unsigned int num_items;
++	int (*set)(struct iio_dev *, const struct iio_chan_spec *, unsigned int);
++	int (*get)(struct iio_dev *, const struct iio_chan_spec *);
++};
++
++ssize_t iio_enum_available_read(struct iio_dev *indio_dev,
++	uintptr_t priv, const struct iio_chan_spec *chan, char *buf);
++ssize_t iio_enum_read(struct iio_dev *indio_dev,
++	uintptr_t priv, const struct iio_chan_spec *chan, char *buf);
++ssize_t iio_enum_write(struct iio_dev *indio_dev,
++	uintptr_t priv, const struct iio_chan_spec *chan, const char *buf,
++	size_t len);
++
++/**
++ * IIO_ENUM() - Initialize enum extended channel attribute
++ * @_name:	Attribute name
++ * @_shared:	Whether the attribute is shared between all channels
++ * @_e:		Pointer to an iio_enum struct
++ *
++ * This should usually be used together with IIO_ENUM_AVAILABLE()
++ */
++#define IIO_ENUM(_name, _shared, _e) \
++{ \
++	.name = (_name), \
++	.shared = (_shared), \
++	.read = iio_enum_read, \
++	.write = iio_enum_write, \
++	.private = (uintptr_t)(_e), \
++}
++
++/**
++ * IIO_ENUM_AVAILABLE() - Initialize enum available extended channel attribute
++ * @_name:	Attribute name ("_available" will be appended to the name)
++ * @_e:		Pointer to an iio_enum struct
++ *
++ * Creates a read only attribute which lists all the available enum items in a
++ * space separated list. This should usually be used together with IIO_ENUM()
++ */
++#define IIO_ENUM_AVAILABLE(_name, _e) \
++{ \
++	.name = (_name "_available"), \
++	.shared = IIO_SHARED_BY_TYPE, \
++	.read = iio_enum_available_read, \
++	.private = (uintptr_t)(_e), \
++}
++
++/**
++ * struct iio_event_spec - specification for a channel event
++ * @type:		    Type of the event
++ * @dir:		    Direction of the event
++ * @mask_separate:	    Bit mask of enum iio_event_info values. Attributes
++ *			    set in this mask will be registered per channel.
++ * @mask_shared_by_type:    Bit mask of enum iio_event_info values. Attributes
++ *			    set in this mask will be shared by channel type.
++ * @mask_shared_by_dir:	    Bit mask of enum iio_event_info values. Attributes
++ *			    set in this mask will be shared by channel type and
++ *			    direction.
++ * @mask_shared_by_all:	    Bit mask of enum iio_event_info values. Attributes
++ *			    set in this mask will be shared by all channels.
++ */
++struct iio_event_spec {
++	enum iio_event_type type;
++	enum iio_event_direction dir;
++	unsigned long mask_separate;
++	unsigned long mask_shared_by_type;
++	unsigned long mask_shared_by_dir;
++	unsigned long mask_shared_by_all;
++};
++
++/**
++ * struct iio_chan_spec - specification of a single channel
++ * @type:		What type of measurement is the channel making.
++ * @channel:		What number do we wish to assign the channel.
++ * @channel2:		If there is a second number for a differential
++ *			channel then this is it. If modified is set then the
++ *			value here specifies the modifier.
++ * @address:		Driver specific identifier.
++ * @scan_index:		Monotonic index to give ordering in scans when read
++ *			from a buffer.
++ * @scan_type:		Sign:		's' or 'u' to specify signed or unsigned
++ *			realbits:	Number of valid bits of data
++ *			storage_bits:	Realbits + padding
++ *			shift:		Shift right by this before masking out
++ *					realbits.
++ *			endianness:	little or big endian
++ *			repeat:		Number of times real/storage bits
++ *					repeats. When the repeat element is
++ *					more than 1, then the type element in
++ *					sysfs will show a repeat value.
++ *					Otherwise, the number of repetitions is
++ *					omitted.
++ * @info_mask_separate: What information is to be exported that is specific to
++ *			this channel.
++ * @info_mask_shared_by_type: What information is to be exported that is shared
++ *			by all channels of the same type.
++ * @info_mask_shared_by_dir: What information is to be exported that is shared
++ *			by all channels of the same direction.
++ * @info_mask_shared_by_all: What information is to be exported that is shared
++ *			by all channels.
++ * @event_spec:		Array of events which should be registered for this
++ *			channel.
++ * @num_event_specs:	Size of the event_spec array.
++ * @ext_info:		Array of extended info attributes for this channel.
++ *			The array is NULL terminated, the last element should
++ *			have its name field set to NULL.
++ * @extend_name:	Allows labeling of channel attributes with an
++ *			informative name. Note this has no effect codes etc,
++ *			unlike modifiers.
++ * @datasheet_name:	A name used in in-kernel mapping of channels. It should
++ *			correspond to the first name that the channel is referred
++ *			to by in the datasheet (e.g. IND), or the nearest
++ *			possible compound name (e.g. IND-INC).
++ * @modified:		Does a modifier apply to this channel. What these are
++ *			depends on the channel type.  Modifier is set in
++ *			channel2. Examples are IIO_MOD_X for axial sensors about
++ *			the 'x' axis.
++ * @indexed:		Specify the channel has a numerical index. If not,
++ *			the channel index number will be suppressed for sysfs
++ *			attributes but not for event codes.
++ * @output:		Channel is output.
++ * @differential:	Channel is differential.
++ */
++struct iio_chan_spec {
++	enum iio_chan_type	type;
++	int			channel;
++	int			channel2;
++	unsigned long		address;
++	int			scan_index;
++	struct {
++		char	sign;
++		u8	realbits;
++		u8	storagebits;
++		u8	shift;
++		u8	repeat;
++		enum iio_endian endianness;
++	} scan_type;
++	long			info_mask_separate;
++	long			info_mask_shared_by_type;
++	long			info_mask_shared_by_dir;
++	long			info_mask_shared_by_all;
++	const struct iio_event_spec *event_spec;
++	unsigned int		num_event_specs;
++	const struct iio_chan_spec_ext_info *ext_info;
++	const char		*extend_name;
++	const char		*datasheet_name;
++	unsigned		modified:1;
++	unsigned		indexed:1;
++	unsigned		output:1;
++	unsigned		differential:1;
++};
++
++
++/**
++ * iio_channel_has_info() - Checks whether a channel supports a info attribute
++ * @chan: The channel to be queried
++ * @type: Type of the info attribute to be checked
++ *
++ * Returns true if the channels supports reporting values for the given info
++ * attribute type, false otherwise.
++ */
++static inline bool iio_channel_has_info(const struct iio_chan_spec *chan,
++	enum iio_chan_info_enum type)
++{
++	return (chan->info_mask_separate & BIT(type)) |
++		(chan->info_mask_shared_by_type & BIT(type)) |
++		(chan->info_mask_shared_by_dir & BIT(type)) |
++		(chan->info_mask_shared_by_all & BIT(type));
++}
++
++#define IIO_CHAN_SOFT_TIMESTAMP(_si) {					\
++	.type = IIO_TIMESTAMP,						\
++	.channel = -1,							\
++	.scan_index = _si,						\
++	.scan_type = {							\
++		.sign = 's',						\
++		.realbits = 64,					\
++		.storagebits = 64,					\
++		},							\
++}
++
++/**
++ * iio_get_time_ns() - utility function to get a time stamp for events etc
++ **/
++static inline s64 iio_get_time_ns(void)
++{
++	struct timespec ts;
++	/*
++	 * calls getnstimeofday.
++	 * If hrtimers then up to ns accurate, if not microsecond.
++	 */
++	ktime_get_real_ts(&ts);
++
++	return timespec_to_ns(&ts);
++}
++
++/* Device operating modes */
++#define INDIO_DIRECT_MODE		0x01
++#define INDIO_BUFFER_TRIGGERED		0x02
++#define INDIO_BUFFER_HARDWARE		0x08
++
++#define INDIO_ALL_BUFFER_MODES					\
++	(INDIO_BUFFER_TRIGGERED | INDIO_BUFFER_HARDWARE)
++
++#define INDIO_MAX_RAW_ELEMENTS		4
++
++struct iio_trigger; /* forward declaration */
++struct iio_dev;
++
++/**
++ * struct iio_info - constant information about device
++ * @driver_module:	module structure used to ensure correct
++ *			ownership of chrdevs etc
++ * @event_attrs:	event control attributes
++ * @attrs:		general purpose device attributes
++ * @read_raw:		function to request a value from the device.
++ *			mask specifies which value. Note 0 means a reading of
++ *			the channel in question.  Return value will specify the
++ *			type of value returned by the device. val and val2 will
++ *			contain the elements making up the returned value.
++ * @read_raw_multi:	function to return values from the device.
++ *			mask specifies which value. Note 0 means a reading of
++ *			the channel in question.  Return value will specify the
++ *			type of value returned by the device. vals pointer
++ *			contain the elements making up the returned value.
++ *			max_len specifies maximum number of elements
++ *			vals pointer can contain. val_len is used to return
++ *			length of valid elements in vals.
++ * @write_raw:		function to write a value to the device.
++ *			Parameters are the same as for read_raw.
++ * @write_raw_get_fmt:	callback function to query the expected
++ *			format/precision. If not set by the driver, write_raw
++ *			returns IIO_VAL_INT_PLUS_MICRO.
++ * @read_event_config:	find out if the event is enabled.
++ * @write_event_config:	set if the event is enabled.
++ * @read_event_value:	read a configuration value associated with the event.
++ * @write_event_value:	write a configuration value for the event.
++ * @validate_trigger:	function to validate the trigger when the
++ *			current trigger gets changed.
++ * @update_scan_mode:	function to configure device and scan buffer when
++ *			channels have changed
++ * @debugfs_reg_access:	function to read or write register value of device
++ **/
++struct iio_info {
++	struct module			*driver_module;
++	struct attribute_group		*event_attrs;
++	const struct attribute_group	*attrs;
++
++	int (*read_raw)(struct iio_dev *indio_dev,
++			struct iio_chan_spec const *chan,
++			int *val,
++			int *val2,
++			long mask);
++
++	int (*read_raw_multi)(struct iio_dev *indio_dev,
++			struct iio_chan_spec const *chan,
++			int max_len,
++			int *vals,
++			int *val_len,
++			long mask);
++
++	int (*write_raw)(struct iio_dev *indio_dev,
++			 struct iio_chan_spec const *chan,
++			 int val,
++			 int val2,
++			 long mask);
++
++	int (*write_raw_get_fmt)(struct iio_dev *indio_dev,
++			 struct iio_chan_spec const *chan,
++			 long mask);
++
++	int (*read_event_config)(struct iio_dev *indio_dev,
++				 const struct iio_chan_spec *chan,
++				 enum iio_event_type type,
++				 enum iio_event_direction dir);
++
++	int (*write_event_config)(struct iio_dev *indio_dev,
++				  const struct iio_chan_spec *chan,
++				  enum iio_event_type type,
++				  enum iio_event_direction dir,
++				  int state);
++
++	int (*read_event_value)(struct iio_dev *indio_dev,
++				const struct iio_chan_spec *chan,
++				enum iio_event_type type,
++				enum iio_event_direction dir,
++				enum iio_event_info info, int *val, int *val2);
++
++	int (*write_event_value)(struct iio_dev *indio_dev,
++				 const struct iio_chan_spec *chan,
++				 enum iio_event_type type,
++				 enum iio_event_direction dir,
++				 enum iio_event_info info, int val, int val2);
++
++	int (*validate_trigger)(struct iio_dev *indio_dev,
++				struct iio_trigger *trig);
++	int (*update_scan_mode)(struct iio_dev *indio_dev,
++				const unsigned long *scan_mask);
++	int (*debugfs_reg_access)(struct iio_dev *indio_dev,
++				  unsigned reg, unsigned writeval,
++				  unsigned *readval);
++};
++
++/**
++ * struct iio_buffer_setup_ops - buffer setup related callbacks
++ * @preenable:		[DRIVER] function to run prior to marking buffer enabled
++ * @postenable:		[DRIVER] function to run after marking buffer enabled
++ * @predisable:		[DRIVER] function to run prior to marking buffer
++ *			disabled
++ * @postdisable:	[DRIVER] function to run after marking buffer disabled
++ * @validate_scan_mask: [DRIVER] function callback to check whether a given
++ *			scan mask is valid for the device.
++ */
++struct iio_buffer_setup_ops {
++	int (*preenable)(struct iio_dev *);
++	int (*postenable)(struct iio_dev *);
++	int (*predisable)(struct iio_dev *);
++	int (*postdisable)(struct iio_dev *);
++	bool (*validate_scan_mask)(struct iio_dev *indio_dev,
++				   const unsigned long *scan_mask);
++};
++
++/**
++ * struct iio_dev - industrial I/O device
++ * @id:			[INTERN] used to identify device internally
++ * @modes:		[DRIVER] operating modes supported by device
++ * @currentmode:	[DRIVER] current operating mode
++ * @dev:		[DRIVER] device structure, should be assigned a parent
++ *			and owner
++ * @event_interface:	[INTERN] event chrdevs associated with interrupt lines
++ * @buffer:		[DRIVER] any buffer present
++ * @buffer_list:	[INTERN] list of all buffers currently attached
++ * @scan_bytes:		[INTERN] num bytes captured to be fed to buffer demux
++ * @mlock:		[INTERN] lock used to prevent simultaneous device state
++ *			changes
++ * @available_scan_masks: [DRIVER] optional array of allowed bitmasks
++ * @masklength:		[INTERN] the length of the mask established from
++ *			channels
++ * @active_scan_mask:	[INTERN] union of all scan masks requested by buffers
++ * @scan_timestamp:	[INTERN] set if any buffers have requested timestamp
++ * @scan_index_timestamp:[INTERN] cache of the index to the timestamp
++ * @trig:		[INTERN] current device trigger (buffer modes)
++ * @pollfunc:		[DRIVER] function run on trigger being received
++ * @channels:		[DRIVER] channel specification structure table
++ * @num_channels:	[DRIVER] number of channels specified in @channels.
++ * @channel_attr_list:	[INTERN] keep track of automatically created channel
++ *			attributes
++ * @chan_attr_group:	[INTERN] group for all attrs in base directory
++ * @name:		[DRIVER] name of the device.
++ * @info:		[DRIVER] callbacks and constant info from driver
++ * @info_exist_lock:	[INTERN] lock to prevent use during removal
++ * @setup_ops:		[DRIVER] callbacks to call before and after buffer
++ *			enable/disable
++ * @chrdev:		[INTERN] associated character device
++ * @groups:		[INTERN] attribute groups
++ * @groupcounter:	[INTERN] index of next attribute group
++ * @flags:		[INTERN] file ops related flags including busy flag.
++ * @debugfs_dentry:	[INTERN] device specific debugfs dentry.
++ * @cached_reg_addr:	[INTERN] cached register address for debugfs reads.
++ */
++struct iio_dev {
++	int				id;
++
++	int				modes;
++	int				currentmode;
++	struct device			dev;
++
++	struct iio_event_interface	*event_interface;
++
++	struct iio_buffer		*buffer;
++	struct list_head		buffer_list;
++	int				scan_bytes;
++	struct mutex			mlock;
++
++	const unsigned long		*available_scan_masks;
++	unsigned			masklength;
++	const unsigned long		*active_scan_mask;
++	bool				scan_timestamp;
++	unsigned			scan_index_timestamp;
++	struct iio_trigger		*trig;
++	struct iio_poll_func		*pollfunc;
++
++	struct iio_chan_spec const	*channels;
++	int				num_channels;
++
++	struct list_head		channel_attr_list;
++	struct attribute_group		chan_attr_group;
++	const char			*name;
++	const struct iio_info		*info;
++	struct mutex			info_exist_lock;
++	const struct iio_buffer_setup_ops	*setup_ops;
++	struct cdev			chrdev;
++#define IIO_MAX_GROUPS 6
++	const struct attribute_group	*groups[IIO_MAX_GROUPS + 1];
++	int				groupcounter;
++
++	unsigned long			flags;
++#if defined(CONFIG_DEBUG_FS)
++	struct dentry			*debugfs_dentry;
++	unsigned			cached_reg_addr;
++#endif
++};
++
++const struct iio_chan_spec
++*iio_find_channel_from_si(struct iio_dev *indio_dev, int si);
++int iio_device_register(struct iio_dev *indio_dev);
++void iio_device_unregister(struct iio_dev *indio_dev);
++int devm_iio_device_register(struct device *dev, struct iio_dev *indio_dev);
++void devm_iio_device_unregister(struct device *dev, struct iio_dev *indio_dev);
++int iio_push_event(struct iio_dev *indio_dev, u64 ev_code, s64 timestamp);
++
++extern struct bus_type iio_bus_type;
++
++/**
++ * iio_device_put() - reference counted deallocation of struct device
++ * @indio_dev: 		IIO device structure containing the device
++ **/
++static inline void iio_device_put(struct iio_dev *indio_dev)
++{
++	if (indio_dev)
++		put_device(&indio_dev->dev);
++}
++
++/**
++ * dev_to_iio_dev() - Get IIO device struct from a device struct
++ * @dev: 		The device embedded in the IIO device
++ *
++ * Note: The device must be a IIO device, otherwise the result is undefined.
++ */
++static inline struct iio_dev *dev_to_iio_dev(struct device *dev)
++{
++	return container_of(dev, struct iio_dev, dev);
++}
++
++/**
++ * iio_device_get() - increment reference count for the device
++ * @indio_dev: 		IIO device structure
++ *
++ * Returns: The passed IIO device
++ **/
++static inline struct iio_dev *iio_device_get(struct iio_dev *indio_dev)
++{
++	return indio_dev ? dev_to_iio_dev(get_device(&indio_dev->dev)) : NULL;
++}
++
++
++/**
++ * iio_device_set_drvdata() - Set device driver data
++ * @indio_dev: IIO device structure
++ * @data: Driver specific data
++ *
++ * Allows to attach an arbitrary pointer to an IIO device, which can later be
++ * retrieved by iio_device_get_drvdata().
++ */
++static inline void iio_device_set_drvdata(struct iio_dev *indio_dev, void *data)
++{
++	dev_set_drvdata(&indio_dev->dev, data);
++}
++
++/**
++ * iio_device_get_drvdata() - Get device driver data
++ * @indio_dev: IIO device structure
++ *
++ * Returns the data previously set with iio_device_set_drvdata()
++ */
++static inline void *iio_device_get_drvdata(struct iio_dev *indio_dev)
++{
++	return dev_get_drvdata(&indio_dev->dev);
++}
++
++/* Can we make this smaller? */
++#define IIO_ALIGN L1_CACHE_BYTES
++struct iio_dev *iio_device_alloc(int sizeof_priv);
++
++static inline void *iio_priv(const struct iio_dev *indio_dev)
++{
++	return (char *)indio_dev + ALIGN(sizeof(struct iio_dev), IIO_ALIGN);
++}
++
++static inline struct iio_dev *iio_priv_to_dev(void *priv)
++{
++	return (struct iio_dev *)((char *)priv -
++				  ALIGN(sizeof(struct iio_dev), IIO_ALIGN));
++}
++
++void iio_device_free(struct iio_dev *indio_dev);
++struct iio_dev *devm_iio_device_alloc(struct device *dev, int sizeof_priv);
++void devm_iio_device_free(struct device *dev, struct iio_dev *indio_dev);
++struct iio_trigger *devm_iio_trigger_alloc(struct device *dev,
++						const char *fmt, ...);
++void devm_iio_trigger_free(struct device *dev, struct iio_trigger *iio_trig);
++
++/**
++ * iio_buffer_enabled() - helper function to test if the buffer is enabled
++ * @indio_dev:		IIO device structure for device
++ **/
++static inline bool iio_buffer_enabled(struct iio_dev *indio_dev)
++{
++	return indio_dev->currentmode
++		& (INDIO_BUFFER_TRIGGERED | INDIO_BUFFER_HARDWARE);
++}
++
++/**
++ * iio_get_debugfs_dentry() - helper function to get the debugfs_dentry
++ * @indio_dev:		IIO device structure for device
++ **/
++#if defined(CONFIG_DEBUG_FS)
++static inline struct dentry *iio_get_debugfs_dentry(struct iio_dev *indio_dev)
++{
++	return indio_dev->debugfs_dentry;
++}
++#else
++static inline struct dentry *iio_get_debugfs_dentry(struct iio_dev *indio_dev)
++{
++	return NULL;
++}
++#endif
++
++int iio_str_to_fixpoint(const char *str, int fract_mult, int *integer,
++	int *fract);
++
++/**
++ * IIO_DEGREE_TO_RAD() - Convert degree to rad
++ * @deg: A value in degree
++ *
++ * Returns the given value converted from degree to rad
++ */
++#define IIO_DEGREE_TO_RAD(deg) (((deg) * 314159ULL + 9000000ULL) / 18000000ULL)
++
++/**
++ * IIO_G_TO_M_S_2() - Convert g to meter / second**2
++ * @g: A value in g
++ *
++ * Returns the given value converted from g to meter / second**2
++ */
++#define IIO_G_TO_M_S_2(g) ((g) * 980665ULL / 100000ULL)
++
++#endif /* _INDUSTRIAL_IO_H_ */
+diff --git a/include/linux/iio/imu/adis.h b/include/linux/iio/imu/adis.h
+new file mode 100644
+index 0000000..b665dc7
+--- /dev/null
++++ b/include/linux/iio/imu/adis.h
+@@ -0,0 +1,280 @@
++/*
++ * Common library for ADIS16XXX devices
++ *
++ * Copyright 2012 Analog Devices Inc.
++ *   Author: Lars-Peter Clausen <lars@metafoo.de>
++ *
++ * Licensed under the GPL-2 or later.
++ */
++
++#ifndef __IIO_ADIS_H__
++#define __IIO_ADIS_H__
++
++#include <linux/spi/spi.h>
++#include <linux/interrupt.h>
++#include <linux/iio/types.h>
++
++#define ADIS_WRITE_REG(reg) ((0x80 | (reg)))
++#define ADIS_READ_REG(reg) ((reg) & 0x7f)
++
++#define ADIS_PAGE_SIZE 0x80
++#define ADIS_REG_PAGE_ID 0x00
++
++struct adis;
++
++/**
++ * struct adis_data - ADIS chip variant specific data
++ * @read_delay: SPI delay for read operations in us
++ * @write_delay: SPI delay for write operations in us
++ * @glob_cmd_reg: Register address of the GLOB_CMD register
++ * @msc_ctrl_reg: Register address of the MSC_CTRL register
++ * @diag_stat_reg: Register address of the DIAG_STAT register
++ * @status_error_msgs: Array of error messgaes
++ * @status_error_mask:
++ */
++struct adis_data {
++	unsigned int read_delay;
++	unsigned int write_delay;
++
++	unsigned int glob_cmd_reg;
++	unsigned int msc_ctrl_reg;
++	unsigned int diag_stat_reg;
++
++	unsigned int self_test_mask;
++	unsigned int startup_delay;
++
++	const char * const *status_error_msgs;
++	unsigned int status_error_mask;
++
++	int (*enable_irq)(struct adis *adis, bool enable);
++
++	bool has_paging;
++};
++
++struct adis {
++	struct spi_device	*spi;
++	struct iio_trigger	*trig;
++
++	const struct adis_data	*data;
++
++	struct mutex		txrx_lock;
++	struct spi_message	msg;
++	struct spi_transfer	*xfer;
++	unsigned int		current_page;
++	void			*buffer;
++
++	uint8_t			tx[10] ____cacheline_aligned;
++	uint8_t			rx[4];
++};
++
++int adis_init(struct adis *adis, struct iio_dev *indio_dev,
++	struct spi_device *spi, const struct adis_data *data);
++int adis_reset(struct adis *adis);
++
++int adis_write_reg(struct adis *adis, unsigned int reg,
++	unsigned int val, unsigned int size);
++int adis_read_reg(struct adis *adis, unsigned int reg,
++	unsigned int *val, unsigned int size);
++
++/**
++ * adis_write_reg_8() - Write single byte to a register
++ * @adis: The adis device
++ * @reg: The address of the register to be written
++ * @value: The value to write
++ */
++static inline int adis_write_reg_8(struct adis *adis, unsigned int reg,
++	uint8_t val)
++{
++	return adis_write_reg(adis, reg, val, 1);
++}
++
++/**
++ * adis_write_reg_16() - Write 2 bytes to a pair of registers
++ * @adis: The adis device
++ * @reg: The address of the lower of the two registers
++ * @value: Value to be written
++ */
++static inline int adis_write_reg_16(struct adis *adis, unsigned int reg,
++	uint16_t val)
++{
++	return adis_write_reg(adis, reg, val, 2);
++}
++
++/**
++ * adis_write_reg_32() - write 4 bytes to four registers
++ * @adis: The adis device
++ * @reg: The address of the lower of the four register
++ * @value: Value to be written
++ */
++static inline int adis_write_reg_32(struct adis *adis, unsigned int reg,
++	uint32_t val)
++{
++	return adis_write_reg(adis, reg, val, 4);
++}
++
++/**
++ * adis_read_reg_16() - read 2 bytes from a 16-bit register
++ * @adis: The adis device
++ * @reg: The address of the lower of the two registers
++ * @val: The value read back from the device
++ */
++static inline int adis_read_reg_16(struct adis *adis, unsigned int reg,
++	uint16_t *val)
++{
++	unsigned int tmp;
++	int ret;
++
++	ret = adis_read_reg(adis, reg, &tmp, 2);
++	*val = tmp;
++
++	return ret;
++}
++
++/**
++ * adis_read_reg_32() - read 4 bytes from a 32-bit register
++ * @adis: The adis device
++ * @reg: The address of the lower of the two registers
++ * @val: The value read back from the device
++ */
++static inline int adis_read_reg_32(struct adis *adis, unsigned int reg,
++	uint32_t *val)
++{
++	unsigned int tmp;
++	int ret;
++
++	ret = adis_read_reg(adis, reg, &tmp, 4);
++	*val = tmp;
++
++	return ret;
++}
++
++int adis_enable_irq(struct adis *adis, bool enable);
++int adis_check_status(struct adis *adis);
++
++int adis_initial_startup(struct adis *adis);
++
++int adis_single_conversion(struct iio_dev *indio_dev,
++	const struct iio_chan_spec *chan, unsigned int error_mask,
++	int *val);
++
++#define ADIS_VOLTAGE_CHAN(addr, si, chan, name, bits) { \
++	.type = IIO_VOLTAGE, \
++	.indexed = 1, \
++	.channel = (chan), \
++	.extend_name = name, \
++	.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) | \
++		BIT(IIO_CHAN_INFO_SCALE), \
++	.address = (addr), \
++	.scan_index = (si), \
++	.scan_type = { \
++		.sign = 'u', \
++		.realbits = (bits), \
++		.storagebits = 16, \
++		.endianness = IIO_BE, \
++	}, \
++}
++
++#define ADIS_SUPPLY_CHAN(addr, si, bits) \
++	ADIS_VOLTAGE_CHAN(addr, si, 0, "supply", bits)
++
++#define ADIS_AUX_ADC_CHAN(addr, si, bits) \
++	ADIS_VOLTAGE_CHAN(addr, si, 1, NULL, bits)
++
++#define ADIS_TEMP_CHAN(addr, si, bits) { \
++	.type = IIO_TEMP, \
++	.indexed = 1, \
++	.channel = 0, \
++	.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) | \
++		BIT(IIO_CHAN_INFO_SCALE) | \
++		BIT(IIO_CHAN_INFO_OFFSET), \
++	.address = (addr), \
++	.scan_index = (si), \
++	.scan_type = { \
++		.sign = 'u', \
++		.realbits = (bits), \
++		.storagebits = 16, \
++		.endianness = IIO_BE, \
++	}, \
++}
++
++#define ADIS_MOD_CHAN(_type, mod, addr, si, info_sep, bits) { \
++	.type = (_type), \
++	.modified = 1, \
++	.channel2 = IIO_MOD_ ## mod, \
++	.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) | \
++		 info_sep, \
++	.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE), \
++	.address = (addr), \
++	.scan_index = (si), \
++	.scan_type = { \
++		.sign = 's', \
++		.realbits = (bits), \
++		.storagebits = 16, \
++		.endianness = IIO_BE, \
++	}, \
++}
++
++#define ADIS_ACCEL_CHAN(mod, addr, si, info_sep, bits) \
++	ADIS_MOD_CHAN(IIO_ACCEL, mod, addr, si, info_sep, bits)
++
++#define ADIS_GYRO_CHAN(mod, addr, si, info_sep, bits) \
++	ADIS_MOD_CHAN(IIO_ANGL_VEL, mod, addr, si, info_sep, bits)
++
++#define ADIS_INCLI_CHAN(mod, addr, si, info_sep, bits) \
++	ADIS_MOD_CHAN(IIO_INCLI, mod, addr, si, info_sep, bits)
++
++#define ADIS_ROT_CHAN(mod, addr, si, info_sep, bits) \
++	ADIS_MOD_CHAN(IIO_ROT, mod, addr, si, info_sep, bits)
++
++#ifdef CONFIG_IIO_ADIS_LIB_BUFFER
++
++int adis_setup_buffer_and_trigger(struct adis *adis,
++	struct iio_dev *indio_dev, irqreturn_t (*trigger_handler)(int, void *));
++void adis_cleanup_buffer_and_trigger(struct adis *adis,
++	struct iio_dev *indio_dev);
++
++int adis_probe_trigger(struct adis *adis, struct iio_dev *indio_dev);
++void adis_remove_trigger(struct adis *adis);
++
++int adis_update_scan_mode(struct iio_dev *indio_dev,
++	const unsigned long *scan_mask);
++
++#else /* CONFIG_IIO_BUFFER */
++
++static inline int adis_setup_buffer_and_trigger(struct adis *adis,
++	struct iio_dev *indio_dev, irqreturn_t (*trigger_handler)(int, void *))
++{
++	return 0;
++}
++
++static inline void adis_cleanup_buffer_and_trigger(struct adis *adis,
++	struct iio_dev *indio_dev)
++{
++}
++
++static inline int adis_probe_trigger(struct adis *adis,
++	struct iio_dev *indio_dev)
++{
++	return 0;
++}
++
++static inline void adis_remove_trigger(struct adis *adis)
++{
++}
++
++#define adis_update_scan_mode NULL
++
++#endif /* CONFIG_IIO_BUFFER */
++
++#ifdef CONFIG_DEBUG_FS
++
++int adis_debugfs_reg_access(struct iio_dev *indio_dev,
++	unsigned int reg, unsigned int writeval, unsigned int *readval);
++
++#else
++
++#define adis_debugfs_reg_access NULL
++
++#endif
++
++#endif
+diff --git a/include/linux/iio/kfifo_buf.h b/include/linux/iio/kfifo_buf.h
+new file mode 100644
+index 0000000..25eeac7
+--- /dev/null
++++ b/include/linux/iio/kfifo_buf.h
+@@ -0,0 +1,11 @@
++#ifndef __LINUX_IIO_KFIFO_BUF_H__
++#define __LINUX_IIO_KFIFO_BUF_H__
++
++#include <linux/kfifo.h>
++#include <linux/iio/iio.h>
++#include <linux/iio/buffer.h>
++
++struct iio_buffer *iio_kfifo_allocate(struct iio_dev *indio_dev);
++void iio_kfifo_free(struct iio_buffer *r);
++
++#endif
+diff --git a/include/linux/iio/machine.h b/include/linux/iio/machine.h
+new file mode 100644
+index 0000000..1601a2a
+--- /dev/null
++++ b/include/linux/iio/machine.h
+@@ -0,0 +1,31 @@
++/*
++ * Industrial I/O in kernel access map definitions for board files.
++ *
++ * Copyright (c) 2011 Jonathan Cameron
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 as published by
++ * the Free Software Foundation.
++ */
++
++#ifndef __LINUX_IIO_MACHINE_H__
++#define __LINUX_IIO_MACHINE_H__
++
++/**
++ * struct iio_map - description of link between consumer and device channels
++ * @adc_channel_label:	Label used to identify the channel on the provider.
++ *			This is matched against the datasheet_name element
++ *			of struct iio_chan_spec.
++ * @consumer_dev_name:	Name to uniquely identify the consumer device.
++ * @consumer_channel:	Unique name used to identify the channel on the
++ *			consumer side.
++ * @consumer_data:	Data about the channel for use by the consumer driver.
++ */
++struct iio_map {
++	const char *adc_channel_label;
++	const char *consumer_dev_name;
++	const char *consumer_channel;
++	void *consumer_data;
++};
++
++#endif
+diff --git a/include/linux/iio/sysfs.h b/include/linux/iio/sysfs.h
+new file mode 100644
+index 0000000..8a1d186
+--- /dev/null
++++ b/include/linux/iio/sysfs.h
+@@ -0,0 +1,127 @@
++/* The industrial I/O core
++ *
++ *Copyright (c) 2008 Jonathan Cameron
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 as published by
++ * the Free Software Foundation.
++ *
++ * General attributes
++ */
++
++#ifndef _INDUSTRIAL_IO_SYSFS_H_
++#define _INDUSTRIAL_IO_SYSFS_H_
++
++struct iio_chan_spec;
++
++/**
++ * struct iio_dev_attr - iio specific device attribute
++ * @dev_attr:	underlying device attribute
++ * @address:	associated register address
++ * @l:		list head for maintaining list of dynamically created attrs.
++ */
++struct iio_dev_attr {
++	struct device_attribute dev_attr;
++	u64 address;
++	struct list_head l;
++	struct iio_chan_spec const *c;
++};
++
++#define to_iio_dev_attr(_dev_attr)				\
++	container_of(_dev_attr, struct iio_dev_attr, dev_attr)
++
++ssize_t iio_read_const_attr(struct device *dev,
++			    struct device_attribute *attr,
++			    char *len);
++
++/**
++ * struct iio_const_attr - constant device specific attribute
++ *                         often used for things like available modes
++ * @string:	attribute string
++ * @dev_attr:	underlying device attribute
++ */
++struct iio_const_attr {
++	const char *string;
++	struct device_attribute dev_attr;
++};
++
++#define to_iio_const_attr(_dev_attr) \
++	container_of(_dev_attr, struct iio_const_attr, dev_attr)
++
++/* Some attributes will be hard coded (device dependent) and not require an
++   address, in these cases pass a negative */
++#define IIO_ATTR(_name, _mode, _show, _store, _addr)		\
++	{ .dev_attr = __ATTR(_name, _mode, _show, _store),	\
++	  .address = _addr }
++
++#define IIO_DEVICE_ATTR(_name, _mode, _show, _store, _addr)	\
++	struct iio_dev_attr iio_dev_attr_##_name		\
++	= IIO_ATTR(_name, _mode, _show, _store, _addr)
++
++#define IIO_DEVICE_ATTR_NAMED(_vname, _name, _mode, _show, _store, _addr) \
++	struct iio_dev_attr iio_dev_attr_##_vname			\
++	= IIO_ATTR(_name, _mode, _show, _store, _addr)
++
++#define IIO_CONST_ATTR(_name, _string)					\
++	struct iio_const_attr iio_const_attr_##_name			\
++	= { .string = _string,						\
++	    .dev_attr = __ATTR(_name, S_IRUGO, iio_read_const_attr, NULL)}
++
++#define IIO_CONST_ATTR_NAMED(_vname, _name, _string)			\
++	struct iio_const_attr iio_const_attr_##_vname			\
++	= { .string = _string,						\
++	    .dev_attr = __ATTR(_name, S_IRUGO, iio_read_const_attr, NULL)}
++
++/* Generic attributes of onetype or another */
++
++/**
++ * IIO_DEV_ATTR_SAMP_FREQ - sets any internal clock frequency
++ * @_mode: sysfs file mode/permissions
++ * @_show: output method for the attribute
++ * @_store: input method for the attribute
++ **/
++#define IIO_DEV_ATTR_SAMP_FREQ(_mode, _show, _store)			\
++	IIO_DEVICE_ATTR(sampling_frequency, _mode, _show, _store, 0)
++
++/**
++ * IIO_DEV_ATTR_SAMP_FREQ_AVAIL - list available sampling frequencies
++ * @_show: output method for the attribute
++ *
++ * May be mode dependent on some devices
++ **/
++#define IIO_DEV_ATTR_SAMP_FREQ_AVAIL(_show)				\
++	IIO_DEVICE_ATTR(sampling_frequency_available, S_IRUGO, _show, NULL, 0)
++/**
++ * IIO_CONST_ATTR_SAMP_FREQ_AVAIL - list available sampling frequencies
++ * @_string: frequency string for the attribute
++ *
++ * Constant version
++ **/
++#define IIO_CONST_ATTR_SAMP_FREQ_AVAIL(_string)			\
++	IIO_CONST_ATTR(sampling_frequency_available, _string)
++
++/**
++ * IIO_DEV_ATTR_INT_TIME_AVAIL - list available integration times
++ * @_show: output method for the attribute
++ **/
++#define IIO_DEV_ATTR_INT_TIME_AVAIL(_show)		\
++	IIO_DEVICE_ATTR(integration_time_available, S_IRUGO, _show, NULL, 0)
++/**
++ * IIO_CONST_ATTR_INT_TIME_AVAIL - list available integration times
++ * @_string: frequency string for the attribute
++ *
++ * Constant version
++ **/
++#define IIO_CONST_ATTR_INT_TIME_AVAIL(_string)		\
++	IIO_CONST_ATTR(integration_time_available, _string)
++
++#define IIO_DEV_ATTR_TEMP_RAW(_show)			\
++	IIO_DEVICE_ATTR(in_temp_raw, S_IRUGO, _show, NULL, 0)
++
++#define IIO_CONST_ATTR_TEMP_OFFSET(_string)		\
++	IIO_CONST_ATTR(in_temp_offset, _string)
++
++#define IIO_CONST_ATTR_TEMP_SCALE(_string)		\
++	IIO_CONST_ATTR(in_temp_scale, _string)
++
++#endif /* _INDUSTRIAL_IO_SYSFS_H_ */
+diff --git a/include/linux/iio/trigger.h b/include/linux/iio/trigger.h
+new file mode 100644
+index 0000000..369cf2c
+--- /dev/null
++++ b/include/linux/iio/trigger.h
+@@ -0,0 +1,148 @@
++/* The industrial I/O core, trigger handling functions
++ *
++ * Copyright (c) 2008 Jonathan Cameron
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 as published by
++ * the Free Software Foundation.
++ */
++#include <linux/irq.h>
++#include <linux/module.h>
++#include <linux/atomic.h>
++
++#ifndef _IIO_TRIGGER_H_
++#define _IIO_TRIGGER_H_
++
++#ifdef CONFIG_IIO_TRIGGER
++struct iio_subirq {
++	bool enabled;
++};
++
++/**
++ * struct iio_trigger_ops - operations structure for an iio_trigger.
++ * @owner:		used to monitor usage count of the trigger.
++ * @set_trigger_state:	switch on/off the trigger on demand
++ * @try_reenable:	function to reenable the trigger when the
++ *			use count is zero (may be NULL)
++ * @validate_device:	function to validate the device when the
++ *			current trigger gets changed.
++ *
++ * This is typically static const within a driver and shared by
++ * instances of a given device.
++ **/
++struct iio_trigger_ops {
++	struct module *owner;
++	int (*set_trigger_state)(struct iio_trigger *trig, bool state);
++	int (*try_reenable)(struct iio_trigger *trig);
++	int (*validate_device)(struct iio_trigger *trig,
++			       struct iio_dev *indio_dev);
++};
++
++
++/**
++ * struct iio_trigger - industrial I/O trigger device
++ * @ops:		[DRIVER] operations structure
++ * @id:			[INTERN] unique id number
++ * @name:		[DRIVER] unique name
++ * @dev:		[DRIVER] associated device (if relevant)
++ * @list:		[INTERN] used in maintenance of global trigger list
++ * @alloc_list:		[DRIVER] used for driver specific trigger list
++ * @use_count:		use count for the trigger
++ * @subirq_chip:	[INTERN] associate 'virtual' irq chip.
++ * @subirq_base:	[INTERN] base number for irqs provided by trigger.
++ * @subirqs:		[INTERN] information about the 'child' irqs.
++ * @pool:		[INTERN] bitmap of irqs currently in use.
++ * @pool_lock:		[INTERN] protection of the irq pool.
++ **/
++struct iio_trigger {
++	const struct iio_trigger_ops	*ops;
++	int				id;
++	const char			*name;
++	struct device			dev;
++
++	struct list_head		list;
++	struct list_head		alloc_list;
++	atomic_t			use_count;
++
++	struct irq_chip			subirq_chip;
++	int				subirq_base;
++
++	struct iio_subirq subirqs[CONFIG_IIO_CONSUMERS_PER_TRIGGER];
++	unsigned long pool[BITS_TO_LONGS(CONFIG_IIO_CONSUMERS_PER_TRIGGER)];
++	struct mutex			pool_lock;
++};
++
++
++static inline struct iio_trigger *to_iio_trigger(struct device *d)
++{
++	return container_of(d, struct iio_trigger, dev);
++}
++
++static inline void iio_trigger_put(struct iio_trigger *trig)
++{
++	module_put(trig->ops->owner);
++	put_device(&trig->dev);
++}
++
++static inline void iio_trigger_get(struct iio_trigger *trig)
++{
++	get_device(&trig->dev);
++	__module_get(trig->ops->owner);
++}
++
++/**
++ * iio_device_set_drvdata() - Set trigger driver data
++ * @trig: IIO trigger structure
++ * @data: Driver specific data
++ *
++ * Allows to attach an arbitrary pointer to an IIO trigger, which can later be
++ * retrieved by iio_trigger_get_drvdata().
++ */
++static inline void iio_trigger_set_drvdata(struct iio_trigger *trig, void *data)
++{
++	dev_set_drvdata(&trig->dev, data);
++}
++
++/**
++ * iio_trigger_get_drvdata() - Get trigger driver data
++ * @trig: IIO trigger structure
++ *
++ * Returns the data previously set with iio_trigger_set_drvdata()
++ */
++static inline void *iio_trigger_get_drvdata(struct iio_trigger *trig)
++{
++	return dev_get_drvdata(&trig->dev);
++}
++
++/**
++ * iio_trigger_register() - register a trigger with the IIO core
++ * @trig_info:	trigger to be registered
++ **/
++int iio_trigger_register(struct iio_trigger *trig_info);
++
++/**
++ * iio_trigger_unregister() - unregister a trigger from the core
++ * @trig_info:	trigger to be unregistered
++ **/
++void iio_trigger_unregister(struct iio_trigger *trig_info);
++
++/**
++ * iio_trigger_poll() - called on a trigger occurring
++ * @trig:	trigger which occurred
++ * @time:	timestamp when trigger occurred
++ *
++ * Typically called in relevant hardware interrupt handler.
++ **/
++void iio_trigger_poll(struct iio_trigger *trig, s64 time);
++void iio_trigger_poll_chained(struct iio_trigger *trig, s64 time);
++
++irqreturn_t iio_trigger_generic_data_rdy_poll(int irq, void *private);
++
++__printf(1, 2) struct iio_trigger *iio_trigger_alloc(const char *fmt, ...);
++void iio_trigger_free(struct iio_trigger *trig);
++
++#else
++struct iio_trigger;
++struct iio_trigger_ops;
++#endif
++#endif /* _IIO_TRIGGER_H_ */
+diff --git a/include/linux/iio/trigger_consumer.h b/include/linux/iio/trigger_consumer.h
+new file mode 100644
+index 0000000..c4f8c74
+--- /dev/null
++++ b/include/linux/iio/trigger_consumer.h
+@@ -0,0 +1,63 @@
++/* The industrial I/O core, trigger consumer functions
++ *
++ * Copyright (c) 2008-2011 Jonathan Cameron
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 as published by
++ * the Free Software Foundation.
++ */
++
++#ifndef __LINUX_IIO_TRIGGER_CONSUMER_H__
++#define __LINUX_IIO_TRIGGER_CONSUMER_H__
++
++#include <linux/interrupt.h>
++#include <linux/types.h>
++
++struct iio_dev;
++struct iio_trigger;
++
++/**
++ * struct iio_poll_func - poll function pair
++ *
++ * @indio_dev:			data specific to device (passed into poll func)
++ * @h:				the function that is actually run on trigger
++ * @thread:			threaded interrupt part
++ * @type:			the type of interrupt (basically if oneshot)
++ * @name:			name used to identify the trigger consumer.
++ * @irq:			the corresponding irq as allocated from the
++ *				trigger pool
++ * @timestamp:			some devices need a timestamp grabbed as soon
++ *				as possible after the trigger - hence handler
++ *				passes it via here.
++ **/
++struct iio_poll_func {
++	struct iio_dev *indio_dev;
++	irqreturn_t (*h)(int irq, void *p);
++	irqreturn_t (*thread)(int irq, void *p);
++	int type;
++	char *name;
++	int irq;
++	s64 timestamp;
++};
++
++
++struct iio_poll_func
++*iio_alloc_pollfunc(irqreturn_t (*h)(int irq, void *p),
++		    irqreturn_t (*thread)(int irq, void *p),
++		    int type,
++		    struct iio_dev *indio_dev,
++		    const char *fmt,
++		    ...);
++void iio_dealloc_pollfunc(struct iio_poll_func *pf);
++irqreturn_t iio_pollfunc_store_time(int irq, void *p);
++
++void iio_trigger_notify_done(struct iio_trigger *trig);
++
++/*
++ * Two functions for common case where all that happens is a pollfunc
++ * is attached and detached from a trigger
++ */
++int iio_triggered_buffer_postenable(struct iio_dev *indio_dev);
++int iio_triggered_buffer_predisable(struct iio_dev *indio_dev);
++
++#endif
+diff --git a/include/linux/iio/triggered_buffer.h b/include/linux/iio/triggered_buffer.h
+new file mode 100644
+index 0000000..c378ebe
+--- /dev/null
++++ b/include/linux/iio/triggered_buffer.h
+@@ -0,0 +1,15 @@
++#ifndef _LINUX_IIO_TRIGGERED_BUFFER_H_
++#define _LINUX_IIO_TRIGGERED_BUFFER_H_
++
++#include <linux/interrupt.h>
++
++struct iio_dev;
++struct iio_buffer_setup_ops;
++
++int iio_triggered_buffer_setup(struct iio_dev *indio_dev,
++	irqreturn_t (*pollfunc_bh)(int irq, void *p),
++	irqreturn_t (*pollfunc_th)(int irq, void *p),
++	const struct iio_buffer_setup_ops *setup_ops);
++void iio_triggered_buffer_cleanup(struct iio_dev *indio_dev);
++
++#endif
+diff --git a/include/linux/iio/types.h b/include/linux/iio/types.h
+new file mode 100644
+index 0000000..d480631
+--- /dev/null
++++ b/include/linux/iio/types.h
+@@ -0,0 +1,89 @@
++/* industrial I/O data types needed both in and out of kernel
++ *
++ * Copyright (c) 2008 Jonathan Cameron
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License version 2 as published by
++ * the Free Software Foundation.
++ */
++
++#ifndef _IIO_TYPES_H_
++#define _IIO_TYPES_H_
++
++enum iio_chan_type {
++	IIO_VOLTAGE,
++	IIO_CURRENT,
++	IIO_POWER,
++	IIO_ACCEL,
++	IIO_ANGL_VEL,
++	IIO_MAGN,
++	IIO_LIGHT,
++	IIO_INTENSITY,
++	IIO_PROXIMITY,
++	IIO_TEMP,
++	IIO_INCLI,
++	IIO_ROT,
++	IIO_ANGL,
++	IIO_TIMESTAMP,
++	IIO_CAPACITANCE,
++	IIO_ALTVOLTAGE,
++	IIO_CCT,
++	IIO_PRESSURE,
++	IIO_HUMIDITYRELATIVE,
++};
++
++enum iio_modifier {
++	IIO_NO_MOD,
++	IIO_MOD_X,
++	IIO_MOD_Y,
++	IIO_MOD_Z,
++	IIO_MOD_X_AND_Y,
++	IIO_MOD_X_AND_Z,
++	IIO_MOD_Y_AND_Z,
++	IIO_MOD_X_AND_Y_AND_Z,
++	IIO_MOD_X_OR_Y,
++	IIO_MOD_X_OR_Z,
++	IIO_MOD_Y_OR_Z,
++	IIO_MOD_X_OR_Y_OR_Z,
++	IIO_MOD_LIGHT_BOTH,
++	IIO_MOD_LIGHT_IR,
++	IIO_MOD_ROOT_SUM_SQUARED_X_Y,
++	IIO_MOD_SUM_SQUARED_X_Y_Z,
++	IIO_MOD_LIGHT_CLEAR,
++	IIO_MOD_LIGHT_RED,
++	IIO_MOD_LIGHT_GREEN,
++	IIO_MOD_LIGHT_BLUE,
++	IIO_MOD_QUATERNION,
++	IIO_MOD_TEMP_AMBIENT,
++	IIO_MOD_TEMP_OBJECT,
++};
++
++enum iio_event_type {
++	IIO_EV_TYPE_THRESH,
++	IIO_EV_TYPE_MAG,
++	IIO_EV_TYPE_ROC,
++	IIO_EV_TYPE_THRESH_ADAPTIVE,
++	IIO_EV_TYPE_MAG_ADAPTIVE,
++};
++
++enum iio_event_info {
++	IIO_EV_INFO_ENABLE,
++	IIO_EV_INFO_VALUE,
++	IIO_EV_INFO_HYSTERESIS,
++};
++
++enum iio_event_direction {
++	IIO_EV_DIR_EITHER,
++	IIO_EV_DIR_RISING,
++	IIO_EV_DIR_FALLING,
++};
++
++#define IIO_VAL_INT 1
++#define IIO_VAL_INT_PLUS_MICRO 2
++#define IIO_VAL_INT_PLUS_NANO 3
++#define IIO_VAL_INT_PLUS_MICRO_DB 4
++#define IIO_VAL_INT_MULTIPLE 5
++#define IIO_VAL_FRACTIONAL 10
++#define IIO_VAL_FRACTIONAL_LOG2 11
++
++#endif /* _IIO_TYPES_H_ */
+-- 
+1.9.1
+

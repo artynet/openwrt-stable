@@ -1,0 +1,27 @@
+From 810d007d947df1c9309d1b04b3ea41c475f0b2f6 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 1 Aug 2014 23:25:32 +0200
+Subject: [PATCH 55/61] drivers/iio/industrialio-event.c: backport kfifo_put
+ call
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/iio/industrialio-event.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/iio/industrialio-event.c b/drivers/iio/industrialio-event.c
+index bfbf4d4..89a741b 100644
+--- a/drivers/iio/industrialio-event.c
++++ b/drivers/iio/industrialio-event.c
+@@ -64,7 +64,7 @@ int iio_push_event(struct iio_dev *indio_dev, u64 ev_code, s64 timestamp)
+ 		ev.id = ev_code;
+ 		ev.timestamp = timestamp;
+ 
+-		copied = kfifo_put(&ev_int->det_events, ev);
++		copied = kfifo_put(&ev_int->det_events, &ev);
+ 		if (copied != 0)
+ 			wake_up_poll(&ev_int->wait, POLLIN);
+ 	}
+-- 
+1.9.1
+
