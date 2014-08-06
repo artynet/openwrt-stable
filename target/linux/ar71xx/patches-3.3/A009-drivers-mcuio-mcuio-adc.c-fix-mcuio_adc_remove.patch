@@ -1,0 +1,84 @@
+From d06d1a2e41ffd721d306d6003881384a9e384744 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 23 Jun 2014 14:33:02 +0200
+Subject: [PATCH] drivers/mcuio/mcuio-adc.c: fix mcuio_adc_remove
+
+Note: this is a fix to commit 231c5ef1b
+
+Do not call mcuio_adc_disable in mcuio_adc_remove, since it causes a failure
+at reboot:
+
+[ 8049.120000] Unhandled kernel unaligned access[#1]:
+[ 8049.120000] Cpu 0
+[ 8049.120000] $ 0   : 00000000 80380000 00000000 00000598
+[ 8049.120000] $ 4   : 82dea588 801b31dc 801b3b30 00000000
+[ 8049.120000] $ 8   : 82d97fe0 0000fc00 00000000 830f4000
+[ 8049.120000] $12   : 006d63a8 7f867f50 00000001 00410000
+[ 8049.120000] $16   : 82dea618 00000012 82dea588 801b3b30
+[ 8049.120000] $20   : 801b31dc 00000000 00000000 83aebf20
+[ 8049.120000] $24   : 0041649c 800955f0
+[ 8049.120000] $28   : 82d96000 82d97e10 801f50f8 801b05cc
+[ 8049.120000] Hi    : 00000752
+[ 8049.120000] Lo    : 14f03800
+[ 8049.120000] epc   : 801b0574 find_dr+0x64/0x9c
+[ 8049.120000]     Tainted: G        W  O
+[ 8049.120000] ra    : 801b05cc devres_find+0x20/0x4c
+[ 8049.120000] Status: 1000fc02    KERNEL EXL
+[ 8049.120000] Cause : 80800010
+[ 8049.120000] BadVA : 0000001a
+[ 8049.120000] PrId  : 00019374 (MIPS 24Kc)
+[ 8049.120000] Modules linked in: spidev fuse v4l2_common videodev i2c_dev ath79_wdt ledtrig_netdev nf_nat_irc nf_conntrack_irc nf_nat_ftp nf_conntrack_ftp ipt_MASQUERADE iptable_nat nf_nat pppoe xt_conntrack xt_C
+T xt_NOTRACK iptable_raw xt_state nf_conntrack_ipv4 nf_defrag_ipv4 nf_conntrack pppox ipt_REJECT xt_TCPMSS ipt_LOG xt_comment xt_multiport xt_mac xt_limit iptable_mangle iptable_filter ip_tables xt_tcpudp x_tables
+ ppp_async ppp_generic slhc vfat fat ntfs hfsplus hfs ath9k(O) ath9k_common(O) ath9k_hw(O) ath(O) nls_utf8 nls_iso8859_1 nls_cp437 mac80211(O) crc_ccitt cfg80211(O) compat(O) arc4 aes_generic crypto_blkcipher cryp
+tomgr aead usb_storage ohci_hcd ehci_hcd sd_mod reiserfs ext4 jbd2 mbcache usbcore usb_common scsi_mod nls_base crc16 crypto_hash crypto_algapi ledtrig_timer ledtrig_default_on leds_gpio [last unloaded: spi_tty_ds
+]
+[ 8049.120000] Process 0:0.0_tx (pid: 1246, threadinfo=82d96000, task=82de90a0, tls=00000000)
+[ 8049.120000] Stack : 83aeb220 00000018 83aebf20 801f5e20 83aebf14 00000001 83aebf10 83aebf14
+[ 8049.120000]         00000000 00000000 82dea588 801b05cc 82de90a0 82de90d0 82de90a0 00000001
+[ 8049.120000]         82dc9aac 801b3668 80338888 80094b64 82de90a0 80092564 83aebf14 801f5238
+[ 8049.120000]         80338888 82de90a0 82de90a0 80338888 980500e4 00000000 00000000 82de90a0
+[ 8049.120000]         82dc9a80 82de90a0 83aebf4c 83aebf3c 00000001 00000000 00000000 00000000
+[ 8049.120000]         ...
+[ 8049.120000] Call Trace:
+[ 8049.120000] [<801b0574>] find_dr+0x64/0x9c
+[ 8049.120000] [<801b05cc>] devres_find+0x20/0x4c
+[ 8049.120000] [<801b3668>] dev_get_regmap+0x20/0x3c
+[ 8049.120000] [<801f5238>] __send_messages+0x10c/0x224
+[ 8049.120000] [<8008a4fc>] kthread_worker_fn+0xd8/0x118
+[ 8049.120000] [<8008a5c4>] kthread+0x88/0x90
+[ 8049.120000] [<80064b40>] kernel_thread_helper+0x10/0x18
+[ 8049.120000]
+[ 8049.120000]
+[ 8049.120000] Code: 14400007  02201021  8e310004 <5630fff5> 8e220008 0806c162  00001021  02201021  8fbf002c
+[ 8049.680000] ---[ end trace 5c937b2658d6760d ]---
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-adc.c |    4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-adc.c b/drivers/mcuio/mcuio-adc.c
+index aa2a570..b776e97 100644
+--- a/drivers/mcuio/mcuio-adc.c
++++ b/drivers/mcuio/mcuio-adc.c
+@@ -314,16 +314,14 @@ static int mcuio_adc_remove(struct mcuio_device *mdev)
+ 
+ 	pr_debug("removing mcuio adc %u:%u:%u\n",
+ 		 mdev->bus, mdev->device, mdev->fn);
++	BUG_ON(!data);
+ 
+ 	if (data->in_created)
+ 		in_devs_destroy(data);
+ 
+ 	device_remove_file(&mdev->dev, &dev_attr_enable);
+ 
+-	BUG_ON(!data);
+-
+ 	sysfs_remove_link(&hc->dev.kobj, "adc");
+-	mcuio_adc_disable(data);
+ 
+ 	return 0;
+ }
+-- 
+1.7.9.5
+

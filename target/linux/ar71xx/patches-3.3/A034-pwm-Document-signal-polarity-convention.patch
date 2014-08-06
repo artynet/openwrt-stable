@@ -1,0 +1,36 @@
+From b84afc6a0bed6599313e3b56594c9f170b87777c Mon Sep 17 00:00:00 2001
+From: Thierry Reding <thierry.reding@gmail.com>
+Date: Mon, 7 Apr 2014 15:45:30 +0200
+Subject: [PATCH 34/47] pwm: Document signal polarity convention
+
+The PWM subsystem defines normal and inversed PWM signal polarity in an
+unambiguous way. In addition to the documentation in the linux/pwm.h
+header file, add a paragraph in Documentation/pwm.txt because people are
+likely to look there for guidance.
+
+Signed-off-by: Thierry Reding <thierry.reding@gmail.com>
+---
+ Documentation/pwm.txt |    7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/Documentation/pwm.txt b/Documentation/pwm.txt
+index 93cb979..0527f61 100644
+--- a/Documentation/pwm.txt
++++ b/Documentation/pwm.txt
+@@ -97,6 +97,13 @@ pwm_chip as argument which provides a description of the PWM chip, the
+ number of PWM devices provided by the chip and the chip-specific
+ implementation of the supported PWM operations to the framework.
+ 
++When implementing polarity support in a PWM driver, make sure to respect the
++signal conventions in the PWM framework. By definition, normal polarity
++characterizes a signal starts high for the duration of the duty cycle and
++goes low for the remainder of the period. Conversely, a signal with inversed
++polarity starts low for the duration of the duty cycle and goes high for the
++remainder of the period.
++
+ Locking
+ -------
+ 
+-- 
+1.7.9.5
+

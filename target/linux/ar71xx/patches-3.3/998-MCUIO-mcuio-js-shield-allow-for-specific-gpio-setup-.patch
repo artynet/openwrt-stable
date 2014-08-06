@@ -1,0 +1,265 @@
+From 589cf752337186a3e5c59341cde510b29f715b70 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 21 May 2014 18:01:52 +0200
+Subject: [PATCH 0999/1009] MCUIO, mcuio-js-shield: allow for specific gpio
+ setup functions
+
+We shall have different setup functions for buttons and leds.
+---
+ drivers/mcuio/mcuio-js-shield.c |  168 +++++++++++++++++++++++----------------
+ 1 file changed, 99 insertions(+), 69 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-js-shield.c b/drivers/mcuio/mcuio-js-shield.c
+index dc8a8ed..ba352c4 100644
+--- a/drivers/mcuio/mcuio-js-shield.c
++++ b/drivers/mcuio/mcuio-js-shield.c
+@@ -29,6 +29,8 @@
+ 
+ #include "mcuio-internal.h"
+ 
++#define JS_MAX_NLEDS 2
++
+ /* The HID report descriptor (just 4 buttons at present) */
+ static char mcuio_js_report_descriptor[] = {
+ 	/* USAGE_PAGE (Button) */
+@@ -54,10 +56,13 @@ static char mcuio_js_report_descriptor[] = {
+ };
+ 
+ struct mcuio_js_data;
++struct mcuio_js_gpio;
++struct mcuio_js_led;
+ 
+ struct mcuio_js_gpio_config {
+ 	const char *name;
+-	int out;
++	int (*setup)(struct mcuio_device *mdev, struct mcuio_js_gpio *data,
++		     int index);
+ };
+ 
+ struct mcuio_js_gpio {
+@@ -66,60 +71,15 @@ struct mcuio_js_gpio {
+ 	int irq;
+ 	int index;
+ 	struct mcuio_js_data *js_data;
++	struct mcuio_js_led *led;
+ 	struct list_head list;
+ };
+ 
+-
+-/* gpio configs for "old" joystick shield */
+-static const struct mcuio_js_gpio_config js_gpios[] = {
+-	{
+-		"SCL", 0,
+-	},
+-	{
+-		"D4", 0,
+-	},
+-	{
+-		"D5", 0,
+-	},
+-	{
+-		"D6", 0,
+-	},
+-	{
+-		NULL, 0,
+-	},
+-};
+-
+-static const struct mcuio_js_gpio_config lucky_gpios[] = {
+-	{
+-		"JOYU", 0,
+-	},
+-#if 0
+-	/* D7 is the handshake signal, not available */
+-	{
+-		"JOYC", 0,
+-	},
+-#endif
+-	{
+-		"JOYR", 0,
+-	},
+-	{
+-		"JOYD", 0,
+-	},
+-	{
+-		"JOYL", 0,
+-	},
+-	{
+-		"PB1", 0,
+-	},
+-	{
+-		"LEDR", 1,
+-	},
+-	{
+-		"LEDY", 1,
+-	},
+-	{
+-		NULL, 0,
+-	},
++struct mcuio_js_led {
++	struct mcuio_js_gpio *gpio;
++	enum led_brightness curr_brightness;
++	struct led_classdev led;
++	struct work_struct work;
+ };
+ 
+ struct mcuio_js_data {
+@@ -156,17 +116,10 @@ static int __match_gpiochip(struct gpio_chip *chip, void *__gpio_data)
+ 	return 0;
+ }
+ 
+-static int __setup_gpio(struct mcuio_device *mdev, struct mcuio_js_gpio *data,
+-			int index)
++static int __setup_button(struct mcuio_device *mdev, struct mcuio_js_gpio *data,
++			  int index)
+ {
+ 	int ret = -ENODEV;
+-	struct gpio_chip *chip;
+-
+-	chip = gpiochip_find(data, __match_gpiochip);
+-	if (!chip) {
+-		dev_dbg(&mdev->dev, "%s: gpiochip not found\n", __func__);
+-		return ret;
+-	}
+ 	ret = devm_gpio_request_one(&mdev->dev, data->gpio, GPIOF_DIR_IN,
+ 				    "js-shield");
+ 	if (ret < 0)
+@@ -179,11 +132,6 @@ static int __setup_gpio(struct mcuio_device *mdev, struct mcuio_js_gpio *data,
+ 			data->gpio);
+ 		return ret;
+ 	}
+-	if (data->cfg->out) {
+-		/* This is an output, no IRQ number */
+-		data->irq = 0;
+-		return 0;
+-	}
+ 	ret = gpio_direction_input(data->gpio);
+ 	if (ret) {
+ 		dev_err(&mdev->dev,
+@@ -203,6 +151,14 @@ static int __setup_gpio(struct mcuio_device *mdev, struct mcuio_js_gpio *data,
+ 	return 0;
+ }
+ 
++static int __setup_led(struct mcuio_device *mdev, struct mcuio_js_gpio *data,
++		       int index)
++{
++	data->irq = 0;
++	data->index = index;
++	return 0;
++}
++
+ static irqreturn_t mcuio_js_irq_handler(int irq, void *__data)
+ {
+ 	int v;
+@@ -285,7 +241,7 @@ static int mcuio_js_hid_start(struct hid_device *hid)
+ 	}
+ 	list_for_each_entry(data, &js_data->gpios, list) {
+ 		unsigned int v;
+-		if (data->cfg->out) {
++		if (!data->irq) {
+ 			i++;
+ 			continue;
+ 		}
+@@ -345,6 +301,71 @@ static struct hid_ll_driver mcuio_js_hid_ll_driver = {
+ 	.parse = mcuio_js_hid_parse,
+ };
+ 
++/* gpio configs for "old" joystick shield */
++static const struct mcuio_js_gpio_config js_gpios[] = {
++	{
++		.name = "SCL",
++		.setup = __setup_button,
++	},
++	{
++		.name = "D4",
++		.setup = __setup_button,
++	},
++	{
++		.name = "D5",
++		.setup = __setup_button,
++	},
++	{
++		.name = "D6",
++		.setup = __setup_button,
++	},
++	{
++		.name = NULL,
++	},
++};
++
++static const struct mcuio_js_gpio_config lucky_gpios[] = {
++	{
++		.name = "JOYU",
++		.setup = __setup_button,
++	},
++#if 0
++	/* D7 is the handshake signal, not available */
++	{
++		.name = "JOYC",
++		.setup = __setup_button,
++	},
++#endif
++	{
++		.name = "JOYR",
++		.setup = __setup_button,
++	},
++	{
++		.name = "JOYD",
++		.setup = __setup_button,
++	},
++	{
++		.name = "JOYL",
++		.setup = __setup_button,
++	},
++	{
++		.name = "PB1",
++		.setup = __setup_button,
++	},
++	{
++		.name = "LEDR",
++		.setup = __setup_led,
++	},
++	{
++		.name = "LEDY",
++		.setup = __setup_led,
++	},
++	{
++		.name = NULL,
++	},
++};
++
++
+ static int mcuio_js_probe(struct mcuio_device *mdev)
+ {
+ 	int i, ret = 0;
+@@ -370,6 +391,7 @@ static int mcuio_js_probe(struct mcuio_device *mdev)
+ 	}
+ 
+ 	for (i = 0; cfg->name && cfg->name[0]; cfg++, i++) {
++		struct gpio_chip *chip;
+ 		struct mcuio_js_gpio *data = devm_kzalloc(&mdev->dev,
+ 							  sizeof(*data),
+ 							  GFP_KERNEL);
+@@ -379,9 +401,17 @@ static int mcuio_js_probe(struct mcuio_device *mdev)
+ 		}
+ 		data->cfg = cfg;
+ 		data->js_data = js_data;
+-		ret = __setup_gpio(mdev, data, i);
+-		if (ret < 0)
++		chip = gpiochip_find(data, __match_gpiochip);
++		if (!chip) {
++			dev_dbg(&mdev->dev,
++				"%s: gpiochip not found\n", __func__);
+ 			return ret;
++		}
++		if (data->cfg->setup) {
++			ret = data->cfg->setup(mdev, data, i);
++			if (ret < 0)
++				return ret;
++		}
+ 		list_add_tail(&data->list, &js_data->gpios);
+ 	}
+ 
+-- 
+1.7.9.5
+

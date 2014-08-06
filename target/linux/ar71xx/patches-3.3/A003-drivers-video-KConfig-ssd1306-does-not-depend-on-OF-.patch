@@ -1,0 +1,25 @@
+From 4beae1bff38819c11bf6e3829384c0e4f1d710c4 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 3 Jun 2014 18:07:47 +0200
+Subject: [PATCH 1004/1009] drivers/video/KConfig: ssd1306 does not depend on
+ OF anymore
+
+---
+ drivers/video/Kconfig |    1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/video/Kconfig b/drivers/video/Kconfig
+index b4e5ec9..f10abe2 100644
+--- a/drivers/video/Kconfig
++++ b/drivers/video/Kconfig
+@@ -2425,7 +2425,6 @@ endif
+ config FB_SSD1307
+ 	tristate "Solomon SSD1307 framebuffer support"
+ 	depends on FB && I2C
+-	depends on OF
+ 	depends on GENERIC_GPIO
+ 	select FB_SYS_FOPS
+ 	select FB_SYS_FILLRECT
+-- 
+1.7.9.5
+

@@ -1,0 +1,139 @@
+From 3cabd884f9063b60670f559f6ba302ff23a36d66 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 28 Jul 2014 16:18:11 +0200
+Subject: [PATCH 39/47] drivers/pwm/pwm-mcuio.c: probe and remove implemented
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/pwm-mcuio.c |   94 +++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 87 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/pwm/pwm-mcuio.c b/drivers/pwm/pwm-mcuio.c
+index b685cf2..83bdcd2 100644
+--- a/drivers/pwm/pwm-mcuio.c
++++ b/drivers/pwm/pwm-mcuio.c
+@@ -18,19 +18,33 @@
+ #include <linux/platform_device.h>
+ #include <linux/pwm.h>
+ #include <linux/slab.h>
++#include <linux/regmap.h>
+ 
+ #include <linux/mcuio.h>
+ #include <linux/mcuio_ids.h>
+ #include <linux/mcuio-proto.h>
+ 
+-struct mcuio_pwm_chip {
++static const struct regmap_config mcuio_pwm_regmap_config = {
++	.reg_bits = 32,
++	.val_bits = 32,
++	.max_register = 0xffc,
++	.cache_type = REGCACHE_NONE,
++};
++
++struct mcuio_pwm_data {
+ 	struct pwm_chip chip;
++	struct regmap *map;
+ 	/* FIXME TODO Add mcuio data */
+ };
+ 
+-static inline struct mcuio_pwm_chip *to_mcuio_pwm_chip(struct pwm_chip *chip)
++static inline struct mcuio_pwm_data *to_mcuio_pwm_data(struct pwm_chip *chip)
+ {
+-	return container_of(chip, struct mcuio_pwm_chip, chip);
++	return container_of(chip, struct mcuio_pwm_data, chip);
++}
++
++static inline int pwm_idx(struct pwm_device *pwm)
++{
++	return pwm - pwm->chip->pwms;
+ }
+ 
+ static int mcuio_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+@@ -68,14 +82,80 @@ static const struct pwm_ops mcuio_pwm_ops = {
+ 
+ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ {
+-	/* FIXME TODO */
+-	return -1;
++	int ret;
++	struct mcuio_pwm_data *data = NULL;
++	struct regmap *map = NULL;
++	struct mcuio_device *hc = to_mcuio_dev(mdev->dev.parent);
++	char *names;
++	int i;
++
++	if (!hc) {
++		dev_err(&mdev->dev, "no parent for device\n");
++		return -EINVAL;
++	}
++
++	map = devm_regmap_init_mcuio(mdev, &mcuio_pwm_regmap_config);
++
++	if (IS_ERR(map)) {
++		dev_err(&mdev->dev, "cannot setup regmap for device\n");
++		return PTR_ERR(map);
++	}
++
++	data = devm_kzalloc(&mdev->dev, sizeof(*data), GFP_KERNEL);
++
++	if (!data) {
++		dev_err(&mdev->dev, "error creating pwm_data\n");
++		ret = -ENOMEM;
++		goto fail1;
++	}
++
++	data->map = map;
++
++	pr_debug("mcuio pwm is %u:%u:%u\n",
++		 mdev->bus, mdev->device, mdev->fn);
++
++	data->chip.dev = &mdev->dev;
++	data->chip.ops = &mcuio_pwm_ops;
++	data->chip.base = -1;
++
++	if (regmap_read(data->map, 0x08, &data->chip.npwm) < 0) {
++		ret = -EIO;
++		goto fail1;
++	}
++
++	dev_dbg(&mdev->dev, "%d pwm outputs detected\n", data->chip.npwm);
++
++	dev_set_drvdata(&mdev->dev, data);
++
++	ret = pwmchip_add(&data->chip);
++
++	names = devm_kzalloc(&mdev->dev, 8 * data->chip.npwm, GFP_KERNEL);
++
++	if (!names) {
++		ret = -ENOMEM;
++		goto fail1;
++	}
++
++	for (i = 0; i < data->chip.npwm; i++) {
++		regmap_read(data->map, 0x040 * (i + 1), (u32*)&names[i * 8]);
++		dev_dbg(&mdev->dev, "found pwm %d: %s\n", i, &names[i * 8]);
++		data->chip.pwms[i].label = &names[i * 8];
++	}
++	return ret;
++
++fail1:
++	return ret;
+ }
+ 
+ static int mcuio_pwm_remove(struct mcuio_device *mdev)
+ {
+-	/* FIXME TODO */
+-	return -1;
++	struct mcuio_pwm_data *data = dev_get_drvdata(&mdev->dev);
++
++	pr_debug("removing mcuio pwm %u:%u:%u\n",
++		 mdev->bus, mdev->device, mdev->fn);
++	BUG_ON(!data);
++
++	return pwmchip_remove(&data->chip);
+ }
+ 
+ static const struct mcuio_device_id pwm_drv_ids[] = {
+-- 
+1.7.9.5
+

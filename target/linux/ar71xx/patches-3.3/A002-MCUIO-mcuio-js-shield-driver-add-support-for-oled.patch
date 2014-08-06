@@ -1,0 +1,139 @@
+From ca3fec646ff0fd209563a08539815a6ecaf67c93 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 27 May 2014 11:19:57 +0200
+Subject: [PATCH 1003/1009] MCUIO: mcuio-js-shield driver: add support for
+ oled
+
+---
+ drivers/mcuio/mcuio-js-shield.c |   86 +++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 86 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-js-shield.c b/drivers/mcuio/mcuio-js-shield.c
+index aff5cd8..4f5222e 100644
+--- a/drivers/mcuio/mcuio-js-shield.c
++++ b/drivers/mcuio/mcuio-js-shield.c
+@@ -21,7 +21,9 @@
+ #include <linux/interrupt.h>
+ #include <linux/gpio.h>
+ #include <linux/hid.h>
++#include <linux/i2c.h>
+ #include <linux/platform_device.h>
++#include <linux/platform_data/ssd1307.h>
+ 
+ 
+ #include <linux/mcuio.h>
+@@ -88,6 +90,8 @@ struct mcuio_js_data {
+ 	struct hid_device *hid;
+ 	u8 cached_gpios;
+ 	int oled_reset_gpio;
++	struct i2c_adapter *i2c_adap;
++	struct i2c_client *oled_i2c_client;
+ 	struct list_head gpios;
+ };
+ 
+@@ -439,6 +443,71 @@ static const struct mcuio_js_gpio_config lucky_gpios[] = {
+ 	},
+ };
+ 
++static int match_i2c_mcuio(struct device *dev, void *dummy)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	return mdev->id.class == MCUIO_CLASS_I2C_CONTROLLER;
++}
++
++static int match_i2c_adap(struct device *dev, void *dummy)
++{
++	return dev->type == &i2c_adapter_type;
++}
++
++static int __setup_i2c_adapter(struct mcuio_device *mdev,
++			      struct mcuio_js_data *js_data)
++{
++	/* Look for mcuio i2c controller device */
++	struct device *hcdev = mdev->dev.parent;
++	struct device *mcuio_i2c_dev = device_find_child(hcdev,
++							 NULL,
++							 match_i2c_mcuio);
++	struct device *adap_dev;
++
++	if (!mcuio_i2c_dev) {
++		dev_err(&mdev->dev,
++			"Cannot find mcuio i2c adapter mcuio dev\n");
++		return -ENODEV;
++	}
++	/* Found, now we need the corresponding adapter ... */
++	adap_dev = device_find_child(mcuio_i2c_dev, NULL, match_i2c_adap);
++	if (!adap_dev) {
++		dev_err(&mdev->dev, "Cannot find mcuio i2c adapter\n");
++		return -ENODEV;
++	}
++	js_data->i2c_adap = to_i2c_adapter(adap_dev);
++	return 0;
++}
++
++static int __instantiate_oled(struct mcuio_device *mdev,
++			      struct mcuio_js_data *js_data)
++{
++	struct ssd1307_platform_data plat = {
++		.type = SSD1307_TYPE_1306,
++		.reset_gpio = js_data->oled_reset_gpio,
++		.width = 128,
++		.height = 64,
++		.page_offset = 0,
++	};
++	struct i2c_board_info oled_board_info = {
++		I2C_BOARD_INFO("ssd1307fb", 0x3c),
++	};
++	struct i2c_board_info *binfo = devm_kzalloc(&mdev->dev,
++						    sizeof(plat) +
++						    sizeof(oled_board_info),
++						    GFP_KERNEL);
++	if (!binfo)
++		return -ENOMEM;
++
++	memcpy(binfo, &oled_board_info, sizeof(*binfo));
++	binfo->platform_data = &binfo[1];
++	memcpy(&binfo[1], &plat, sizeof(plat));
++
++	js_data->oled_i2c_client = i2c_new_device(js_data->i2c_adap, binfo);
++	if (IS_ERR(js_data->oled_i2c_client))
++		return PTR_ERR(js_data->oled_i2c_client);
++	return 0;
++}
+ 
+ static int mcuio_js_probe(struct mcuio_device *mdev)
+ {
+@@ -490,6 +559,21 @@ static int mcuio_js_probe(struct mcuio_device *mdev)
+ 		list_add_tail(&data->list, &js_data->gpios);
+ 	}
+ 
++	ret = __setup_i2c_adapter(mdev, js_data);
++	if (ret < 0) {
++		dev_err(&mdev->dev, "error setting up i2c adapter\n");
++		return ret;
++	}
++
++	if (js_data->oled_reset_gpio >= 0) {
++		ret = __instantiate_oled(mdev, js_data);
++		if (ret < 0) {
++			dev_err(&mdev->dev,
++				"error instantiating oled device\n");
++			return ret;
++		}
++	}
++
+ 	hid = hid_allocate_device();
+ 	if (IS_ERR(hid)) {
+ 		dev_err(&mdev->dev, "error allocating hid device\n");
+@@ -537,6 +621,8 @@ static int mcuio_js_remove(struct mcuio_device *mdev)
+ 		led_classdev_unregister(&gpio->led->led);
+ 	}
+ 
++	i2c_unregister_device(js_data->oled_i2c_client);
++
+ 	hid_destroy_device(js_data->hid);
+ 	return 0;
+ }
+-- 
+1.7.9.5
+

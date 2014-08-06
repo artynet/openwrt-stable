@@ -1,0 +1,37 @@
+From 211ecf6c24c26f59d05e379aa48498743a0436a2 Mon Sep 17 00:00:00 2001
+From: Peter Ujfalusi <peter.ujfalusi@ti.com>
+Date: Fri, 21 Dec 2012 01:43:57 -0800
+Subject: [PATCH 27/47] pwm: Correct parameter name in header for *pwm_get()
+ functions
+
+To synchronize the header file definition and the actual code. In the code
+the consumer parameter is named as con_id, change the header file and replace
+consumer -> con_id in the parameter list.
+
+Signed-off-by: Peter Ujfalusi <peter.ujfalusi@ti.com>
+Ackedy-by: Thierry Reding <thierry.reding@avionic-design.de>
+Signed-off-by: Bryan Wu <cooloney@gmail.com>
+---
+ include/linux/pwm.h |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/linux/pwm.h b/include/linux/pwm.h
+index 6c934ea..c73a6fe 100644
+--- a/include/linux/pwm.h
++++ b/include/linux/pwm.h
+@@ -164,10 +164,10 @@ struct pwm_device *pwm_request_from_chip(struct pwm_chip *chip,
+ 					 unsigned int index,
+ 					 const char *label);
+ 
+-struct pwm_device *pwm_get(struct device *dev, const char *consumer);
++struct pwm_device *pwm_get(struct device *dev, const char *con_id);
+ void pwm_put(struct pwm_device *pwm);
+ 
+-struct pwm_device *devm_pwm_get(struct device *dev, const char *consumer);
++struct pwm_device *devm_pwm_get(struct device *dev, const char *con_id);
+ void devm_pwm_put(struct device *dev, struct pwm_device *pwm);
+ #else
+ static inline int pwm_set_chip_data(struct pwm_device *pwm, void *data)
+-- 
+1.7.9.5
+

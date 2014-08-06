@@ -1,0 +1,29 @@
+From 0aba512d5fbf346b0e18edebfaeef60b05e447d8 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 28 Jul 2014 14:18:23 +0200
+Subject: [PATCH 19/47] pwm: do not use EPROBE_DEFER, since we don't have
+ deferral mechanism
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/core.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/pwm/core.c b/drivers/pwm/core.c
+index a0b0f4e..fa4d79a 100644
+--- a/drivers/pwm/core.c
++++ b/drivers/pwm/core.c
+@@ -386,8 +386,8 @@ void __init pwm_add_table(struct pwm_lookup *table, size_t num)
+  */
+ struct pwm_device *pwm_get(struct device *dev, const char *con_id)
+ {
+-	struct pwm_device *pwm = ERR_PTR(-EPROBE_DEFER);
+-	const char *dev_id = dev ? dev_name(dev): NULL;
++	struct pwm_device *pwm = ERR_PTR(-EAGAIN);
++	const char *dev_id = dev ? dev_name(dev) : NULL;
+ 	struct pwm_chip *chip = NULL;
+ 	unsigned int best = 0;
+ 	struct pwm_lookup *p;
+-- 
+1.7.9.5
+

@@ -1,0 +1,476 @@
+From a95d8602aa305056b9b8936fe50068396bdf427c Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 22 May 2014 14:37:32 +0200
+Subject: [PATCH 0985/1009] i2c-mcuio: actually implement the driver
+
+---
+ drivers/i2c/busses/Kconfig     |    6 +
+ drivers/i2c/busses/Makefile    |    1 +
+ drivers/i2c/busses/i2c-mcuio.c |  398 +++++++++++++++++++++++++++++++++++++++-
+ 3 files changed, 402 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/i2c/busses/Kconfig b/drivers/i2c/busses/Kconfig
+index 3101dd5..c61da72 100644
+--- a/drivers/i2c/busses/Kconfig
++++ b/drivers/i2c/busses/Kconfig
+@@ -886,4 +886,10 @@ config SCx200_ACB
+ 	  This support is also available as a module.  If so, the module
+ 	  will be called scx200_acb.
+ 
++config I2C_MCUIO
++	tristate "MCUIO I2C driver"
++	depends on MCUIO
++	help
++	  Add support for mcuio i2c driver"
++
+ endmenu
+diff --git a/drivers/i2c/busses/Makefile b/drivers/i2c/busses/Makefile
+index fba6da6..dd4e9b6 100644
+--- a/drivers/i2c/busses/Makefile
++++ b/drivers/i2c/busses/Makefile
+@@ -85,5 +85,6 @@ obj-$(CONFIG_I2C_SIBYTE)	+= i2c-sibyte.o
+ obj-$(CONFIG_I2C_STUB)		+= i2c-stub.o
+ obj-$(CONFIG_SCx200_ACB)	+= scx200_acb.o
+ obj-$(CONFIG_SCx200_I2C)	+= scx200_i2c.o
++obj-$(CONFIG_I2C_MCUIO)		+= i2c-mcuio.o
+ 
+ ccflags-$(CONFIG_I2C_DEBUG_BUS) := -DDEBUG
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index 04bb341..72441ed 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -1,6 +1,9 @@
+ /*
+  * mcuio I2c controller driver
++ * Some code from drivers/i2c/busses/i2c-nomadik
+  */
++#define DEBUG 1
++
+ #include <linux/kernel.h>
+ #include <linux/module.h>
+ #include <linux/init.h>
+@@ -11,21 +14,411 @@
+ #include <linux/workqueue.h>
+ #include <linux/kthread.h>
+ #include <linux/irq.h>
++#include <linux/i2c.h>
+ #include <linux/interrupt.h>
++#include <linux/circ_buf.h>
+ 
+ #include <linux/mcuio.h>
+ #include <linux/mcuio_ids.h>
+ #include <linux/mcuio-proto.h>
+ 
+-#include "mcuio-internal.h"
++#define I2C_MCUIO_BUF_MAX_SIZE 0x100
++#define I2C_MCUIO_IBUF_MAX_SIZE I2C_MCUIO_BUF_MAX_SIZE
++#define I2C_MCUIO_OBUF_MAX_SIZE I2C_MCUIO_BUF_MAX_SIZE
++
++#define LOCAL_BUF_SIZE 2048
++
++#define I2C_MCUIO_SADDR	   0x008
++#define I2C_MCUIO_STATUS   0x00c
++#define	  TRANSACTION_OK       0x1
++#define	  LOW_OBUF_WATERMARK   0x2
++#define   HI_IBUF_WATERMARK    0x4
++#define	  NAK_RECEIVED	       0x80
++#define I2C_MCUIO_CFG	   0x010
++#define I2C_MCUIO_BRATE	   0x014
++#define I2C_MCUIO_CMD	   0x018
++#define	  START_TRANSACTION 0x1
++
++#define I2C_MCUIO_INTEN	   0x01c
++#define I2C_MCUIO_BUF_SIZE 0x020
++#define I2C_MCUIO_OBUF_LEN 0x024
++#define I2C_MCUIO_IBUF_LEN 0x028
++#define I2C_MCUIO_OBUF_HEAD 0x02c
++#define I2C_MCUIO_OBUF_TAIL 0x030
++#define I2C_MCUIO_IBUF_HEAD 0x034
++#define I2C_MCUIO_IBUF_TAIL 0x038
++#define I2C_MCUIO_OBUF	   0x040
++#define I2C_MCUIO_IBUF	   (I2C_MCUIO_OBUF + I2C_MCUIO_OBUF_MAX_SIZE)
++
++struct mcuio_i2c_dev {
++	struct i2c_adapter adapter;
++	struct mcuio_device *mdev;
++	struct regmap *map;
++	struct completion xfer_complete;
++	int xfer_status;
++	unsigned buf_size;
++	struct i2c_msg *msg;
++	int sent;
++	int received;
++	u32 buf[LOCAL_BUF_SIZE/sizeof(u32)];
++};
++
++static int __send_data(struct mcuio_i2c_dev *i2cd, u32 *buf, int len,
++		       int *head)
++{
++	int i, ret = 0;
++
++	if (len % sizeof(u32)) {
++		WARN_ON(1);
++		return -EINVAL;
++	}
++	dev_dbg(&i2cd->mdev->dev, "len = %d\n", len);
++	/* TERRIBLE HACK: FIX THIS BY WRITING BYTE BY BYTE */
++	for (i = 0; i < len/sizeof(u32) && ret >= 0; i++) {
++		dev_dbg(&i2cd->mdev->dev, "writing 0x%08x to 0x%04x\n",
++			cpu_to_le32(buf[i]), I2C_MCUIO_OBUF + *head);
++		ret = regmap_write(i2cd->map, I2C_MCUIO_OBUF + *head,
++				   cpu_to_le32(buf[i]));
++		if (ret < 0) {
++			dev_err(&i2cd->mdev->dev, "error writing message\n");
++			break;
++		}
++		*head = (*head + sizeof(u32)) & (i2cd->buf_size - 1);
++	}
++	return ret < 0 ? ret : len;
++}
++
++static int __receive_data(struct mcuio_i2c_dev *i2cd, u32 *buf, int len,
++			  int *tail)
++{
++	int i, ret = 0;
++
++	if (len % sizeof(u32)) {
++		WARN_ON(1);
++		return -EINVAL;
++	}
++	dev_dbg(&i2cd->mdev->dev, "len = %d\n", len);
++	/* TERRIBLE HACK: FIX THIS BY WRITING BYTE BY BYTE */
++	for (i = 0; i < len/sizeof(u32) && ret >= 0; i++) {
++		u32 v;
++		ret = regmap_read(i2cd->map, I2C_MCUIO_IBUF + *tail, &v);
++		if (ret < 0) {
++			dev_err(&i2cd->mdev->dev, "error reading message\n");
++			continue;
++		}
++		buf[i] = le32_to_cpu(v);
++		dev_dbg(&i2cd->mdev->dev, "read 0x%08x from 0x%04x\n",
++			buf[i], I2C_MCUIO_IBUF + *tail);
++		*tail = (*tail + sizeof(u32)) & (i2cd->buf_size - 1);
++	}
++	return ret < 0 ? ret : len;
++}
++
++static int __send_obuf(struct mcuio_i2c_dev *i2cd)
++{
++	u32 h, t;
++	int space;
++	int stat, togo, l;
++
++	stat = regmap_read(i2cd->map, I2C_MCUIO_OBUF_HEAD, &h);
++	if (stat < 0) {
++		dev_err(&i2cd->mdev->dev, "error reading obuf head\n");
++		return stat;
++	}
++	stat = regmap_read(i2cd->map, I2C_MCUIO_OBUF_TAIL, &t);
++	if (stat < 0) {
++		dev_err(&i2cd->mdev->dev, "error reading obuf tail\n");
++		return stat;
++	}
++	space = ((CIRC_SPACE(h, t, i2cd->buf_size)) / sizeof(u32)) *
++		sizeof(u32);
++	dev_dbg(&i2cd->mdev->dev, "h = %u, t = %u, space = %d\n", h, t, space);
++	if (!space) {
++		dev_dbg(&i2cd->mdev->dev, "no space in output buffer\n");
++		return 0;
++	}
++	togo = ((i2cd->msg->len - i2cd->sent)/sizeof(u32)) * sizeof(u32);
++	if ((i2cd->msg->len - i2cd->sent) % sizeof(u32))
++		togo += sizeof(u32);
++	l = min(space, togo);
++	dev_dbg(&i2cd->mdev->dev, "togo = %d, %p\n", togo,
++		&i2cd->buf[i2cd->sent/sizeof(u32)]);
++	stat = __send_data(i2cd, &i2cd->buf[i2cd->sent/sizeof(u32)], l, &h);
++
++	if (stat < 0) {
++		dev_err(&i2cd->mdev->dev, "error sending data to target\n");
++		return stat;
++	}
++	i2cd->sent += stat;
++	dev_dbg(&i2cd->mdev->dev, "sent = %d\n", i2cd->sent);
++	stat = regmap_write(i2cd->map, I2C_MCUIO_OBUF_HEAD, h);
++	if (stat < 0)
++		dev_err(&i2cd->mdev->dev, "error setting new obuf head\n");
++	return stat;
++}
++
++static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
++{
++	u32 h, t;
++	int count;
++	int stat, togo, l;
++
++	stat = regmap_read(i2cd->map, I2C_MCUIO_IBUF_TAIL, &t);
++	if (stat < 0) {
++		dev_err(&i2cd->mdev->dev, "error reading ibuf tail\n");
++		return stat;
++	}
++	stat = regmap_read(i2cd->map, I2C_MCUIO_IBUF_HEAD, &h);
++	if (stat < 0) {
++		dev_err(&i2cd->mdev->dev,
++			"error reading input buffer head\n");
++		return stat;
++	}
++	count = (CIRC_CNT(h, t, i2cd->buf_size) / sizeof(u32)) * sizeof(u32);
++	dev_dbg(&i2cd->mdev->dev, "h = %u, t = %u, count = %d\n", h, t, count);
++	if (!count) {
++		dev_dbg(&i2cd->mdev->dev, "nothing in input buffer\n");
++		return 0;
++	}
++	togo = ((i2cd->msg->len - i2cd->received)/sizeof(u32)) * sizeof(u32);
++	if ((i2cd->msg->len - i2cd->received) % sizeof(u32))
++		togo += sizeof(u32);
++	l = min(count, togo);
++	dev_dbg(&i2cd->mdev->dev, "togo = %d, %p\n", togo,
++		&i2cd->buf[i2cd->received/sizeof(u32)]);
++	stat = __receive_data(i2cd, &i2cd->buf[i2cd->received/sizeof(u32)],
++			      l, &t);
++	if (stat < 0) {
++		dev_err(&i2cd->mdev->dev, "error receiving data from target\n");
++		return stat;
++	}
++	i2cd->received += stat;
++	dev_dbg(&i2cd->mdev->dev, "received = %d\n", i2cd->received);
++	stat = regmap_write(i2cd->map, I2C_MCUIO_IBUF_TAIL, t);
++	if (stat < 0)
++		dev_err(&i2cd->mdev->dev, "error setting new ibuf tail\n");
++	return stat;
++}
++
++static irqreturn_t mcuio_i2c_irq_handler(int irq, void *devid)
++{
++	/* Read status register and complete current transaction */
++	struct mcuio_i2c_dev *i2cd = devid;
++	u32 v;
++	int stat;
++
++	BUG_ON(!i2cd || !i2cd->map);
++	stat = regmap_read(i2cd->map, I2C_MCUIO_STATUS, &v);
++	dev_dbg(&i2cd->mdev->dev, "%s: status = 0x%08x\n", __func__, v);
++	if (v & LOW_OBUF_WATERMARK)
++		__send_obuf(i2cd);
++	if (v & HI_IBUF_WATERMARK)
++		__get_ibuf(i2cd);
++	if ((v & NAK_RECEIVED) || (v & TRANSACTION_OK)) {
++		i2cd->xfer_status = (stat < 0 || (v & NAK_RECEIVED)) ? -EIO : 0;
++		if (i2cd->msg->flags & I2C_M_RD)
++			__get_ibuf(i2cd);
++		complete(&i2cd->xfer_complete);
++	}
++	dev_dbg(&i2cd->mdev->dev, "%s: xfer_status = %d\n", __func__,
++		i2cd->xfer_status);
++	return IRQ_HANDLED;
++}
++
++static void __dump_message(struct device *dev, struct i2c_msg *msg)
++{
++	int i;
++	dev_dbg(dev, "i2c msg len = %u\n", msg->len);
++#ifdef DEBUG
++	printk(KERN_DEBUG);
++	for (i = 0; i < msg->len; i++) {
++		printk("0x%02x\t", msg->buf[i]);
++		if (i && !(i % 8)) {
++			printk("\n");
++			printk(KERN_DEBUG);
++		}
++	}
++	printk("\n");
++#endif
++}
++
++static int mcuio_simple_i2c_xfer_one(struct i2c_adapter *a,
++				     struct i2c_msg *msg)
++{
++	struct mcuio_i2c_dev *i2cd = i2c_get_adapdata(a);
++	u32 v;
++	int ret, timeout;
++
++	if (!i2cd) {
++		WARN_ON(1);
++		return -ENODEV;
++	}
++
++	if (msg->len > LOCAL_BUF_SIZE) {
++		dev_dbg(&i2cd->mdev->dev, "i2c message is too long\n");
++		return -EINVAL;
++	}
++
++	__dump_message(&i2cd->mdev->dev, msg);
++
++	i2cd->msg = msg;
++
++	/* Set slave address + R/W */
++	v = msg->addr << 1;
++	dev_dbg(&i2cd->mdev->dev, "msg->flags = %d\n", msg->flags);
++	if (msg->flags & I2C_M_RD)
++		v |= 1;
++	dev_dbg(&i2cd->mdev->dev, "setting slave addr 0x%08x\n", v);
++	ret = regmap_write(i2cd->map, I2C_MCUIO_SADDR, v);
++	if (ret < 0) {
++		dev_err(&i2cd->mdev->dev, "error setting slave address\n");
++		return ret;
++	}
++
++	/* Write message to buffer */
++	/* FIXME: check whether regmap_raw_write works */
++	memcpy(i2cd->buf, msg->buf, msg->len);
++	i2cd->sent = 0;
++	i2cd->received = 0;
++	ret = __send_obuf(i2cd);
++	if (ret < 0) {
++		dev_err(&i2cd->mdev->dev, "error sending output buffer\n");
++		return ret;
++	}
++
++	/* Write message length */
++	v = msg->len;
++	dev_dbg(&i2cd->mdev->dev, "writing msg len = %u\n", v);
++	ret = regmap_write(i2cd->map, I2C_MCUIO_OBUF_LEN, v);
++	if (ret < 0) {
++		dev_err(&i2cd->mdev->dev, "error writing message length\n");
++		return ret;
++	}
++
++	/* Enable interrupt */
++	v = TRANSACTION_OK | NAK_RECEIVED | LOW_OBUF_WATERMARK;
++	dev_dbg(&i2cd->mdev->dev, "enabling interrupt\n");
++	ret = regmap_write(i2cd->map, I2C_MCUIO_INTEN, v);
++	if (ret < 0) {
++		dev_err(&i2cd->mdev->dev, "error enabling interrupt\n");
++		return ret;
++	}
++
++	/* Initialize xfer status and init xfer completion struct */
++	i2cd->xfer_status = -ETIMEDOUT;
++	init_completion(&i2cd->xfer_complete);
++
++	/* Issue xmit command */
++	v = START_TRANSACTION;
++	dev_dbg(&i2cd->mdev->dev, "starting transaction\n");
++	ret = regmap_write(i2cd->map, I2C_MCUIO_CMD, v);
++	if (ret < 0) {
++		dev_err(&i2cd->mdev->dev, "error starting transaction\n");
++		return ret;
++	}
++
++	/* Wait for transfer complete */
++	timeout = wait_for_completion_timeout(&i2cd->xfer_complete,
++					      a->timeout);
++	if (timeout < 0) {
++		dev_err(&i2cd->mdev->dev, "error %d on slave xfer\n", timeout);
++		ret = timeout;
++	}
++	if (!timeout)
++		/*
++		 * In case of timeout, the initial value of i2cd->xfer_status
++		 * will be returned
++		 */
++		dev_err(&i2cd->mdev->dev, "timeout on slave xfer\n");
++	else
++		dev_dbg(&i2cd->mdev->dev, "transaction done\n");
++	return ret < 0 ? ret : i2cd->xfer_status;
++}
++
++static int mcuio_simple_i2c_xfer(struct i2c_adapter *a,
++				 struct i2c_msg msgs[], int num_msgs)
++{
++	int i, ret = 0;
++
++	for (i = 0; i < num_msgs && !ret; i++)
++		ret = mcuio_simple_i2c_xfer_one(a, &msgs[i]);
++	return ret < 0 ? ret : num_msgs;
++}
++
++static unsigned int mcuio_simple_i2c_functionality(struct i2c_adapter *adap)
++{
++	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
++}
++
++static const struct i2c_algorithm mcuio_simple_i2c_algo = {
++	.master_xfer	= mcuio_simple_i2c_xfer,
++	.functionality	= mcuio_simple_i2c_functionality
++};
++
++static const struct regmap_config mcuio_i2c_regmap_config = {
++	.reg_bits = 32,
++	.val_bits = 32,
++	.max_register = 0x240,
++	.cache_type = REGCACHE_NONE,
++};
+ 
+ static int mcuio_simple_i2c_probe(struct mcuio_device *mdev)
+ {
+-	return -ENODEV;
++	int ret;
++	struct mcuio_i2c_dev *i2cd;
++	struct i2c_adapter *a;
++	u32 v;
++
++	i2cd = devm_kzalloc(&mdev->dev, sizeof(*i2cd), GFP_KERNEL);
++	if (!i2cd)
++		return -ENOMEM;
++	i2cd->mdev = mdev;
++	i2cd->map = devm_regmap_init_mcuio(mdev, &mcuio_i2c_regmap_config);
++
++	if (IS_ERR(i2cd->map)) {
++		dev_err(&mdev->dev, "cannot setup regmap for device\n");
++		return PTR_ERR(i2cd->map);
++	}
++
++	ret = regmap_read(i2cd->map, I2C_MCUIO_BUF_SIZE, &v);
++	if (ret < 0) {
++		dev_err(&mdev->dev, "error reading mcu buffer size\n");
++		return ret;
++	}
++	i2cd->buf_size = v;
++
++	a = &i2cd->adapter;
++
++	a->dev.parent	= &mdev->dev;
++	a->owner	= THIS_MODULE;
++	a->class	= I2C_CLASS_HWMON | I2C_CLASS_SPD;
++	a->algo		= &mcuio_simple_i2c_algo;
++	/* FIXME: read timeout from mcu ? */
++	a->timeout	= msecs_to_jiffies(20000);
++	snprintf(a->name, sizeof(a->name),
++		 "Mcuio I2C %s", dev_name(&mdev->dev));
++
++	ret = request_threaded_irq(mdev->irq, NULL, mcuio_i2c_irq_handler,
++				   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
++				   "mcuio-i2c", i2cd);
++
++	i2c_set_adapdata(a, i2cd);
++
++	ret = i2c_add_adapter(a);
++	if (ret) {
++		dev_err(&mdev->dev, "failed to add adapter\n");
++		free_irq(mdev->irq, i2cd);
++		return ret;
++	}
++	dev_set_drvdata(&mdev->dev, i2cd);
++	return ret;
+ }
+ 
+ static int mcuio_simple_i2c_remove(struct mcuio_device *mdev)
+ {
++	struct mcuio_i2c_dev *i2cd = dev_get_drvdata(&mdev->dev);
++	free_irq(mdev->irq, i2cd);
++	i2c_del_adapter(&i2cd->adapter);
+ 	return 0;
+ }
+ 
+@@ -64,7 +457,6 @@ static void __exit mcuio_simple_i2c_exit(void)
+ subsys_initcall(mcuio_simple_i2c_init);
+ module_exit(mcuio_simple_i2c_exit);
+ 
+-MODULE_VERSION(GIT_VERSION); /* Defined in local Makefile */
+ MODULE_AUTHOR("Davide Ciminaghi");
+ MODULE_DESCRIPTION("MCUIO simple i2c controller driver");
+ MODULE_LICENSE("GPL v2");
+-- 
+1.7.9.5
+

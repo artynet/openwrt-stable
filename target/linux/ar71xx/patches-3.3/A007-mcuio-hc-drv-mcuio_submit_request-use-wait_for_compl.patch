@@ -1,0 +1,32 @@
+From 7dbfb8a60c2cd242eba1ec750a009dd3f3e59fc3 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 15 Jul 2014 11:12:12 +0200
+Subject: [PATCH 1008/1009] mcuio-hc-drv, mcuio_submit_request(): use
+ wait_for_completion()
+
+With wait_for_completion_interruptible(), if a signal is received while
+waiting, the delayed work should be cancelled. Let's take the non
+interruptible version for now (timeouts are very short).
+---
+ drivers/mcuio/mcuio-hc-drv.c |    3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index de627d0..823fdba 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -410,10 +410,9 @@ int mcuio_submit_request(struct mcuio_request *r)
+ 	r->cb_data = &request_complete;
+ 	r->status = -ETIMEDOUT;
+ 	ret = mcuio_hc_enqueue_request(r, 1);
+-	if (!ret)
+-		ret = wait_for_completion_interruptible(&request_complete);
+ 	if (ret)
+ 		return ret;
++	wait_for_completion(&request_complete);
+ 	return r->status;
+ }
+ EXPORT_SYMBOL(mcuio_submit_request);
+-- 
+1.7.9.5
+

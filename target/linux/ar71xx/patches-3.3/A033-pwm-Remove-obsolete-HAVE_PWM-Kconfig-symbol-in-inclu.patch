@@ -1,0 +1,29 @@
+From 56f4288d9e2249ed2d511be96f4ad75ccfa522c7 Mon Sep 17 00:00:00 2001
+From: Sascha Hauer <s.hauer@pengutronix.de>
+Date: Fri, 24 Jan 2014 08:54:16 +0100
+Subject: [PATCH 33/47] pwm: Remove obsolete HAVE_PWM Kconfig symbol in
+ include/linux/pwm.h
+
+Partial apply of commit 557fe99 in linux-mainline
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ include/linux/pwm.h |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/linux/pwm.h b/include/linux/pwm.h
+index 4ea1f3f..9a2b9d1 100644
+--- a/include/linux/pwm.h
++++ b/include/linux/pwm.h
+@@ -4,7 +4,7 @@
+ struct pwm_device;
+ struct seq_file;
+ 
+-#if IS_ENABLED(CONFIG_PWM) || IS_ENABLED(CONFIG_HAVE_PWM)
++#if IS_ENABLED(CONFIG_PWM)
+ /*
+  * pwm_request - request a PWM device
+  */
+-- 
+1.7.9.5
+
