@@ -23,8 +23,16 @@ fi
 
 # program AVR
 echo 1 > $OE_PATH
-avrdude -c linuxgpio -C /etc/avrdude.conf -p m32u4 -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xFB:m -Uflash:w:$1:i $2
 
+avrdude  -q -q -c linuxgpio -C /etc/avrdude.conf -p m32u4 -U efuse:r:/tmp/efuse:d
+read EFUSE < /tmp/efuse
+rm -f /tmp/efuse
+if [ "x$EFUSE" = "x203" ] # 203 = 0xCB
+then
+	avrdude -c linuxgpio -C /etc/avrdude.conf -p m32u4 -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xCB:m -Uflash:w:$1:i $2
+else
+	avrdude -c linuxgpio -C /etc/avrdude.conf -p m32u4 -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xFB:m -Uflash:w:$1:i $2
+fi
 
 # Restore previous status
 echo $OE_VALUE > $OE_PATH
