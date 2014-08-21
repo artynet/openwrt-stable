@@ -35,8 +35,8 @@
 #define DS_GPIO_RGB_LED_BLUE            DS_GPIO_LED0       
 #define DS_GPIO_RGB_LED_RED             DS_GPIO_LED1
 #define DS_GPIO_RGB_LED_GREEN           DS_GPIO_LED3
-#define DS_GPIO_LED_USB            	DS_GPIO_LED0       
-#define DS_GPIO_LED_WLAN             	DS_GPIO_LED1
+#define DS_GPIO_LED_WLAN             	DS_GPIO_LED0
+#define DS_GPIO_LED_USB            	DS_GPIO_LED1       
 
 #define DS_GPIO_OE			21
 #define DS_GPIO_MCU_RESET		18
