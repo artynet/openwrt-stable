@@ -28,7 +28,7 @@
 /* * * * * * * * * * * * * * * * * * * LED * * * * * * * * * * * * * * * * * */
 
 static struct gpio_led ds_leds_gpio[] __initdata = {
-#if defined(LININO_BOARD_RGB)
+#if defined(LININO_ONE_PLUS)
         {
                 .name = "rgb:blue",
                 .gpio = DS_GPIO_RGB_LED_BLUE,
@@ -46,12 +46,12 @@ static struct gpio_led ds_leds_gpio[] __initdata = {
         },
 #else
 	{
-		.name = "ds:green:usb",
+		.name = "usb",
 		.gpio = DS_GPIO_LED_USB,
 		.active_low = 0,
 	},
 	{
-		.name = "ds:green:wlan",
+		.name = "wlan",
 		.gpio = DS_GPIO_LED_WLAN,
 		.active_low = 0,
 	},

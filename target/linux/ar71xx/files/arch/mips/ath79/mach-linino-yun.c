@@ -5,7 +5,6 @@
  */
 
 #define LININO_YUN 1
-#define LININO_BOARD_RGB 1
 
 #include "mach-linino.c"
 
