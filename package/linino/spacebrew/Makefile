@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=spacebrew
-PKG_VERSION:=1.0.0
+PKG_VERSION:=2.3.0
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=git://github.com/julioterra/yunSpacebrew.git
 PKG_SOURCE_SUBDIR:=spacebrew-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=d05bfb3cb609d04e3e2fcbe10367fa7177cf8c2e
+PKG_SOURCE_VERSION:=0299adaca762f75afd4551aa63ff54c703cbd7e6
 PKG_SOURCE_PROTO:=git
 
 include $(INCLUDE_DIR)/package.mk

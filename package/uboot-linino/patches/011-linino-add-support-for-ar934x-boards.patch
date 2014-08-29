@@ -1,6 +1,6 @@
 --- a/Makefile
 +++ b/Makefile
-@@ -343,6 +343,65 @@ ifdef BOARD_STRING
+@@ -343,6 +343,66 @@ ifdef BOARD_STRING
  endif
  	@./mkconfig -a ap121 mips mips ap121 ar7240 ar7240 linino
  	
@@ -41,6 +41,7 @@
 +	@echo '#define CONFIG_ROOTFS_TYPE "rootfstype=squashfs"' >>include/config.h
 +	@echo "#define CONFIG_AR7240 1" >>include/config.h
 +	@echo "#define CONFIG_WASP 1" >>include/config.h
++	@echo '#define CFG_AG7240_NMACS 1' >>include/config.h
 +ifdef FLASH_SIZE
 +	@echo "#define FLASH_SIZE $(FLASH_SIZE)" >>include/config.h
 +endif

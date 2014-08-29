@@ -1,8 +1,8 @@
 #!/bin/sh /etc/rc.common
 # Copyright (C) 2013 DogHunter
 
-START=99
-STOP=99
+START=40
+STOP=40
 
 status() {
 	oi=$(pidof uSDaemon)
@@ -16,7 +16,7 @@ status() {
 start() {
 	oi=$(pidof uSDaemon)
 	if [ "x$oi" == "x" ]; then
-		echo "Start uSDaemon"
+		echo "Start uSDaemon" > /dev/kmsg
 		nice -n 10 /sbin/uSDaemon &
 	else
 		echo "uSDaemon is already running ($oi)"

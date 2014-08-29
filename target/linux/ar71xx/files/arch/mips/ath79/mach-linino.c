@@ -38,6 +38,20 @@ static struct gpio_led ds_leds_gpio[] __initdata = {
 		.gpio = DS_GPIO_LED_WLAN,
 		.active_low = 0,
 	},
+#if defined(LININO_CHIWAWA)
+	{
+		.name = "ds:green:lan0",
+		.gpio = DS_GPIO_LED2,
+		.active_low = 0,
+		.default_trigger = "netdev"
+	},
+	{
+		.name = "ds:green:lan1",
+		.gpio = DS_GPIO_LED4,
+		.active_low = 0,
+		.default_trigger = "netdev"
+	},
+#endif
 };
 
 /* * * * * * * * * * * * * * * * * BUTTONS * * * * * * * * * * * * * * * * * */
@@ -101,10 +115,8 @@ static struct spi_board_info linino_spi_info[] = {
 static void ds_register_spi(void) {
 	pr_info("mach-linino: enabling GPIO SPI Controller");
 
-#ifdef DS_GPIO_OE
 	/* Enable level shifter on SPI signals */
 	gpio_set_value(DS_GPIO_OE, 1);
-#endif
 	/* Enable level shifter on AVR interrupt */
 	gpio_set_value(DS_GPIO_OE2, 1);
 	/* Register SPI devices */
@@ -161,13 +173,32 @@ static void __init ds_setup_level_shifter_oe(void)
 	if (err)
 		pr_err("mach-linino: error setting GPIO OE\n");
 
-	/* enable OE2 of level shifter */
-	pr_info("Setting GPIO OE2 %d\n", DS_GPIO_OE2);
-	err= gpio_request_one(DS_GPIO_OE2,
-			      GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED,
-			      "OE-2");
-	if (err)
-		pr_err("mach-linino: error setting GPIO OE2\n");
+	#if defined(LININO_FREEDOG)
+        /* enable SWD_OE to be low as default */
+        pr_info("Setting GPIO SWD OE %d\n", DS_GPIO_SWD_OE);
+        err= gpio_request_one(DS_GPIO_SWD_OE,
+                              GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED,
+                              "SWD_OE");
+        if (err)
+                pr_err("mach-linino: error setting GPIO SWD_OE\n");
+
+        /* enable SWD_EN to be low as default */
+        pr_info("Setting GPIO SWD EN %d\n", DS_GPIO_SWD_EN);
+        err= gpio_request_one(DS_GPIO_SWD_EN,
+                              GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED,
+                              "SWD_EN");
+        if (err)
+                pr_err("mach-linino: error setting GPIO SWD_EN\n");
+	#else
+
+        /* enable OE2 of level shifter */
+        pr_info("Setting GPIO OE2 %d\n", DS_GPIO_OE2);
+        err= gpio_request_one(DS_GPIO_OE2,
+                              GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED,
+                              "OE-2");
+        if (err)
+                pr_err("mach-linino: error setting GPIO OE2\n");
+	#endif
 }
 
 
@@ -180,7 +211,7 @@ static void ds_setup_uart_enable(void)
 
 	pr_info("Setting GPIO UART-ENA %d\n", DS_GPIO_UART_ENA);
 	err = gpio_request_one(DS_GPIO_UART_ENA,
-			       GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED,
+			       DS_GPIO_UART_POL | GPIOF_EXPORT_DIR_FIXED,
 			       "UART-ENA");
 	if (err)
 		pr_err("mach-linino: error setting GPIO Uart Enable\n");
@@ -197,6 +228,12 @@ static void __init ds_setup(void)
 	ath79_register_gpio_keys_polled(-1, DS_KEYS_POLL_INTERVAL,
 			ARRAY_SIZE(ds_gpio_keys), ds_gpio_keys);
 	ath79_register_usb();
+
+	// use the swtich_led directly form sysfs
+	ath79_gpio_function_disable(AR933X_GPIO_FUNC_ETH_SWITCH_LED0_EN |
+	                            AR933X_GPIO_FUNC_ETH_SWITCH_LED1_EN |
+	                            AR933X_GPIO_FUNC_ETH_SWITCH_LED2_EN |
+	                            AR933X_GPIO_FUNC_ETH_SWITCH_LED3_EN);
 
 	/*
 	 * Disable the Function for some pins to have GPIO functionality active

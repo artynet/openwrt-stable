@@ -41,6 +41,13 @@
 	#define DS_GPIO_LED_USB			1
 #endif
 
+#define DS_GPIO_LED2			13
+#define DS_GPIO_LED3			14
+#define DS_GPIO_LED4			15
+#define DS_GPIO_LED5			16
+
+#define DS_GPIO_OE			21
+#define DS_GPIO_MCU_RESET		18
 
 #define DS_GPIO_UART_ENA	23
 
@@ -48,12 +55,17 @@
 #if defined(LININO_FREEDOG)
 	#define DS_GPIO_OE2			11
 	#define DS_GPIO_CONF_BTN	20
+	#define DS_GPIO_SWD_EN		12
+	#define DS_GPIO_SWD_OE		11
+	#define DS_GPIO_UART_POL 	GPIOF_OUT_INIT_HIGH
 #elif defined(LININO_CHOWCHOW)
 	#define DS_GPIO_OE2			15
 	#define DS_GPIO_CONF_BTN	17
+	#define DS_GPIO_UART_POL        GPIOF_OUT_INIT_LOW
 #else	/* YUN */
 	#define DS_GPIO_OE2			22
 	#define DS_GPIO_CONF_BTN	20
+	#define DS_GPIO_UART_POL        GPIOF_OUT_INIT_LOW
 #endif
 
 #define DS_KEYS_POLL_INTERVAL		20	/* msecs */
@@ -69,15 +81,14 @@
 
 #if defined(LININO_FREEDOG)
 	#define	LININO_GPIO_SPI_SCK		7
-	#define	LININO_GPIO_SPI_MISO	6
+	#define	LININO_GPIO_SPI_MISO	8
 	#define	LININO_GPIO_SPI_MOSI	27
 	#define LININO_GPIO_SPI_CS0		26
-
 #elif defined(LININO_CHOWCHOW)
-	#define	LININO_GPIO_SPI_SCK		6
-	#define	LININO_GPIO_SPI_MISO	8
-	#define	LININO_GPIO_SPI_MOSI	7
-	#define LININO_GPIO_SPI_CS0		5
+	#define	LININO_GPIO_SPI_SCK		4
+	#define	LININO_GPIO_SPI_MISO	3
+	#define	LININO_GPIO_SPI_MOSI	2
+	#define LININO_GPIO_SPI_CS0		1
 #else	/* YUN */
 	#define	LININO_GPIO_SPI_SCK		11
 	#define	LININO_GPIO_SPI_MISO	8
