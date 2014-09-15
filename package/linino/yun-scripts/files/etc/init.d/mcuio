@@ -7,7 +7,7 @@ start() {
 	# Remove spi-tty-ds if loaded
 	/sbin/lsmod | grep spi_tty && /sbin/rmmod spi_tty_ds
 	# Reset mcu
-	mcu-reset
+	# mcu-reset
 	sleep 2
 	# Init serial port
 	stty 230400 -echo raw < /dev/ttyATH0
@@ -25,5 +25,5 @@ start() {
 
 stop() {
 	killall ldattach
-	mcu-reset
+	# mcu-reset
 }
