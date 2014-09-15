@@ -1,0 +1,29 @@
+From aebb8dd9e76f6c259356bd01c9222b14e16e6ced Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 28 Aug 2014 15:05:21 +0200
+Subject: [PATCH 075/115] mcuio: make mcuio-js-shield driver no more handle
+ lucky shield
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-js-shield.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-js-shield.c b/drivers/mcuio/mcuio-js-shield.c
+index 015d7fa..7f204a7 100644
+--- a/drivers/mcuio/mcuio-js-shield.c
++++ b/drivers/mcuio/mcuio-js-shield.c
+@@ -605,10 +605,6 @@ static const struct mcuio_device_id js_drv_ids[] = {
+ 		.vendor = MCUIO_VENDOR_DOGHUNTER,
+ 		.device = MCUIO_DEVICE_JOYSTICK_SHIELD,
+ 	},
+-	{
+-		.vendor = MCUIO_VENDOR_DOGHUNTER,
+-		.device = MCUIO_DEVICE_LUCKY_SHIELD,
+-	},
+ 	/* Terminator */
+ 	{
+ 		.device = MCUIO_NO_DEVICE,
+-- 
+1.9.1
+

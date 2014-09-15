@@ -1,0 +1,64 @@
+From b0ab192b88560af513a8b5935a8970ccf81c645f Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 5 Sep 2014 17:40:52 +0200
+Subject: [PATCH 095/115] MCUIO, mcuio.h: add release function pointer
+
+This pointer will be NULL in case of non-dynamically allocated
+requests (i.e.: on stack requests).
+---
+ include/linux/mcuio.h | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+diff --git a/include/linux/mcuio.h b/include/linux/mcuio.h
+index 80958b5..6fed1bd 100644
+--- a/include/linux/mcuio.h
++++ b/include/linux/mcuio.h
+@@ -83,6 +83,7 @@ typedef void (*request_cb)(struct mcuio_request *);
+  * @priv: private data. FIX THIS
+  * @fill: if this is !0 the resulting request packet shall have its fill data
+  *	  flag set
++ * @release: pointer to memory release function
+  */
+ struct mcuio_request {
+ 	struct mcuio_device *hc;
+@@ -99,6 +100,7 @@ struct mcuio_request {
+ 	struct delayed_work to_work;
+ 	void *priv;
+ 	int fill;
++	void (*release)(struct mcuio_request *);
+ };
+ 
+ /*
+@@ -115,6 +117,29 @@ int mcuio_submit_request(struct mcuio_request *r);
+  */
+ int mcuio_setup_cb(struct mcuio_request *r);
+ 
++/*
++ * Fill an mcuio request
++ */
++void mcuio_init_request(struct mcuio_request *r,
++			struct mcuio_device *mdev,
++			unsigned dev, unsigned func,
++			unsigned type,
++			int fill,
++			unsigned offset,
++			unsigned offset_mask,
++			request_cb cb);
++
++/*
++ * Dynamically allocate an mcuio request
++ */
++struct mcuio_request *mcuio_make_request(struct mcuio_device *mdev,
++					 unsigned dev, unsigned func,
++					 unsigned type,
++					 int fill,
++					 unsigned offset,
++					 unsigned offset_mask,
++					 request_cb cb);
++
+ #endif /* __KERNEL__ */
+ 
+ #endif /* __MCUIO_H__ */
+-- 
+1.9.1
+

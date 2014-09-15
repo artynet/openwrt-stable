@@ -1,0 +1,36 @@
+From 83f5202e1f8392f7bf6c920ee6f6a806fd828c20 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 2 Sep 2014 06:19:37 +0200
+Subject: [PATCH 087/115] I2C, i2c-mcuio: fix a couple of debug prints
+
+---
+ drivers/i2c/busses/i2c-mcuio.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index ad9dcb6..de74f1e 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -506,15 +506,16 @@ static s32 mcuio_simple_smbus_xfer(struct i2c_adapter * adap, u16 addr,
+ 			ilen = -1;
+ 			i2cd->buf.b[0] = command;
+ 			dev_dbg(&adap->dev, "i2c block data - addr 0x%02x, "
+-					"read  %d bytes at 0x%02x.\n",
+-					addr, len, command);
++					"read  ? bytes at 0x%02x.\n",
++					addr, command);
+ 		}
+ 
+ 		ret = 0;
+ 		break;
+ 
+ 	default:
+-		dev_dbg(&adap->dev, "Unsupported I2C/SMBus command\n");
++		dev_dbg(&adap->dev, "Unsupported I2C/SMBus command 0x%08x\n",
++			size);
+ 		ret = -EOPNOTSUPP;
+ 		break;
+ 	} /* switch (size) */
+-- 
+1.9.1
+

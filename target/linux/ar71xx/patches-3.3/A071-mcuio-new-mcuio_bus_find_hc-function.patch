@@ -1,0 +1,57 @@
+From 8e7e8647c58cdf010053c9f1f9cfc23623fc9342 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Tue, 26 Aug 2014 13:58:15 +0200
+Subject: [PATCH 071/115] mcuio: new mcuio_bus_find_hc function
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/bus.c            | 14 ++++++++++++++
+ drivers/mcuio/mcuio-internal.h |  2 ++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/drivers/mcuio/bus.c b/drivers/mcuio/bus.c
+index 3356f1b..4cd30bc 100644
+--- a/drivers/mcuio/bus.c
++++ b/drivers/mcuio/bus.c
+@@ -11,6 +11,7 @@
+ #include <linux/device.h>
+ #include <linux/slab.h>
+ #include <linux/types.h>
++#include <linux/err.h>
+ 
+ #include <linux/mcuio.h>
+ #include <linux/mcuio_ids.h>
+@@ -120,6 +121,19 @@ struct device_type mcuio_default_device_type = {
+ 	.release = mcuio_dev_default_release,
+ };
+ 
++struct mcuio_device *mcuio_bus_find_hc(int bus)
++{
++	char _name[8];
++	struct device *dev;
++	sprintf(_name, "%d:0.0", bus);
++	dev = bus_find_device_by_name(&mcuio_bus_type, NULL, _name);
++	if (!dev)
++		return ERR_PTR(-ENODEV);
++
++	return container_of(dev, struct mcuio_device, dev);
++}
++EXPORT_SYMBOL_GPL(mcuio_bus_find_hc);
++
+ int mcuio_device_register(struct mcuio_device *mdev,
+ 			  struct device_type *type,
+ 			  struct device *parent)
+diff --git a/drivers/mcuio/mcuio-internal.h b/drivers/mcuio/mcuio-internal.h
+index 83c417a..1da95c3 100644
+--- a/drivers/mcuio/mcuio-internal.h
++++ b/drivers/mcuio/mcuio-internal.h
+@@ -12,4 +12,6 @@ void mcuio_put_bus(unsigned bus);
+ 
+ struct i2c_adapter *mcuio_get_i2c_adapter(struct mcuio_device *mdev);
+ 
++struct mcuio_device *mcuio_bus_find_hc(int bus);
++
+ #endif /* __MCUIO_INTERNAL_H__ */
+-- 
+1.9.1
+

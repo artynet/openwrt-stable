@@ -1,0 +1,104 @@
+From b8a488ec6f973f5b6ff6ac02589075633b3a62fb Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Tue, 9 Sep 2014 09:38:21 +0200
+Subject: [PATCH 105/115] MCUIO: irq handling for dio and lucky shield
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig |  2 +-
+ drivers/mcuio/mcuio-dio-shield.c       |  4 +++-
+ drivers/mcuio/mcuio-lucky-shield.c     | 12 +++++++-----
+ drivers/mcuio/mcuio-shields.h          |  6 ++++--
+ 4 files changed, 15 insertions(+), 9 deletions(-)
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index c472a7b..6b1f5d4 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -1850,7 +1850,7 @@ CONFIG_GPIO_MCUIO=y
+ # CONFIG_GPIO_MAX7300 is not set
+ # CONFIG_GPIO_MAX732X is not set
+ CONFIG_GPIO_PCA953X=y
+-# CONFIG_GPIO_PCA953X_IRQ is not set
++CONFIG_GPIO_PCA953X_IRQ=y
+ CONFIG_GPIO_PCF857X=y
+ # CONFIG_GPIO_SX150X is not set
+ # CONFIG_GPIO_ADP5588 is not set
+diff --git a/drivers/mcuio/mcuio-dio-shield.c b/drivers/mcuio/mcuio-dio-shield.c
+index 3db0942..ea47b23 100644
+--- a/drivers/mcuio/mcuio-dio-shield.c
++++ b/drivers/mcuio/mcuio-dio-shield.c
+@@ -39,7 +39,7 @@ module_param(pca9555_base, uint, 0444);
+ static struct pca953x_platform_data pca9555_plat;
+ 
+ static struct mcuio_shld_i2c_info i2c_lst[] = {
+-	MCUIO_SHLD_I2C_DEV("pca9555", &pca9555_addr, &pca9555_plat),
++	MCUIO_SHLD_I2C_DEV("pca9555", &pca9555_addr, &pca9555_plat, 104),
+ };
+ 
+ static int mcuio_dio_probe(struct mcuio_device *mdev)
+@@ -74,6 +74,8 @@ static int mcuio_dio_probe(struct mcuio_device *mdev)
+ 	for (cnt = 0; cnt < data->i2c_cnt; cnt++) {
+ 		i = &data->i2c_info[cnt];
+ 		i->info.addr = *i->paddr;
++		i->info.irq = (i->gpio_irq >= 0) ?
++			gpio_to_irq(i->gpio_irq) : 0;
+ 
+ 		i->i2c_client = i2c_new_device(data->i2c_adap, &i->info);
+ 		if (!i->i2c_client)
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index ffd002b..81ec111 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -60,11 +60,11 @@ struct ssd1307_platform_data ssd1307_plat = {
+ static struct pca953x_platform_data pca9555_plat;
+ 
+ static struct mcuio_shld_i2c_info i2c_lst[] = {
+-	MCUIO_SHLD_I2C_DEV("pca9555", &pca9555_addr, &pca9555_plat),
+-	MCUIO_SHLD_I2C_DEV("mpl3115", &mpl3115_addr, NULL),
+-	MCUIO_SHLD_I2C_DEV("mag3110", &mag3110_addr, NULL),
+-	MCUIO_SHLD_I2C_DEV("sht21", &sht21_addr, NULL),
+-	MCUIO_SHLD_I2C_DEV("ssd1307fb", &ssd1307_addr, &ssd1307_plat),
++	MCUIO_SHLD_I2C_DEV("pca9555", &pca9555_addr, &pca9555_plat, 122),
++	MCUIO_SHLD_I2C_DEV("mpl3115", &mpl3115_addr, NULL, -1),
++	MCUIO_SHLD_I2C_DEV("mag3110", &mag3110_addr, NULL, -1),
++	MCUIO_SHLD_I2C_DEV("sht21", &sht21_addr, NULL, -1),
++	MCUIO_SHLD_I2C_DEV("ssd1307fb", &ssd1307_addr, &ssd1307_plat, -1),
+ };
+ 
+ static int mcuio_lucky_probe(struct mcuio_device *mdev)
+@@ -100,6 +100,8 @@ static int mcuio_lucky_probe(struct mcuio_device *mdev)
+ 	for (cnt = 0; cnt < data->i2c_cnt; cnt++) {
+ 		i = &data->i2c_info[cnt];
+ 		i->info.addr = *i->paddr;
++		i->info.irq = (i->gpio_irq >= 0) ?
++			gpio_to_irq(i->gpio_irq) : 0;
+ 
+ 		i->i2c_client = i2c_new_device(data->i2c_adap, &i->info);
+ 
+diff --git a/drivers/mcuio/mcuio-shields.h b/drivers/mcuio/mcuio-shields.h
+index 1f72d58..4ec0515 100644
+--- a/drivers/mcuio/mcuio-shields.h
++++ b/drivers/mcuio/mcuio-shields.h
+@@ -7,6 +7,7 @@ struct mcuio_shld_i2c_info {
+ 	unsigned short *paddr;
+ 	struct i2c_client *i2c_client;
+ 	struct i2c_board_info info;
++	int gpio_irq;
+ };
+ 
+ struct mcuio_shld_data {
+@@ -15,7 +16,8 @@ struct mcuio_shld_data {
+ 	int i2c_cnt;
+ };
+ 
+-#define MCUIO_SHLD_I2C_DEV(t, pa, p) \
+-	{.paddr = pa, .info = {.platform_data = p, .type = t}}
++#define MCUIO_SHLD_I2C_DEV(t, pa, p, g) \
++	{.paddr = pa, .gpio_irq = g,\
++		.info = {.platform_data = p, .type = t}}
+ 
+ #endif /* __MCUIO_SHIELDS_H__ */
+-- 
+1.9.1
+

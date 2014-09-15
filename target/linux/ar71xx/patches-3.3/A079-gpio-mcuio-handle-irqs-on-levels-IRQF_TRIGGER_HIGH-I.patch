@@ -1,0 +1,35 @@
+From 71986fc31d6c858cf1e14b7a374d61640e35a463 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 29 Aug 2014 20:41:47 +0200
+Subject: [PATCH 079/115] gpio-mcuio: handle irqs on levels (IRQF_TRIGGER_HIGH,
+ IRQF_TRIGGER_LOW)
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/gpio/gpio-mcuio.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpio/gpio-mcuio.c b/drivers/gpio/gpio-mcuio.c
+index a60a5e1..fd2b7b8 100644
+--- a/drivers/gpio/gpio-mcuio.c
++++ b/drivers/gpio/gpio-mcuio.c
+@@ -207,12 +207,14 @@ static int mcuio_gpio_irq_set_type(struct irq_data *d, unsigned int flow_type)
+ {
+ 	u8 v = 0;
+ 	unsigned int t = flow_type & IRQF_TRIGGER_MASK;
+-	if ((t & IRQF_TRIGGER_HIGH) || (t & IRQF_TRIGGER_LOW))
+-		return -EINVAL;
+ 	if (t & IRQF_TRIGGER_RISING)
+ 		v |= 1;
+ 	if (t & IRQF_TRIGGER_FALLING)
+ 		v |= 2;
++	if (t & IRQF_TRIGGER_HIGH)
++		v |= 4;
++	if (t & IRQF_TRIGGER_LOW)
++		v |= 8;
+ 	return __mcuio_gpio_set_irq_flags(d, v, 0x7f);
+ }
+ 
+-- 
+1.9.1
+

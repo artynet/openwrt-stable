@@ -1,0 +1,28 @@
+From 5e06e834aa44cde562b4d79fb8e788b1399f8228 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 8 Sep 2014 17:49:31 +0200
+Subject: [PATCH 102/115] MCUIO: mcuio-soft-hc.c fix soft mcuio controller
+ device descriptor
+
+---
+ drivers/mcuio/mcuio-soft-hc.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-soft-hc.c b/drivers/mcuio/mcuio-soft-hc.c
+index ccb12c6..9afef96 100644
+--- a/drivers/mcuio/mcuio-soft-hc.c
++++ b/drivers/mcuio/mcuio-soft-hc.c
+@@ -207,8 +207,8 @@ static struct mcuio_soft_hc *__setup_shc(const struct mcuio_soft_hc_ops *ops,
+ }
+ 
+ static struct mcuio_device_id default_soft_hc_id = {
+-	.device = 0,
+-	.vendor = 0,
++	.device = MCUIO_DEVICE_SOFT_HC,
++	.vendor = MCUIO_VENDOR_DOGHUNTER,
+ 	.class = MCUIO_CLASS_SOFT_HOST_CONTROLLER,
+ };
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,80 @@
+From 10f2d7e2f5b83415eaf208063f2e8fe943155ef1 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 3 Sep 2014 13:41:44 +0200
+Subject: [PATCH 088/115] I2C, i2c-mcuio: avoid reading outside input buffer
+ limits.
+
+Use CIRC_CNT_TO_END to wrap around.
+---
+ drivers/i2c/busses/i2c-mcuio.c | 36 +++++++++++++++++++++++++++++-------
+ 1 file changed, 29 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index de74f1e..6f202c9 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -161,8 +161,8 @@ static int __send_obuf(struct mcuio_i2c_dev *i2cd)
+ static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
+ {
+ 	u32 h, t;
+-	int count;
+-	int stat, togo, l;
++	int count, count_to_end;
++	int stat, togo, l, l1, l2;
+ 
+ 	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_IBUF_TAIL, &t);
+ 	if (stat < 0) {
+@@ -176,6 +176,7 @@ static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
+ 		return stat;
+ 	}
+ 	count = CIRC_CNT(h, t, i2cd->buf_size);
++	count_to_end = CIRC_CNT_TO_END(h, t, i2cd->buf_size);
+ 	dev_dbg(&i2cd->mdev->dev, "h = %u, t = %u, count = %d\n", h, t, count);
+ 	if (!count) {
+ 		dev_dbg(&i2cd->mdev->dev, "nothing in input buffer\n");
+@@ -198,16 +199,37 @@ static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
+ 	}
+ 	togo = i2cd->ilen - i2cd->received;
+ 	l = min(count, togo);
++	l1 = min(l, count_to_end);
++	l2 = l - count_to_end;
+ 	dev_dbg(&i2cd->mdev->dev, "togo = %d, l = %d\n", togo, l);
+ 	stat = regmap_raw_read(i2cd->map_b, I2C_MCUIO_IBUF + t,
+-			       &i2cd->buf.b[i2cd->received], l);
+-	i2cd->received += l;
++			       &i2cd->buf.b[i2cd->received], l1);
++	if (stat < 0) {
++		dev_err(&i2cd->mdev->dev, "Error reading ibuf\n");
++		return stat;
++	}
++	t = (t + l1) & (i2cd->buf_size - 1);
++	i2cd->received += l1;
++	if (l2 > 0) {
++		/* Wrap around */
++		stat = regmap_raw_read(i2cd->map_b, I2C_MCUIO_IBUF + t,
++				       &i2cd->buf.b[i2cd->received], l2);
++		if (stat < 0) {
++			dev_err(&i2cd->mdev->dev, "Error reading ibuf\n");
++			return stat;
++		}
++		t = (t + l2) & (i2cd->buf_size - 1);
++		i2cd->received += l2;
++	}
+ 	__dump_ibuf(i2cd);
+ 	dev_dbg(&i2cd->mdev->dev, "received = %d\n", i2cd->received);
+-	t = (t + l) & (i2cd->buf_size - 1);
++
+ 	stat = regmap_write(i2cd->map_dw, I2C_MCUIO_IBUF_TAIL, t);
+-	if (stat < 0)
+-		dev_err(&i2cd->mdev->dev, "error setting new ibuf tail\n");
++	if (stat < 0) {
++		dev_err(&i2cd->mdev->dev,
++			"error setting new ibuf tail\n");
++		return stat;
++	}
+ 	return stat;
+ }
+ 
+-- 
+1.9.1
+

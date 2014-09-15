@@ -1,0 +1,173 @@
+From 6f61fcc87039727a1b72799294d027224b7195eb Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 5 Sep 2014 13:25:52 +0200
+Subject: [PATCH 090/115] [REGMAP] regmap-mcuio: use mcuio request fill flag
+
+If a total of more than 8 bytes must be read/written, try using
+as much as fill messages as we can, to reduce mcuio protocol overhead
+effect (8 bytes of data can be transferred via a single mcuio message,
+instead of just 1, 2, 4). This is particularly useful in case
+regmap_raw_read/write functions are used.
+---
+ drivers/base/regmap/regmap-mcuio-remote.c | 60 +++++++++++--------------------
+ 1 file changed, 20 insertions(+), 40 deletions(-)
+
+diff --git a/drivers/base/regmap/regmap-mcuio-remote.c b/drivers/base/regmap/regmap-mcuio-remote.c
+index 854a2f5..b0b503f 100644
+--- a/drivers/base/regmap/regmap-mcuio-remote.c
++++ b/drivers/base/regmap/regmap-mcuio-remote.c
+@@ -29,28 +29,6 @@ struct regmap_mcuio_context {
+ 	unsigned val_bytes;
+ };
+ 
+-typedef void (*copyf)(void *, const void *);
+-
+-static void copyb(void *dst, const void *src)
+-{
+-	*(u8 *)dst = *(u8 *)src;
+-}
+-
+-static void copyw(void *dst, const void *src)
+-{
+-	*(u16 *)dst = *(u16 *)src;
+-}
+-
+-static void copydw(void *dst, const void *src)
+-{
+-	*(u32 *)dst = *(u32 *)src;
+-}
+-
+-static void copyq(void *dst, const void *src)
+-{
+-	*(u64 *)dst = *(u64 *)src;
+-}
+-
+ static int regmap_mcuio_gather_write(void *context,
+ 				     const void *reg, size_t reg_size,
+ 				     const void *val, size_t val_size)
+@@ -60,7 +38,6 @@ static int regmap_mcuio_gather_write(void *context,
+ 	u32 offset;
+ 	unsigned t;
+ 	int ret;
+-	copyf f;
+ 	int retries = MAX_RETRIES;
+ 
+ 	BUG_ON(reg_size != 4);
+@@ -75,33 +52,35 @@ static int regmap_mcuio_gather_write(void *context,
+ 	switch (ctx->val_bytes) {
+ 	case 1:
+ 		t = mcuio_type_wrb;
+-		f = copyb;
+ 		break;
+ 	case 2:
+ 		t = mcuio_type_wrw;
+-		f = copyw;
+ 		break;
+ 	case 4:
+ 		t = mcuio_type_wrdw;
+-		f = copydw;
+ 		break;
+ 	case 8:
+ 		t = mcuio_type_wrq;
+-		f = copyq;
+ 		break;
+ 	default:
+ 		BUG();
+ 	}
+ 
+ 	while (val_size && retries) {
++		int sz = ctx->val_bytes;
++
+ 		r.type = t;
+ 		r.hc = ctx->hc;
+ 		r.dev = ctx->dev;
+ 		r.func = ctx->func;
+ 		r.offset = offset;
+ 		r.fill = 0;
++		if (val_size >= sizeof(u64)) {
++			r.fill = 1;
++			sz = sizeof(u64);
++		}
+ 		r.dont_free = 1;
+-		f(r.data, val);
++		memcpy(r.data, val, sz);
+ 		ret = mcuio_submit_request(&r);
+ 		if (ret == -ETIMEDOUT) {
+ 			retries--;
+@@ -109,9 +88,9 @@ static int regmap_mcuio_gather_write(void *context,
+ 		}
+ 		if (ret)
+ 			break;
+-		val_size -= ctx->val_bytes;
+-		val += ctx->val_bytes;
+-		offset += ctx->val_bytes;
++		val_size -= sz;
++		val += sz;
++		offset += sz;
+ 	}
+ 
+ 	return ret;
+@@ -132,7 +111,6 @@ static int regmap_mcuio_read(void *context,
+ 	struct mcuio_request r;
+ 	u32 offset = *(u32 *)reg;
+ 	int ret;
+-	copyf f;
+ 	unsigned t;
+ 	int retries = MAX_RETRIES;
+ 
+@@ -141,24 +119,22 @@ static int regmap_mcuio_read(void *context,
+ 	switch (ctx->val_bytes) {
+ 	case 1:
+ 		t = mcuio_type_rdb;
+-		f = copyb;
+ 		break;
+ 	case 2:
+ 		t = mcuio_type_rdw;
+-		f = copyw;
+ 		break;
+ 	case 4:
+ 		t = mcuio_type_rddw;
+-		f = copydw;
+ 		break;
+ 	case 8:
+ 		t = mcuio_type_rdq;
+-		f = copyq;
+ 		break;
+ 	default:
+ 		return -EINVAL;
+ 	}
+ 	while (val_size && retries) {
++		int sz = ctx->val_bytes;
++
+ 		r.type = t;
+ 		r.hc = ctx->hc;
+ 		r.dev = ctx->dev;
+@@ -167,6 +143,10 @@ static int regmap_mcuio_read(void *context,
+ 		r.offset_mask = 0xffff;
+ 		r.status = -ETIMEDOUT;
+ 		r.dont_free = 1;
++		if (val_size >= sizeof(u64)) {
++			r.fill = 1;
++			sz = sizeof(u64);
++		}
+ 		r.fill = 0;
+ 		ret = mcuio_submit_request(&r);
+ 		if (ret == -ETIMEDOUT) {
+@@ -175,10 +155,10 @@ static int regmap_mcuio_read(void *context,
+ 		}
+ 		if (ret)
+ 			break;
+-		f(val, r.data);
+-		val_size -= ctx->val_bytes;
+-		val += ctx->val_bytes;
+-		offset += ctx->val_bytes;
++		memcpy(val, r.data, sz);
++		val_size -= sz;
++		val += sz;
++		offset += sz;
+ 	}
+ 	return ret;
+ }
+-- 
+1.9.1
+

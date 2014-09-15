@@ -1,0 +1,238 @@
+From 8cb54535d2b244acd4f0f4d7bb81c7aca8a23f57 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 28 Aug 2014 16:03:25 +0200
+Subject: [PATCH 077/115] mcuio: driver for digital IO shield
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig |   1 +
+ drivers/mcuio/Kconfig                  |   7 ++
+ drivers/mcuio/Makefile                 |   1 +
+ drivers/mcuio/mcuio-dio-shield.c       | 148 +++++++++++++++++++++++++++++++++
+ drivers/mcuio/mcuio-shields-manprobe.c |   1 +
+ include/linux/mcuio_ids.h              |   1 +
+ 6 files changed, 159 insertions(+)
+ create mode 100644 drivers/mcuio/mcuio-dio-shield.c
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index a21469a..415b1b1 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -2825,6 +2825,7 @@ CONFIG_MCUIO_LDISC_HC=y
+ CONFIG_MCUIO_IRQ_CTRL=y
+ CONFIG_MCUIO_JS_SHIELD=y
+ CONFIG_MCUIO_LUCKY_SHIELD=y
++CONFIG_MCUIO_DIGITALIO_SHIELD=y
+ CONFIG_MCUIO_SHIELDS_MANUAL_PROBE=y
+ CONFIG_MCUIO_ADC=y
+ CONFIG_PWM=y
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index f7b6b1b..e0f53d7 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -37,6 +37,13 @@ config MCUIO_LUCKY_SHIELD
+ 	help
+ 	  Adds a driver for the Dog Hunter Lucky shield (experimental)
+ 
++config MCUIO_DIGITALIO_SHIELD
++	tristate "mcuio Digital I/O shield driver"
++	depends on (MCUIO && MCUIO_IRQ_CTRL && I2C)
++	default y
++	help
++	  Adds a driver for the Dog Hunter Lucky shield (experimental)
++
+ config MCUIO_SHIELDS_MANUAL_PROBE
+ 	tristate "mcuio shields manual probe"
+ 	depends on (MCUIO_LUCKY_SHIELD || MCUIO_DIGITALIO_SHIELD)
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index c5f7c50..928692e 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -9,5 +9,6 @@ obj-$(CONFIG_MCUIO_LDISC_HC) += mcuio-hc-ldisc.o
+ obj-$(CONFIG_MCUIO_IRQ_CTRL) += mcuio-irq-ctrl.o
+ obj-$(CONFIG_MCUIO_JS_SHIELD) += mcuio-js-shield.o
+ obj-$(CONFIG_MCUIO_LUCKY_SHIELD) += mcuio-lucky-shield.o
++obj-$(CONFIG_MCUIO_DIGITALIO_SHIELD) += mcuio-dio-shield.o
+ obj-$(CONFIG_MCUIO_SHIELDS_MANUAL_PROBE) += mcuio-shields-manprobe.o
+ obj-$(CONFIG_MCUIO_ADC) += mcuio-adc.o
+\ No newline at end of file
+diff --git a/drivers/mcuio/mcuio-dio-shield.c b/drivers/mcuio/mcuio-dio-shield.c
+new file mode 100644
+index 0000000..079121b
+--- /dev/null
++++ b/drivers/mcuio/mcuio-dio-shield.c
+@@ -0,0 +1,148 @@
++/*
++ * Copyright 2014 Dog Hunter SA
++ * Author: Aurelio Colosimo <aurelio@aureliocolosimo.it>
++ *
++ * GNU GPLv2 or later
++ */
++
++#define DEBUG
++
++/* mcuio driver for DigitalIO shield */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/types.h>
++#include <linux/regmap.h>
++#include <linux/workqueue.h>
++#include <linux/irq.h>
++#include <linux/interrupt.h>
++#include <linux/gpio.h>
++#include <linux/i2c.h>
++#include <linux/platform_device.h>
++#include <linux/i2c/pca953x.h>
++
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++#include <linux/mcuio-proto.h>
++
++#include "mcuio-internal.h"
++#include "mcuio-shields.h"
++
++static unsigned short pca9555_addr = 0x27;
++static unsigned int pca9555_base = 216;
++module_param(pca9555_addr, ushort, 0444);
++module_param(pca9555_base, uint, 0444);
++
++static struct pca953x_platform_data pca9555_plat;
++
++static struct mcuio_shld_i2c_info i2c_lst[] = {
++	MCUIO_SHLD_I2C_DEV("pca9555", &pca9555_addr, &pca9555_plat),
++};
++
++static int mcuio_dio_probe(struct mcuio_device *mdev)
++{
++	struct i2c_board_info info;
++	struct mcuio_shld_i2c_info *i;
++	int cnt;
++
++	struct mcuio_shld_data *data;
++
++	dev_dbg(&mdev->dev, "%s entered\n", __func__);
++
++	data = devm_kzalloc(&mdev->dev, sizeof(*data), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++
++	dev_set_drvdata(&mdev->dev, data);
++
++	/* Apply module_param values to platform_data when needed */
++	pca9555_plat.gpio_base = pca9555_base;
++
++	data->i2c_adap = mcuio_get_i2c_adapter(mdev);
++
++	if (!data->i2c_adap) {
++		dev_err(&mdev->dev, "error setting up i2c adapter\n");
++		return -ENODEV;
++	}
++
++	data->i2c_info = i2c_lst;
++	data->i2c_cnt = ARRAY_SIZE(i2c_lst);
++
++	/* Register all devices in Digital IO shield */
++	for (cnt = 0; cnt < data->i2c_cnt; cnt++) {
++		i = &data->i2c_info[cnt];
++		strcpy(info.type, i->type);
++		info.addr = *i->paddr;
++		info.platform_data = i->platform_data;
++
++		i->i2c_client = i2c_new_device(data->i2c_adap, &info);
++		if (!i->i2c_client)
++			dev_err(&mdev->dev,
++				"i2c_new_device %s failed\n", i->type);
++	}
++
++	dev_dbg(&mdev->dev, "%s returns ok\n", __func__);
++
++	return 0;
++}
++
++static int mcuio_dio_remove(struct mcuio_device *mdev)
++{
++	struct mcuio_shld_i2c_info *i;
++	struct mcuio_shld_data *data;
++
++	data = dev_get_drvdata(&mdev->dev);
++
++	/* Unregister all devices in Lucky shield, in opposite order as they
++	 * had been registered */
++	for (i = &data->i2c_info[data->i2c_cnt - 1];
++	     data->i2c_cnt; i--, data->i2c_cnt--) {
++		if (i->i2c_client) {
++			i2c_unregister_device(i->i2c_client);
++			i->i2c_client = NULL;
++		}
++	}
++
++	return 0;
++}
++
++static const struct mcuio_device_id dio_drv_ids[] = {
++	{
++		.vendor = MCUIO_VENDOR_DOGHUNTER,
++		.device = MCUIO_DEVICE_DIGITALIO_SHIELD,
++	},
++	/* Terminator */
++	{
++		.device = MCUIO_NO_DEVICE,
++		.class = MCUIO_CLASS_UNDEFINED,
++	},
++};
++
++static struct mcuio_driver mcuio_dio_driver = {
++	.driver = {
++		.name = "mcuio-digitalio-shield",
++	},
++	.id_table = dio_drv_ids,
++	.probe = mcuio_dio_probe,
++	.remove = mcuio_dio_remove,
++};
++
++static int __init mcuio_dio_init(void)
++{
++	return mcuio_driver_register(&mcuio_dio_driver, THIS_MODULE);
++}
++
++static void __exit mcuio_dio_exit(void)
++{
++	return mcuio_driver_unregister(&mcuio_dio_driver);
++}
++
++subsys_initcall(mcuio_dio_init);
++module_exit(mcuio_dio_exit);
++
++MODULE_AUTHOR("Aurelio Colosimo");
++MODULE_DESCRIPTION("MCUIO driver for Digital IO shield");
++MODULE_LICENSE("GPL v2");
+diff --git a/drivers/mcuio/mcuio-shields-manprobe.c b/drivers/mcuio/mcuio-shields-manprobe.c
+index f9f3549..db3f144 100644
+--- a/drivers/mcuio/mcuio-shields-manprobe.c
++++ b/drivers/mcuio/mcuio-shields-manprobe.c
+@@ -40,6 +40,7 @@ struct shld_probe_info {
+ 
+ struct shld_probe_info shld_list[] = {
+ 	DH_SHLD("lucky", MCUIO_DEVICE_LUCKY_SHIELD, 32),
++	DH_SHLD("digitalio", MCUIO_DEVICE_DIGITALIO_SHIELD, 33),
+ 	{.name = NULL},
+ };
+ 
+diff --git a/include/linux/mcuio_ids.h b/include/linux/mcuio_ids.h
+index 53d6d9f..9a29a5c 100644
+--- a/include/linux/mcuio_ids.h
++++ b/include/linux/mcuio_ids.h
+@@ -34,5 +34,6 @@
+ /* Specific devices */
+ #define MCUIO_DEVICE_JOYSTICK_SHIELD 0x0001
+ #define MCUIO_DEVICE_LUCKY_SHIELD    0x0002
++#define MCUIO_DEVICE_DIGITALIO_SHIELD 0x0003
+ 
+ #endif /* __MCUIO_IDS_H__ */
+-- 
+1.9.1
+

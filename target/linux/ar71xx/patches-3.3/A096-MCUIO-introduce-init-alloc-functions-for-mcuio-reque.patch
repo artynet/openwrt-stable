@@ -1,0 +1,208 @@
+From eca11c201dd86bd9e69fea186159440bee9fa219 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 5 Sep 2014 18:00:00 +0200
+Subject: [PATCH 096/115] MCUIO: introduce init/alloc functions for mcuio
+ requests
+
+---
+ drivers/base/regmap/regmap-mcuio-remote.c | 27 +++++--------
+ drivers/mcuio/mcuio-hc-drv.c              | 66 ++++++++++++++++++++++---------
+ include/linux/mcuio.h                     | 10 ++---
+ 3 files changed, 61 insertions(+), 42 deletions(-)
+
+diff --git a/drivers/base/regmap/regmap-mcuio-remote.c b/drivers/base/regmap/regmap-mcuio-remote.c
+index 5d83c03..b91dca0 100644
+--- a/drivers/base/regmap/regmap-mcuio-remote.c
++++ b/drivers/base/regmap/regmap-mcuio-remote.c
+@@ -67,19 +67,15 @@ static int regmap_mcuio_gather_write(void *context,
+ 	}
+ 
+ 	while (val_size && retries) {
+-		int sz = ctx->val_bytes;
++		int sz = ctx->val_bytes, fill = 0;
+ 
+-		r.type = t;
+-		r.hc = ctx->hc;
+-		r.dev = ctx->dev;
+-		r.func = ctx->func;
+-		r.offset = offset;
+-		r.fill = 0;
+ 		if (val_size >= sizeof(u64)) {
+-			r.fill = 1;
++			fill = 1;
+ 			sz = sizeof(u64);
+ 		}
+ 		memcpy(r.data, val, sz);
++		mcuio_init_request(&r, ctx->hc, ctx->dev, ctx->func,
++				   t, fill, offset, 0xffff);
+ 		ret = mcuio_submit_request(&r);
+ 		if (ret == -ETIMEDOUT) {
+ 			retries--;
+@@ -132,20 +128,15 @@ static int regmap_mcuio_read(void *context,
+ 		return -EINVAL;
+ 	}
+ 	while (val_size && retries) {
+-		int sz = ctx->val_bytes;
++		int sz = ctx->val_bytes, fill = 0;
+ 
+-		r.type = t;
+-		r.hc = ctx->hc;
+-		r.dev = ctx->dev;
+-		r.func = ctx->func;
+-		r.offset = offset;
+-		r.offset_mask = 0xffff;
+-		r.status = -ETIMEDOUT;
++		fill = 0;
+ 		if (val_size >= sizeof(u64)) {
+-			r.fill = 1;
++			fill = 1;
+ 			sz = sizeof(u64);
+ 		}
+-		r.fill = 0;
++		mcuio_init_request(&r, ctx->hc, ctx->dev, ctx->func, t,
++				   fill, offset, 0xffff);
+ 		ret = mcuio_submit_request(&r);
+ 		if (ret == -ETIMEDOUT) {
+ 			retries--;
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 497cbff..2c56b1e 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -117,12 +117,18 @@ static int __copy_data(uint32_t *addr, struct mcuio_packet *p, int ntoh)
+ 		  ntoh ? mcuio_packet_is_read(p) : !mcuio_packet_is_read(p));
+ }
+ 
++static void __free_request(struct mcuio_request *r)
++{
++	devm_kfree(&r->hc->dev, r);
++}
++
+ static struct mcuio_request *mcuio_alloc_request(struct mcuio_device *mdev)
+ {
+ 	struct mcuio_request *out = devm_kzalloc(&mdev->dev, sizeof(*out),
+ 						 GFP_KERNEL);
+ 	if (!out)
+ 		dev_err(&mdev->dev, "not enough memory for mcuio request\n");
++	out->release = __free_request;
+ 	return out;
+ }
+ 
+@@ -149,28 +155,52 @@ static void __request_to_packet(struct mcuio_request *r, struct mcuio_packet *p)
+ 	__copy_data(r->data, p, 0);
+ }
+ 
+-static struct mcuio_request *__make_request(struct mcuio_device *mdev,
+-					    unsigned dev, unsigned func,
+-					    unsigned type,
+-					    int fill,
+-					    unsigned offset,
+-					    unsigned offset_mask,
+-					    ___request_cb cb)
++static void __init_request(struct mcuio_request *r,
++			   struct mcuio_device *mdev,
++			   unsigned dev, unsigned func,
++			   unsigned type,
++			   int fill,
++			   unsigned offset,
++			   unsigned offset_mask)
++{
++	r->hc = mdev;
++	r->dev = dev;
++	r->func = func;
++	r->type = type;
++	r->offset = offset;
++	r->offset_mask = offset_mask;
++	r->status = -ETIMEDOUT;
++	r->fill = fill;
++}
++
++struct mcuio_request *mcuio_make_request(struct mcuio_device *mdev,
++					 unsigned dev, unsigned func,
++					 unsigned type,
++					 int fill,
++					 unsigned offset,
++					 unsigned offset_mask)
+ {
+ 	struct mcuio_request *out = mcuio_alloc_request(mdev);
+ 	if (!out)
+ 		return NULL;
+-	out->hc = mdev;
+-	out->dev = dev;
+-	out->func = func;
+-	out->type = type;
+-	out->offset = offset;
+-	out->offset_mask = offset_mask;
+-	out->status = -ETIMEDOUT;
+-	out->cb = cb;
+-	out->fill = fill;
++	__init_request(out, mdev, dev, func, type, fill, offset,
++		       offset_mask);
+ 	return out;
+ }
++EXPORT_SYMBOL(mcuio_make_request);
++
++void mcuio_init_request(struct mcuio_request *r,
++			struct mcuio_device *mdev,
++			unsigned dev, unsigned func,
++			unsigned type,
++			int fill,
++			unsigned offset,
++			unsigned offset_mask)
++{
++	__init_request(r, mdev, dev, func, type, fill, offset, offset_mask);
++	r->release = NULL;
++}
++EXPORT_SYMBOL(mcuio_init_request);
+ 
+ static void __request_timeout(struct work_struct *work)
+ {
+@@ -446,8 +476,8 @@ static int __do_one_enum(struct mcuio_device *mdev, unsigned edev,
+ 	struct mcuio_request *r;
+ 	int ret;
+ 
+-	r = __make_request(mdev, edev, efunc,
+-			   mcuio_type_rddw, 1, 0, 0xffff, NULL);
++	r = mcuio_make_request(mdev, edev, efunc,
++			       mcuio_type_rddw, 1, 0, 0xffff);
+ 	if (!r) {
+ 		*out = NULL;
+ 		return -ENOMEM;
+diff --git a/include/linux/mcuio.h b/include/linux/mcuio.h
+index 6fed1bd..44dc893 100644
+--- a/include/linux/mcuio.h
++++ b/include/linux/mcuio.h
+@@ -118,7 +118,7 @@ int mcuio_submit_request(struct mcuio_request *r);
+ int mcuio_setup_cb(struct mcuio_request *r);
+ 
+ /*
+- * Fill an mcuio request
++ * Fill a non-dynamically allocated mcuio request
+  */
+ void mcuio_init_request(struct mcuio_request *r,
+ 			struct mcuio_device *mdev,
+@@ -126,19 +126,17 @@ void mcuio_init_request(struct mcuio_request *r,
+ 			unsigned type,
+ 			int fill,
+ 			unsigned offset,
+-			unsigned offset_mask,
+-			request_cb cb);
++			unsigned offset_mask);
+ 
+ /*
+- * Dynamically allocate an mcuio request
++ * Dynamically allocate an mcuio request and initialize it
+  */
+ struct mcuio_request *mcuio_make_request(struct mcuio_device *mdev,
+ 					 unsigned dev, unsigned func,
+ 					 unsigned type,
+ 					 int fill,
+ 					 unsigned offset,
+-					 unsigned offset_mask,
+-					 request_cb cb);
++					 unsigned offset_mask);
+ 
+ #endif /* __KERNEL__ */
+ 
+-- 
+1.9.1
+

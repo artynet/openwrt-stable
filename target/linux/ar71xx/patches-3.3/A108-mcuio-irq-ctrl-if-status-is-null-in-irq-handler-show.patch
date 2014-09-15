@@ -1,0 +1,27 @@
+From 3f00625eb2ce423a1427e1351ffc94c6289e2606 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 12 Sep 2014 12:02:09 +0200
+Subject: [PATCH 108/115] mcuio irq ctrl: if status is null in irq handler,
+ show error dbg msg (not err)
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-irq-ctrl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-irq-ctrl.c b/drivers/mcuio/mcuio-irq-ctrl.c
+index 4ff1689..2fddb01 100644
+--- a/drivers/mcuio/mcuio-irq-ctrl.c
++++ b/drivers/mcuio/mcuio-irq-ctrl.c
+@@ -64,7 +64,7 @@ static irqreturn_t irq_ctrl_irq_handler(int irq, void *__data)
+ 		return IRQ_NONE;
+ 	}
+ 	if (!status) {
+-		dev_err(&mdev->dev, "irq status is 0\n");
++		dev_dbg(&mdev->dev, "irq status is 0\n");
+ 		return IRQ_NONE;
+ 	}
+ 	dev_dbg(&mdev->dev, "%s: irq status = 0x%08x\n", __func__, status);
+-- 
+1.9.1
+

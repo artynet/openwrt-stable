@@ -1,0 +1,52 @@
+From af8bf028675b73d447435120e34e2d96d2ef7471 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 8 Sep 2014 16:32:21 +0200
+Subject: [PATCH 098/115] I2C, i2c-mcuio: avoid creating 16bits regmap
+
+We just use 32bits and 8 bits, let's save memory.
+---
+ drivers/i2c/busses/i2c-mcuio.c | 14 --------------
+ 1 file changed, 14 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index ea240ed..84eb667 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -55,7 +55,6 @@ struct mcuio_i2c_dev {
+ 	struct i2c_adapter adapter;
+ 	struct mcuio_device *mdev;
+ 	struct regmap *map_dw;
+-	struct regmap *map_w;
+ 	struct regmap *map_b;
+ 	struct completion xfer_complete;
+ 	int xfer_status;
+@@ -574,13 +573,6 @@ static const struct regmap_config mcuio_i2c_regmap_config_dw = {
+ 	.cache_type = REGCACHE_NONE,
+ };
+ 
+-static const struct regmap_config mcuio_i2c_regmap_config_w = {
+-	.reg_bits = 32,
+-	.val_bits = 16,
+-	.max_register = 0x240,
+-	.cache_type = REGCACHE_NONE,
+-};
+-
+ static const struct regmap_config mcuio_i2c_regmap_config_b = {
+ 	.reg_bits = 32,
+ 	.val_bits = 8,
+@@ -605,12 +597,6 @@ static int mcuio_simple_i2c_probe(struct mcuio_device *mdev)
+ 		dev_err(&mdev->dev, "cannot setup regmap (dw) for device\n");
+ 		return PTR_ERR(i2cd->map_dw);
+ 	}
+-	i2cd->map_w = devm_regmap_init_mcuio(mdev,
+-					     &mcuio_i2c_regmap_config_w);
+-	if (IS_ERR(i2cd->map_w)) {
+-		dev_err(&mdev->dev, "cannot setup regmap (w) for device\n");
+-		return PTR_ERR(i2cd->map_w);
+-	}
+ 	i2cd->map_b = devm_regmap_init_mcuio(mdev,
+ 					     &mcuio_i2c_regmap_config_b);
+ 	if (IS_ERR(i2cd->map_b)) {
+-- 
+1.9.1
+

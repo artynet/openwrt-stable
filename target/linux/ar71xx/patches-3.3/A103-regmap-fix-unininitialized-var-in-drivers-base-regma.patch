@@ -1,0 +1,36 @@
+From 808a218f2c15b12bed948f3e7923c071d68cab54 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 8 Sep 2014 11:15:35 +0200
+Subject: [PATCH 103/115] regmap: fix unininitialized var in
+ drivers/base/regmap/regmap-mcuio-remote.c
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/base/regmap/regmap-mcuio-remote.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/base/regmap/regmap-mcuio-remote.c b/drivers/base/regmap/regmap-mcuio-remote.c
+index b91dca0..126f5ab 100644
+--- a/drivers/base/regmap/regmap-mcuio-remote.c
++++ b/drivers/base/regmap/regmap-mcuio-remote.c
+@@ -37,7 +37,7 @@ static int regmap_mcuio_gather_write(void *context,
+ 	struct mcuio_request r;
+ 	u32 offset;
+ 	unsigned t;
+-	int ret;
++	int ret = 0;
+ 	int retries = MAX_RETRIES;
+ 
+ 	BUG_ON(reg_size != 4);
+@@ -105,7 +105,7 @@ static int regmap_mcuio_read(void *context,
+ 	struct regmap_mcuio_context *ctx = context;
+ 	struct mcuio_request r;
+ 	u32 offset = *(u32 *)reg;
+-	int ret;
++	int ret = 0;
+ 	unsigned t;
+ 	int retries = MAX_RETRIES;
+ 
+-- 
+1.9.1
+

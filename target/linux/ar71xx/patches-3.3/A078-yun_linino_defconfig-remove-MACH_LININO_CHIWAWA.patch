@@ -1,0 +1,25 @@
+From db96ba30675f50b94b3ada20996f161b480fd3c3 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 28 Aug 2014 16:05:24 +0200
+Subject: [PATCH 078/115] yun_linino_defconfig: remove MACH_LININO_CHIWAWA
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index 415b1b1..9883629 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -125,7 +125,6 @@ CONFIG_ATH79_MACH_NBG460N=y
+ CONFIG_ATH79_MACH_LININO_YUN=y
+ CONFIG_ATH79_MACH_LININO_ONE=y
+ CONFIG_ATH79_MACH_LININO_FREEDOG=y
+-CONFIG_ATH79_MACH_LININO_CHIWAWA=y
+ CONFIG_SOC_AR71XX=y
+ CONFIG_SOC_AR724X=y
+ CONFIG_SOC_AR913X=y
+-- 
+1.9.1
+

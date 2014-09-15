@@ -1,0 +1,61 @@
+From 954ad87c205efbee66309e67aba5a6ba2ce0bc40 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 8 Sep 2014 16:29:52 +0200
+Subject: [PATCH 097/115] MCUIO: try fixing requests at the right time
+
+---
+ drivers/mcuio/mcuio-hc-drv.c | 3 +++
+ include/linux/mcuio.h        | 9 +++++++++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 2c56b1e..eb74b8e 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -594,6 +594,7 @@ static void __do_enum(struct kthread_work *work)
+ 				"error %d on enum of %u.%u\n",
+ 				r->status == -ETIMEDOUT ? r->status :
+ 				r->data[0], edev, efunc);
++			mcuio_free_request(r);
+ 			continue;
+ 		}
+ 		retry = -1;
+@@ -605,6 +606,7 @@ static void __do_enum(struct kthread_work *work)
+ 		if (__is_irq_controller(d) || irq_controller_found) {
+ 			irq_controller_found = 1;
+ 			__register_device(r);
++			mcuio_free_request(r);
+ 			continue;
+ 		}
+ 		e = devm_kzalloc(&r->hc->dev, sizeof(*e), GFP_KERNEL);
+@@ -613,6 +615,7 @@ static void __do_enum(struct kthread_work *work)
+ 			continue;
+ 		}
+ 		memcpy(&e->r, r, sizeof(*r));
++		mcuio_free_request(r);
+ 		list_add_tail(&e->list, &data->to_be_registered);
+ 	}
+ 	/*
+diff --git a/include/linux/mcuio.h b/include/linux/mcuio.h
+index 44dc893..d650569 100644
+--- a/include/linux/mcuio.h
++++ b/include/linux/mcuio.h
+@@ -138,6 +138,15 @@ struct mcuio_request *mcuio_make_request(struct mcuio_device *mdev,
+ 					 unsigned offset,
+ 					 unsigned offset_mask);
+ 
++/*
++ * Free an mcuio request
++ */
++static inline void mcuio_free_request(struct mcuio_request *r)
++{
++	if (r->release)
++		r->release(r);
++}
++
+ #endif /* __KERNEL__ */
+ 
+ #endif /* __MCUIO_H__ */
+-- 
+1.9.1
+

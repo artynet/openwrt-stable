@@ -1,0 +1,31 @@
+From 2ea2b6cec86595ff5f97e1dac50f8115ce5ba177 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 22 Aug 2014 23:58:57 +0200
+Subject: [PATCH 068/115] I2C, i2c-mcuio: fix smbus word rx endianness
+
+---
+ drivers/i2c/busses/i2c-mcuio.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index f24bd88..ab13763 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -510,7 +510,13 @@ static s32 mcuio_simple_smbus_xfer(struct i2c_adapter * adap, u16 addr,
+ 	if (ret < 0 || read_write == I2C_SMBUS_WRITE)
+ 		return ret;
+ 
+-	memcpy(&data->byte, i2cd->buf.b, i2cd->ilen);
++	switch (size) {
++	case I2C_SMBUS_WORD_DATA:
++		data->word = (i2cd->buf.b[1] << 8) | (i2cd->buf.b[0]);
++		break;
++	default:
++		memcpy(&data->byte, i2cd->buf.b, i2cd->ilen);
++	}
+ 	return ret;
+ }
+ 
+-- 
+1.9.1
+

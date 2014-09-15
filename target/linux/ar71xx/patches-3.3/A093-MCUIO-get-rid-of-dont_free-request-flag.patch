@@ -1,0 +1,78 @@
+From e9772bd48b869fd452ad328f824cc44a312824ed Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 5 Sep 2014 16:40:54 +0200
+Subject: [PATCH 093/115] MCUIO: get rid of dont_free request flag
+
+Since we may need to access a request __after__ it has been completed,
+we leave the responsibility of freeing it to the code that submitted it.
+---
+ drivers/base/regmap/regmap-mcuio-remote.c | 2 --
+ drivers/mcuio/mcuio-hc-drv.c              | 4 +---
+ include/linux/mcuio.h                     | 2 --
+ 3 files changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/drivers/base/regmap/regmap-mcuio-remote.c b/drivers/base/regmap/regmap-mcuio-remote.c
+index b0b503f..5d83c03 100644
+--- a/drivers/base/regmap/regmap-mcuio-remote.c
++++ b/drivers/base/regmap/regmap-mcuio-remote.c
+@@ -79,7 +79,6 @@ static int regmap_mcuio_gather_write(void *context,
+ 			r.fill = 1;
+ 			sz = sizeof(u64);
+ 		}
+-		r.dont_free = 1;
+ 		memcpy(r.data, val, sz);
+ 		ret = mcuio_submit_request(&r);
+ 		if (ret == -ETIMEDOUT) {
+@@ -142,7 +141,6 @@ static int regmap_mcuio_read(void *context,
+ 		r.offset = offset;
+ 		r.offset_mask = 0xffff;
+ 		r.status = -ETIMEDOUT;
+-		r.dont_free = 1;
+ 		if (val_size >= sizeof(u64)) {
+ 			r.fill = 1;
+ 			sz = sizeof(u64);
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 823fdba..64c5634 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -134,8 +134,7 @@ static void mcuio_free_request(struct mcuio_request *r)
+ 	mutex_lock(&data->lock);
+ 	list_del(&r->list);
+ 	mutex_unlock(&data->lock);
+-	if (!r->dont_free)
+-		devm_kfree(&r->hc->dev, r);
++	devm_kfree(&r->hc->dev, r);
+ }
+ 
+ 
+@@ -231,7 +230,6 @@ static int __do_request(struct mcuio_hc_data *data)
+ 
+ regmap_error:
+ 	cancel_delayed_work_sync(&r->to_work);
+-	mcuio_free_request(r);
+ 	return -EIO;
+ }
+ 
+diff --git a/include/linux/mcuio.h b/include/linux/mcuio.h
+index 0f789e2..80958b5 100644
+--- a/include/linux/mcuio.h
++++ b/include/linux/mcuio.h
+@@ -81,7 +81,6 @@ typedef void (*request_cb)(struct mcuio_request *);
+  * @list: used for enqueueing requests
+  * @to_work: delayed_work struct for request timeout management
+  * @priv: private data. FIX THIS
+- * @dont_free: this flag is !0 when request shall not be kfree'd
+  * @fill: if this is !0 the resulting request packet shall have its fill data
+  *	  flag set
+  */
+@@ -99,7 +98,6 @@ struct mcuio_request {
+ 	struct list_head list;
+ 	struct delayed_work to_work;
+ 	void *priv;
+-	int dont_free;
+ 	int fill;
+ };
+ 
+-- 
+1.9.1
+

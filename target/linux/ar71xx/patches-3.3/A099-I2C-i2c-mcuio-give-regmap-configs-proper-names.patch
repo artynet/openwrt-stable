@@ -1,0 +1,35 @@
+From 6b36de90a7b43d4428bddbedb6f11ea60b89356f Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 8 Sep 2014 16:45:57 +0200
+Subject: [PATCH 099/115] I2C, i2c-mcuio: give regmap configs proper names
+
+This should fix the following warning:
+
+mcuio-simple-i2c 0:1.3: Failed to create debugfs directory
+---
+ drivers/i2c/busses/i2c-mcuio.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index 84eb667..20e641d 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -571,6 +571,7 @@ static const struct regmap_config mcuio_i2c_regmap_config_dw = {
+ 	.val_bits = 32,
+ 	.max_register = 0x240,
+ 	.cache_type = REGCACHE_NONE,
++	.name = "mcuio-i2c-dw",
+ };
+ 
+ static const struct regmap_config mcuio_i2c_regmap_config_b = {
+@@ -578,6 +579,7 @@ static const struct regmap_config mcuio_i2c_regmap_config_b = {
+ 	.val_bits = 8,
+ 	.max_register = 0x240,
+ 	.cache_type = REGCACHE_NONE,
++	.name = "mcuio=i2c-b",
+ };
+ 
+ static int mcuio_simple_i2c_probe(struct mcuio_device *mdev)
+-- 
+1.9.1
+

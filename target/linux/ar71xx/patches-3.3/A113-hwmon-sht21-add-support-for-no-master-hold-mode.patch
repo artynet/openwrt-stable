@@ -1,0 +1,205 @@
+From f13fd9fdf818760a1d7af4b16b254d43cf44fd70 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 15 Sep 2014 16:07:45 +0200
+Subject: [PATCH 113/115] hwmon, sht21: add support for no master hold mode
+
+---
+ drivers/hwmon/sht21.c | 129 ++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 125 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/hwmon/sht21.c b/drivers/hwmon/sht21.c
+index 1539878..2d7755c 100644
+--- a/drivers/hwmon/sht21.c
++++ b/drivers/hwmon/sht21.c
+@@ -30,9 +30,17 @@
+ #include <linux/mutex.h>
+ #include <linux/device.h>
+ 
++#define SHT21_MODE_HOLD_MASTER	  1
++#define SHT21_MODE_NO_HOLD_MASTER 2
++
++static unsigned int update_mode = SHT21_MODE_NO_HOLD_MASTER;
++module_param(update_mode, uint, 0444);
++
+ /* I2C command bytes */
+ #define SHT21_TRIG_T_MEASUREMENT_HM  0xe3
+ #define SHT21_TRIG_RH_MEASUREMENT_HM 0xe5
++#define SHT21_NOHOLD_RH_TIMEOUT HZ
++#define SHT21_NOHOLD_T_TIMEOUT HZ
+ 
+ /**
+  * struct sht21 - SHT21 device specific data
+@@ -50,6 +58,7 @@ struct sht21 {
+ 	unsigned long last_update;
+ 	int temperature;
+ 	int humidity;
++	int (*update_measurements)(struct i2c_client *);
+ };
+ 
+ /**
+@@ -83,12 +92,13 @@ static inline int sht21_rh_ticks_to_per_cent_mille(int ticks)
+ }
+ 
+ /**
+- * sht21_update_measurements() - get updated measurements from device
++ * sht21_update_measurements_hold() - get updated measurements from device
++ * (master hold mode)
+  * @client: I2C client device
+  *
+  * Returns 0 on success, else negative errno.
+  */
+-static int sht21_update_measurements(struct i2c_client *client)
++static int sht21_update_measurements_hold(struct i2c_client *client)
+ {
+ 	int ret = 0;
+ 	struct sht21 *sht21 = i2c_get_clientdata(client);
+@@ -119,6 +129,91 @@ out:
+ 	return ret >= 0 ? 0 : ret;
+ }
+ 
++
++static s32 __do_update_nohold(struct i2c_client *client, u8 command,
++			      unsigned long timeout)
++{
++	s32 ret = 0;
++	unsigned long start;
++	union {
++		u8 c[2];
++		u16 val;
++	} v;
++
++	ret = i2c_smbus_write_byte(client, command | 0x10);
++	if (ret < 0)
++		return ret;
++
++	start = jiffies;
++	do {
++		ret = i2c_master_recv(client, v.c, sizeof(v));
++	} while(ret < 0 && !time_after(jiffies, start + timeout));
++
++	pr_debug("%s: c[0] = 0x%02x, c[1] = 0x%02x, v = 0x%04x\n",
++		 __func__, v.c[0], v.c[1], v.val);
++	return v.val;
++}
++
++static s32 __do_update_temp_nohold(struct i2c_client *client)
++{
++	struct sht21 *sht21 = i2c_get_clientdata(client);
++	s32 ret;
++
++	ret = __do_update_nohold(client, SHT21_TRIG_T_MEASUREMENT_HM,
++				 SHT21_NOHOLD_T_TIMEOUT);
++	if (ret < 0)
++		return ret;
++
++	sht21->temperature = sht21_temp_ticks_to_millicelsius(be16_to_cpu(ret));
++	return 0;
++}
++
++static int __do_update_hm_nohold(struct i2c_client *client)
++{
++	struct sht21 *sht21 = i2c_get_clientdata(client);
++	int ret;
++
++	ret = __do_update_nohold(client, SHT21_TRIG_RH_MEASUREMENT_HM,
++				 SHT21_NOHOLD_RH_TIMEOUT);
++	if (ret < 0)
++		return ret;
++
++	sht21->humidity = sht21_rh_ticks_to_per_cent_mille(be16_to_cpu(ret));
++	return 0;
++}
++
++/**
++ * sht21_update_measurements_hold() - get updated measurements from device
++ * (master no hold mode)
++ * @client: I2C client device
++ *
++ * Returns 0 on success, else negative errno.
++ */
++static int sht21_update_measurements_nohold(struct i2c_client *client)
++{
++	int ret = 0;
++	struct sht21 *sht21 = i2c_get_clientdata(client);
++
++	mutex_lock(&sht21->lock);
++	/*
++	 * Data sheet 2.4:
++	 * SHT2x should not be active for more than 10% of the time - e.g.
++	 * maximum two measurements per second at 12bit accuracy shall be made.
++	 */
++	if (time_after(jiffies, sht21->last_update + HZ / 2) || !sht21->valid) {
++		ret = __do_update_hm_nohold(client);
++		if (ret < 0)
++			goto out;
++		ret = __do_update_temp_nohold(client);
++	}
++
++out:
++	mutex_unlock(&sht21->lock);
++
++	return ret >= 0 ? 0 : ret;
++}
++
++
+ /**
+  * sht21_show_temperature() - show temperature measurement value in sysfs
+  * @dev: device
+@@ -134,9 +229,17 @@ static ssize_t sht21_show_temperature(struct device *dev,
+ {
+ 	struct i2c_client *client = to_i2c_client(dev);
+ 	struct sht21 *sht21 = i2c_get_clientdata(client);
+-	int ret = sht21_update_measurements(client);
++	int ret = -EIO;
++
++	if (!sht21->update_measurements)
++		return ret;
++	ret = sht21->update_measurements(client);
++
+ 	if (ret < 0)
+ 		return ret;
++
++	sht21->last_update = jiffies;
++	sht21->valid = 1;
+ 	return sprintf(buf, "%d\n", sht21->temperature);
+ }
+ 
+@@ -155,9 +258,16 @@ static ssize_t sht21_show_humidity(struct device *dev,
+ {
+ 	struct i2c_client *client = to_i2c_client(dev);
+ 	struct sht21 *sht21 = i2c_get_clientdata(client);
+-	int ret = sht21_update_measurements(client);
++	int ret = -EIO;
++
++	if (!sht21->update_measurements)
++		return ret;
++	ret = sht21->update_measurements(client);
++
+ 	if (ret < 0)
+ 		return ret;
++	sht21->last_update = jiffies;
++	sht21->valid = 1;
+ 	return sprintf(buf, "%d\n", sht21->humidity);
+ }
+ 
+@@ -219,6 +329,17 @@ static int __devinit sht21_probe(struct i2c_client *client,
+ 		err = PTR_ERR(sht21->hwmon_dev);
+ 		goto fail_remove_sysfs;
+ 	}
++	switch (update_mode) {
++	case SHT21_MODE_HOLD_MASTER:
++		sht21->update_measurements = sht21_update_measurements_hold;
++		break;
++	case SHT21_MODE_NO_HOLD_MASTER:
++		sht21->update_measurements = sht21_update_measurements_nohold;
++		break;
++	default:
++		WARN_ON(1);
++		break;
++	}
+ 
+ 	dev_info(&client->dev, "initialized\n");
+ 
+-- 
+1.9.1
+

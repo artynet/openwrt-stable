@@ -1,0 +1,34 @@
+From e2ee81f57abef1eb0b5b35bf81788770f1311cd6 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 28 Aug 2014 15:04:22 +0200
+Subject: [PATCH 073/115] video ssd1307fb: fill fb_info struct with proper
+ values at probe
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/video/ssd1307fb.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/video/ssd1307fb.c b/drivers/video/ssd1307fb.c
+index 2264486..19cc1fb 100644
+--- a/drivers/video/ssd1307fb.c
++++ b/drivers/video/ssd1307fb.c
+@@ -493,9 +493,15 @@ static int __devinit ssd1307fb_probe(struct i2c_client *client, const struct i2c
+ 
+ 	info->fbops = &ssd1307fb_ops;
+ 	info->fix = ssd1307fb_fix;
++	info->fix.line_length = par->width / 8;
+ 	info->fbdefio = &ssd1307fb_defio;
+ 
+ 	info->var = ssd1307fb_var;
++	info->var.xres = par->width;
++	info->var.xres_virtual = par->width;
++	info->var.yres = par->height;
++	info->var.yres_virtual = par->height;
++
+ 	info->var.red.length = 1;
+ 	info->var.red.offset = 0;
+ 	info->var.green.length = 1;
+-- 
+1.9.1
+

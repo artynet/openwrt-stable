@@ -1,0 +1,27 @@
+From 16066c1cc4592e143aba746139c5b2109a1f6feb Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 15 Sep 2014 16:16:55 +0200
+Subject: [PATCH 115/115] I2C, mcuio bus: first delete adapter, then free irq
+
+This is what i2c bus drivers usually do.
+---
+ drivers/i2c/busses/i2c-mcuio.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index 20e641d..b9d6d03 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -643,8 +643,8 @@ static int mcuio_simple_i2c_probe(struct mcuio_device *mdev)
+ static int mcuio_simple_i2c_remove(struct mcuio_device *mdev)
+ {
+ 	struct mcuio_i2c_dev *i2cd = dev_get_drvdata(&mdev->dev);
+-	free_irq(mdev->irq, i2cd);
+ 	i2c_del_adapter(&i2cd->adapter);
++	free_irq(mdev->irq, i2cd);
+ 	return 0;
+ }
+ 
+-- 
+1.9.1
+

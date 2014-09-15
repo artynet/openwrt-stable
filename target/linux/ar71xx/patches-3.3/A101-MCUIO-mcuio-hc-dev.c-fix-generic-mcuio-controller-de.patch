@@ -1,0 +1,28 @@
+From 2c4f0e6a50f167dcb8807be3dbe6abba1ae158a6 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 8 Sep 2014 17:48:51 +0200
+Subject: [PATCH 101/115] MCUIO: mcuio-hc-dev.c fix generic mcuio controller
+ device descriptor
+
+---
+ drivers/mcuio/mcuio-hc-dev.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-dev.c b/drivers/mcuio/mcuio-hc-dev.c
+index 8463391..4e1ff9a 100644
+--- a/drivers/mcuio/mcuio-hc-dev.c
++++ b/drivers/mcuio/mcuio-hc-dev.c
+@@ -21,8 +21,8 @@
+ #include "mcuio-internal.h"
+ 
+ static struct mcuio_device_id default_hc_id = {
+-	.device = 0,
+-	.vendor = 0,
++	.device = MCUIO_DEVICE_GENERIC_HC,
++	.vendor = MCUIO_VENDOR_DOGHUNTER,
+ 	.class = MCUIO_CLASS_HOST_CONTROLLER,
+ };
+ 
+-- 
+1.9.1
+

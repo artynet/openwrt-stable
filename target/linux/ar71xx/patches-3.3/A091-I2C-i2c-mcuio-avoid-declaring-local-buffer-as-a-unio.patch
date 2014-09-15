@@ -1,0 +1,193 @@
+From ae1e758640580851dd0f2a2160979b72836ed33e Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 5 Sep 2014 15:34:48 +0200
+Subject: [PATCH 091/115] I2C, i2c-mcuio: avoid declaring local buffer as a
+ union
+
+We use regmap_raw functions both for reading and for writing,
+so things can be simplified.
+---
+ drivers/i2c/busses/i2c-mcuio.c | 53 ++++++++++++++++++++----------------------
+ 1 file changed, 25 insertions(+), 28 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index 598e6ba..ea240ed 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -66,10 +66,7 @@ struct mcuio_i2c_dev {
+ 	unsigned short addr;
+ 	int sent;
+ 	int received;
+-	union {
+-		u32 dw[LOCAL_BUF_SIZE/sizeof(u32)];
+-		u8 b[LOCAL_BUF_SIZE];
+-	} buf;
++	u8 buf[LOCAL_BUF_SIZE];
+ };
+ 
+ #ifdef DEBUG
+@@ -78,7 +75,7 @@ static void __dump_ibuf(struct mcuio_i2c_dev *i2cd)
+ 	int i;
+ 	printk(KERN_DEBUG "input buffer\n");
+ 	for (i = 0; i < i2cd->received; i++) {
+-		printk("0x%02x\t", i2cd->buf.b[i]);
++		printk("0x%02x\t", i2cd->buf[i]);
+ 		if (i && !(i % 8)) {
+ 			printk("\n");
+ 			printk(KERN_DEBUG);
+@@ -119,7 +116,7 @@ static int __send_obuf(struct mcuio_i2c_dev *i2cd)
+ 	l2 = l - space_to_end;
+ 	dev_dbg(&i2cd->mdev->dev, "togo = %d, l = %d\n", togo, l);
+ 	stat = regmap_raw_write(i2cd->map_b, I2C_MCUIO_OBUF + h,
+-				&i2cd->buf.b[i2cd->sent], l1);
++				&i2cd->buf[i2cd->sent], l1);
+ 	if (stat < 0) {
+ 		dev_err(&i2cd->mdev->dev, "error sending obuf\n");
+ 		return stat;
+@@ -129,7 +126,7 @@ static int __send_obuf(struct mcuio_i2c_dev *i2cd)
+ 	if (l2 > 0) {
+ 		/* Wrap around */
+ 		stat = regmap_raw_write(i2cd->map_b, I2C_MCUIO_OBUF + h,
+-					&i2cd->buf.b[i2cd->sent], l2);
++					&i2cd->buf[i2cd->sent], l2);
+ 		if (stat < 0) {
+ 			dev_err(&i2cd->mdev->dev, "error sending obuf\n");
+ 			return stat;
+@@ -190,7 +187,7 @@ static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
+ 	l2 = l - count_to_end;
+ 	dev_dbg(&i2cd->mdev->dev, "togo = %d, l = %d\n", togo, l);
+ 	stat = regmap_raw_read(i2cd->map_b, I2C_MCUIO_IBUF + t,
+-			       &i2cd->buf.b[i2cd->received], l1);
++			       &i2cd->buf[i2cd->received], l1);
+ 	if (stat < 0) {
+ 		dev_err(&i2cd->mdev->dev, "Error reading ibuf\n");
+ 		return stat;
+@@ -200,7 +197,7 @@ static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
+ 	if (l2 > 0) {
+ 		/* Wrap around */
+ 		stat = regmap_raw_read(i2cd->map_b, I2C_MCUIO_IBUF + t,
+-				       &i2cd->buf.b[i2cd->received], l2);
++				       &i2cd->buf[i2cd->received], l2);
+ 		if (stat < 0) {
+ 			dev_err(&i2cd->mdev->dev, "Error reading ibuf\n");
+ 			return stat;
+@@ -379,13 +376,13 @@ static int mcuio_simple_i2c_xfer_one(struct i2c_adapter *a,
+ 		i2cd->olen = msg->len;
+ 
+ 	if (i2cd->olen)
+-		memcpy(i2cd->buf.b, msg->buf, i2cd->olen);
++		memcpy(i2cd->buf, msg->buf, i2cd->olen);
+ 
+ 	ret = __do_xfer(a);
+ 	if (ret < 0 || !i2cd->ilen)
+ 		return ret;
+ 
+-	memcpy(msg->buf, i2cd->buf.b, i2cd->ilen);
++	memcpy(msg->buf, i2cd->buf, i2cd->ilen);
+ 	return ret;
+ }
+ 
+@@ -428,7 +425,7 @@ static s32 mcuio_simple_smbus_xfer(struct i2c_adapter * adap, u16 addr,
+ 					"write 0x%02x.\n",
+ 					addr, command);
+ 			olen = 1;
+-			i2cd->buf.b[0] = command;
++			i2cd->buf[0] = command;
+ 		} else {
+ 			dev_dbg(&adap->dev, "smbus byte - rd addr 0x%02x\n",
+ 				addr);
+@@ -440,15 +437,15 @@ static s32 mcuio_simple_smbus_xfer(struct i2c_adapter * adap, u16 addr,
+ 	case I2C_SMBUS_BYTE_DATA:
+ 		if (read_write == I2C_SMBUS_WRITE) {
+ 			olen = 2;
+-			i2cd->buf.b[0] = command;
+-			i2cd->buf.b[1] = data->byte;
++			i2cd->buf[0] = command;
++			i2cd->buf[1] = data->byte;
+ 			dev_dbg(&adap->dev, "smbus byte data - addr 0x%02x, "
+ 					"write 0x%02x at 0x%02x.\n",
+ 					addr, data->byte, command);
+ 		} else {
+ 			olen = 1;
+ 			ilen = 1;
+-			i2cd->buf.b[0] = command;
++			i2cd->buf[0] = command;
+ 			dev_dbg(&adap->dev, "smbus byte data - addr 0x%02x, "
+ 					"read at 0x%02x.\n",
+ 					addr, command);
+@@ -459,16 +456,16 @@ static s32 mcuio_simple_smbus_xfer(struct i2c_adapter * adap, u16 addr,
+ 	case I2C_SMBUS_WORD_DATA:
+ 		if (read_write == I2C_SMBUS_WRITE) {
+ 			olen = 3;
+-			i2cd->buf.b[0] = command;
+-			i2cd->buf.b[1] = data->word & (u16)0x00ff;
+-			i2cd->buf.b[2] = data->word >> 8;
++			i2cd->buf[0] = command;
++			i2cd->buf[1] = data->word & (u16)0x00ff;
++			i2cd->buf[2] = data->word >> 8;
+ 			dev_dbg(&adap->dev, "smbus word data - addr 0x%02x, "
+ 					"write 0x%04x at 0x%02x.\n",
+ 					addr, data->word, command);
+ 		} else {
+-			i2cd->buf.b[0] = command;
++			i2cd->buf[0] = command;
+ 			olen = 1;
+-			i2cd->buf.b[0] = command;
++			i2cd->buf[0] = command;
+ 			ilen = 2;
+ 			dev_dbg(&adap->dev, "smbus word data - addr 0x%02x, "
+ 					"read at 0x%02x.\n",
+@@ -483,10 +480,10 @@ static s32 mcuio_simple_smbus_xfer(struct i2c_adapter * adap, u16 addr,
+ 		/* smbus limit */
+ 		if (len < 0 || len > 32)
+ 			return -EINVAL;
+-		i2cd->buf.b[0] = command;
++		i2cd->buf[0] = command;
+ 		if (read_write == I2C_SMBUS_WRITE) {
+ 			olen = 1 + len;
+-			memcpy(&i2cd->buf.b[1], &data->block[1], len);
++			memcpy(&i2cd->buf[1], &data->block[1], len);
+ 		} else {
+ 			olen = 1;
+ 			ilen = len;
+@@ -504,8 +501,8 @@ static s32 mcuio_simple_smbus_xfer(struct i2c_adapter * adap, u16 addr,
+ 			 * if bufsize < 32
+ 			 */
+ 			olen = 1 + len;
+-			i2cd->buf.b[0] = command;
+-			memcpy(&i2cd->buf.b[1], &data->block[1], len);
++			i2cd->buf[0] = command;
++			memcpy(&i2cd->buf[1], &data->block[1], len);
+ 			dev_dbg(&adap->dev, "i2c block data - addr 0x%02x, "
+ 					"write %d bytes at 0x%02x.\n",
+ 					addr, len, command);
+@@ -513,7 +510,7 @@ static s32 mcuio_simple_smbus_xfer(struct i2c_adapter * adap, u16 addr,
+ 			olen = 1;
+ 			/* The device tells how long the block shall be */
+ 			ilen = -1;
+-			i2cd->buf.b[0] = command;
++			i2cd->buf[0] = command;
+ 			dev_dbg(&adap->dev, "i2c block data - addr 0x%02x, "
+ 					"read  ? bytes at 0x%02x.\n",
+ 					addr, command);
+@@ -544,14 +541,14 @@ static s32 mcuio_simple_smbus_xfer(struct i2c_adapter * adap, u16 addr,
+ 
+ 	switch (size) {
+ 	case I2C_SMBUS_WORD_DATA:
+-		data->word = (i2cd->buf.b[1] << 8) | (i2cd->buf.b[0]);
++		data->word = (i2cd->buf[1] << 8) | (i2cd->buf[0]);
+ 		break;
+ 	case I2C_SMBUS_I2C_BLOCK_DATA:
+ 		data->block[0] = i2cd->ilen;
+-		memcpy(&data->block[1], i2cd->buf.b, i2cd->ilen);
++		memcpy(&data->block[1], i2cd->buf, i2cd->ilen);
+ 		break;
+ 	default:
+-		memcpy(&data->byte, i2cd->buf.b, i2cd->ilen);
++		memcpy(&data->byte, i2cd->buf, i2cd->ilen);
+ 	}
+ 	return ret;
+ }
+-- 
+1.9.1
+

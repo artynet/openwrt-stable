@@ -1,0 +1,25 @@
+From 4d2daf76b3c80770f2d0f75f326e673a5b739a4e Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 8 Sep 2014 17:47:54 +0200
+Subject: [PATCH 100/115] MCUIO, mcuio_ids: add ids for generic and soft host
+ controllers
+
+---
+ include/linux/mcuio_ids.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/linux/mcuio_ids.h b/include/linux/mcuio_ids.h
+index 9a29a5c..4d0c259 100644
+--- a/include/linux/mcuio_ids.h
++++ b/include/linux/mcuio_ids.h
+@@ -35,5 +35,7 @@
+ #define MCUIO_DEVICE_JOYSTICK_SHIELD 0x0001
+ #define MCUIO_DEVICE_LUCKY_SHIELD    0x0002
+ #define MCUIO_DEVICE_DIGITALIO_SHIELD 0x0003
++#define MCUIO_DEVICE_SOFT_HC	     0x0004
++#define MCUIO_DEVICE_GENERIC_HC	     0x0005
+ 
+ #endif /* __MCUIO_IDS_H__ */
+-- 
+1.9.1
+
