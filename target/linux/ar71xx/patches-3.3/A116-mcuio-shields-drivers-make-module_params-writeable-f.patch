@@ -1,0 +1,55 @@
+From 9cb47494d275f7a0529df9d9f5109403ef2cca4b Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Tue, 16 Sep 2014 10:21:13 +0200
+Subject: [PATCH] mcuio: shields drivers, make module_params writeable from
+ sysfs
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-dio-shield.c   |    4 ++--
+ drivers/mcuio/mcuio-lucky-shield.c |   14 +++++++-------
+ 2 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-dio-shield.c b/drivers/mcuio/mcuio-dio-shield.c
+index ea47b23..0621269 100644
+--- a/drivers/mcuio/mcuio-dio-shield.c
++++ b/drivers/mcuio/mcuio-dio-shield.c
+@@ -33,8 +33,8 @@
+ 
+ static unsigned short pca9555_addr = 0x27;
+ static unsigned int pca9555_base = 216;
+-module_param(pca9555_addr, ushort, 0444);
+-module_param(pca9555_base, uint, 0444);
++module_param(pca9555_addr, ushort, 0644);
++module_param(pca9555_base, uint, 0644);
+ 
+ static struct pca953x_platform_data pca9555_plat;
+ 
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 647c5d9..0a6a2c2 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -42,13 +42,13 @@ static unsigned short mag3110_addr = 0x0e;
+ static unsigned short sht21_addr = 0x40;
+ static unsigned short ssd1307_addr = 0x3c;
+ static unsigned short mma8491_addr = 0x55;
+-module_param(pca9555_base, uint, 0444);
+-module_param(pca9555_addr, ushort, 0444);
+-module_param(mpl3115_addr, ushort, 0444);
+-module_param(mag3110_addr, ushort, 0444);
+-module_param(sht21_addr, ushort, 0444);
+-module_param(ssd1307_addr, ushort, 0444);
+-module_param(mma8491_addr, ushort, 0444);
++module_param(pca9555_base, uint, 0644);
++module_param(pca9555_addr, ushort, 0644);
++module_param(mpl3115_addr, ushort, 0644);
++module_param(mag3110_addr, ushort, 0644);
++module_param(sht21_addr, ushort, 0644);
++module_param(ssd1307_addr, ushort, 0644);
++module_param(mma8491_addr, ushort, 0644);
+ 
+ struct ssd1307_platform_data ssd1307_plat = {
+ 	.type = SSD1307_TYPE_1306,
+-- 
+1.7.9.5
+
