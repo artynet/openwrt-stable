@@ -1,0 +1,44 @@
+From 0a461fdb79ff546ea13184ecf07ed6e69bf351a4 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Wed, 1 Oct 2014 16:53:12 +0200
+Subject: [PATCH 131/134] pwm mcuio: undefined DEBUG and fixed msg verbosity
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/pwm-mcuio.c |    6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/pwm/pwm-mcuio.c b/drivers/pwm/pwm-mcuio.c
+index 017d270..b538dbf 100644
+--- a/drivers/pwm/pwm-mcuio.c
++++ b/drivers/pwm/pwm-mcuio.c
+@@ -7,8 +7,6 @@
+ 
+ /* mcuio driver for PWM outputs */
+ 
+-#define DEBUG 1
+-
+ #include <linux/clk.h>
+ #include <linux/err.h>
+ #include <linux/io.h>
+@@ -211,7 +209,7 @@ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ 
+ 	data->map = map;
+ 
+-	pr_debug("mcuio pwm is %u:%u:%u\n",
++	pr_info("mcuio pwm is %u:%u:%u\n",
+ 		 mdev->bus, mdev->device, mdev->fn);
+ 
+ 	data->chip.dev = &mdev->dev;
+@@ -223,7 +221,7 @@ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ 		goto fail1;
+ 	}
+ 
+-	dev_dbg(&mdev->dev, "%d pwm outputs detected\n", data->chip.npwm);
++	dev_info(&mdev->dev, "%d pwm outputs detected\n", data->chip.npwm);
+ 
+ 	dev_set_drvdata(&mdev->dev, data);
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,26 @@
+From a0ad92d49ff76104c5c774d9a707a7d1dbdc838b Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Tue, 30 Sep 2014 15:37:15 +0200
+Subject: [PATCH 130/134] trivial drivers/gpio/gpio-mcuio.c: undefine DEBUG
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/gpio/gpio-mcuio.c |    2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/gpio/gpio-mcuio.c b/drivers/gpio/gpio-mcuio.c
+index 8a575dc..ec21d2e 100644
+--- a/drivers/gpio/gpio-mcuio.c
++++ b/drivers/gpio/gpio-mcuio.c
+@@ -5,8 +5,6 @@
+  * GNU GPLv2 or later
+  */
+ 
+-#define DEBUG
+-
+ /* mcuio host controller driver */
+ 
+ #include <linux/kernel.h>
+-- 
+1.7.9.5
+

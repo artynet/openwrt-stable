@@ -1,0 +1,26 @@
+From f506db0f4822197c5d17d560ae451e90cc5b0ce5 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 26 Sep 2014 16:39:53 +0200
+Subject: [PATCH 128/134] yun_linino_defconfig: enable
+ CONFIG_MCUIO_DOGOLED_SHIELD
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index b48301b..d8c414d 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -2825,6 +2825,7 @@ CONFIG_MCUIO_IRQ_CTRL=y
+ CONFIG_MCUIO_JS_SHIELD=y
+ CONFIG_MCUIO_LUCKY_SHIELD=y
+ CONFIG_MCUIO_DIGITALIO_SHIELD=y
++CONFIG_MCUIO_DOGOLED_SHIELD=y
+ CONFIG_MCUIO_SHIELDS_MANUAL_PROBE=y
+ CONFIG_MCUIO_ADC=y
+ CONFIG_PWM=y
+-- 
+1.7.9.5
+

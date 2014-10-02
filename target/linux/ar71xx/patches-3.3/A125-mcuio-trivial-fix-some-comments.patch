@@ -1,0 +1,40 @@
+From 473afbb57c19df9c31128d752ca4d92c12faff1c Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 26 Sep 2014 16:26:43 +0200
+Subject: [PATCH 125/134] mcuio trivial: fix some comments
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/Kconfig            |    2 +-
+ drivers/mcuio/mcuio-dio-shield.c |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index e0f53d7..f4552ef 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -42,7 +42,7 @@ config MCUIO_DIGITALIO_SHIELD
+ 	depends on (MCUIO && MCUIO_IRQ_CTRL && I2C)
+ 	default y
+ 	help
+-	  Adds a driver for the Dog Hunter Lucky shield (experimental)
++	  Adds a driver for the Dog Hunter Digital IO shield (experimental)
+ 
+ config MCUIO_SHIELDS_MANUAL_PROBE
+ 	tristate "mcuio shields manual probe"
+diff --git a/drivers/mcuio/mcuio-dio-shield.c b/drivers/mcuio/mcuio-dio-shield.c
+index 0621269..7e633d9 100644
+--- a/drivers/mcuio/mcuio-dio-shield.c
++++ b/drivers/mcuio/mcuio-dio-shield.c
+@@ -95,7 +95,7 @@ static int mcuio_dio_remove(struct mcuio_device *mdev)
+ 
+ 	data = dev_get_drvdata(&mdev->dev);
+ 
+-	/* Unregister all devices in Lucky shield, in opposite order as they
++	/* Unregister all devices in Digital IO shield, in opposite order as they
+ 	 * had been registered */
+ 	for (i = &data->i2c_info[data->i2c_cnt - 1];
+ 	     data->i2c_cnt; i--, data->i2c_cnt--) {
+-- 
+1.7.9.5
+

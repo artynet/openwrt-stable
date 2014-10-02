@@ -1,0 +1,31 @@
+From dc0244c9d01b5ac54025945fc8325b1e514287a3 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 2 Oct 2014 14:22:06 +0200
+Subject: [PATCH 134/134] IIO, mag3110: ignore i2c errors while waiting for
+ data ready.
+
+This apparently fixes a problem with the mag3110, which replies with a NAK
+the first time the master asks for the status register after having triggered
+a measurement cycle.
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/iio/magnetometer/mag3110.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/iio/magnetometer/mag3110.c b/drivers/iio/magnetometer/mag3110.c
+index e3106b4..48f1bca 100644
+--- a/drivers/iio/magnetometer/mag3110.c
++++ b/drivers/iio/magnetometer/mag3110.c
+@@ -67,7 +67,7 @@ static int mag3110_request(struct mag3110_data *data)
+ 	while (tries-- > 0) {
+ 		ret = i2c_smbus_read_byte_data(data->client, MAG3110_STATUS);
+ 		if (ret < 0)
+-			return ret;
++			continue;
+ 		/* wait for data ready */
+ 		if ((ret & MAG3110_STATUS_DRDY) == MAG3110_STATUS_DRDY)
+ 			break;
+-- 
+1.7.9.5
+

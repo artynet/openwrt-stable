@@ -1,0 +1,29 @@
+From 0e75b2eb41ac3ce9eb557ff7d8eb62ef09ca6c40 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Tue, 30 Sep 2014 15:01:21 +0200
+Subject: [PATCH 129/134] yun_linino_defconfig: enable CONFIG_GPIO_PCA953X_IRQ
+
+Issues related to irqs seem solved on MCU side, so we can re-enable again
+irqs on gpio expansion.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index d8c414d..a0954be 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -1850,7 +1850,7 @@ CONFIG_GPIO_MCUIO=y
+ # CONFIG_GPIO_MAX7300 is not set
+ # CONFIG_GPIO_MAX732X is not set
+ CONFIG_GPIO_PCA953X=y
+-# CONFIG_GPIO_PCA953X_IRQ is not set
++CONFIG_GPIO_PCA953X_IRQ=y
+ CONFIG_GPIO_PCF857X=y
+ # CONFIG_GPIO_SX150X is not set
+ # CONFIG_GPIO_ADP5588 is not set
+-- 
+1.7.9.5
+
