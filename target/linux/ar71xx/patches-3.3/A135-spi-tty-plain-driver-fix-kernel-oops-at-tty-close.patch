@@ -1,0 +1,25 @@
+From 186c4fad18b06eea31713d4dc30534ff35a1ac47 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 3 Oct 2014 11:22:37 +0200
+Subject: [PATCH 135/139] spi-tty-plain driver: fix kernel oops at tty close
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/spi/spi-tty-plain.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/spi/spi-tty-plain.c b/drivers/spi/spi-tty-plain.c
+index b7d8195..0702625 100644
+--- a/drivers/spi/spi-tty-plain.c
++++ b/drivers/spi/spi-tty-plain.c
+@@ -217,6 +217,7 @@ static int spi_serial_tty_install(struct tty_driver *driver,
+ 	tty->count++;
+ 
+ 	ttys[0] = tty;
++	driver->ttys = ttys;
+ 
+ 	return 0;
+ }
+-- 
+1.9.1
+

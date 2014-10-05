@@ -1,0 +1,26 @@
+From a9a38b02392387d2382c3814b0238f5a80fa161c Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Sat, 4 Oct 2014 14:37:05 +0200
+Subject: [PATCH 137/139] spi-tty-plain driver: trivial, removed unused var
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/spi/spi-tty-plain.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/spi/spi-tty-plain.c b/drivers/spi/spi-tty-plain.c
+index ce9ddf9..b4ba305 100644
+--- a/drivers/spi/spi-tty-plain.c
++++ b/drivers/spi/spi-tty-plain.c
+@@ -40,8 +40,6 @@ static spinlock_t lock;
+ struct spi_tty {
+ 	struct spi_device *spi;
+ 
+-	unsigned long flags;
+-
+ 	unsigned int tty_minor;
+ 	struct device *tty_dev;
+ 	struct tty_port port;
+-- 
+1.9.1
+

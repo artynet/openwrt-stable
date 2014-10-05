@@ -1,0 +1,32 @@
+From e1dfddfea29d812d7c27b2e5e0f5fb54e19fc73a Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 3 Oct 2014 11:34:36 +0200
+Subject: [PATCH 136/139] spy-tty-plain driver: remove useless pr_info,
+ replaced by a comment
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/spi/spi-tty-plain.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/spi/spi-tty-plain.c b/drivers/spi/spi-tty-plain.c
+index 0702625..ce9ddf9 100644
+--- a/drivers/spi/spi-tty-plain.c
++++ b/drivers/spi/spi-tty-plain.c
+@@ -239,11 +239,11 @@ static struct tty_operations spi_serial_ops = {
+ };
+ 
+ static void spi_serial_port_dtr_rts(struct tty_port *port, int on){
+-	pr_info("%s:%d\n", __func__, __LINE__);
++	/* Nothing to do */
+ }
+ 
+ static const struct tty_port_operations spi_serial_port_ops = {
+-	.dtr_rts = spi_serial_port_dtr_rts,
++	.dtr_rts = spi_serial_port_dtr_rts, /* required, even if empty */
+ };
+ 
+ static void spi_poll_work_handler(struct work_struct *w)
+-- 
+1.9.1
+
