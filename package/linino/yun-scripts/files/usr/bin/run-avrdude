@@ -4,8 +4,8 @@ OE_PATH=/sys/class/gpio/gpio21/value
 OE_VALUE=$(cat $OE_PATH)
 
 # remove SPI driver to avoid conflicts while AVR programming
-TTY_DS=$(lsmod | grep spi_tty_ds)
-if [ "x$TTY_DS" != "x" ]; then
+TTY_PLAIN=$(lsmod | grep spi_tty_plain)
+if [ "x$TTY_PLAIN" != "x" ]; then
 	rmmod spi-tty-ds
 	if [ "$?" != "0" ]; then
 		exit
@@ -46,6 +46,6 @@ if [ "x$GPIO_DS" != "x" ]; then
 	insmod spi-gpio
 fi
 
-if [ "x$TTY_DS" != "x" ]; then
-	insmod spi-tty-ds
+if [ "x$TTY_PLAIN" != "x" ]; then
+	insmod spi-tty-plain
 fi

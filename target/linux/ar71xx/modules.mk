@@ -85,18 +85,18 @@ endef
 $(eval $(call KernelPackage,wdt-ath79))
 
 
-define KernelPackage/spi-tty-ds
+define KernelPackage/spi-tty-plain
   SUBMENU:=$(SPI_MENU)
-  TITLE:=DogStick SPI TTY Driver
+  TITLE:=Linino SPI TTY Driver
   DEPENDS:=@TARGET_ar71xx
-  KCONFIG:=CONFIG_SPI_TTY_DS
-  FILES:=$(LINUX_DIR)/drivers/spi/spi-tty-ds.ko
-  AUTOLOAD:=$(call AutoLoad,95,spi-tty-ds)
+  KCONFIG:=CONFIG_SPI_TTY_PLAIN
+  FILES:=$(LINUX_DIR)/drivers/spi/spi-tty-plain.ko
+  AUTOLOAD:=$(call AutoLoad,95,spi-tty-plain)
 endef
 
-define KernelPackage/spi-tty-ds/description
-  This package contains the TTY SPI driver.
+define KernelPackage/spi-tty-plain/description
+  This package contains the Linino TTY SPI driver.
 endef
 
-$(eval $(call KernelPackage,spi-tty-ds))
+$(eval $(call KernelPackage,spi-tty-plain))
 
