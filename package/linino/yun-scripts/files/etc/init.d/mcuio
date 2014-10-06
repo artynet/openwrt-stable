@@ -1,14 +1,14 @@
 #!/bin/sh /etc/rc.common
 
-START=99
-STOP=99
+START=11
+STOP=11
 
 start() {
 	# Remove spi-tty-ds if loaded
-	/sbin/lsmod | grep spi_tty && /sbin/rmmod spi_tty_ds
+	#/sbin/lsmod | grep spi_tty && /sbin/rmmod spi_tty_plain
 	# Reset mcu
 	# mcu-reset
-	sleep 2
+	#sleep 2
 	# Init serial port
 	stty 230400 -echo raw < /dev/ttyATH0
 	# Enable handshake
