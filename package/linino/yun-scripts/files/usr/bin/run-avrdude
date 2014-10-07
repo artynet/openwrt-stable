@@ -6,7 +6,7 @@ OE_VALUE=$(cat $OE_PATH)
 # remove SPI driver to avoid conflicts while AVR programming
 TTY_PLAIN=$(lsmod | grep spi_tty_plain)
 if [ "x$TTY_PLAIN" != "x" ]; then
-	rmmod spi-tty-ds
+	rmmod spi-tty-plain
 	if [ "$?" != "0" ]; then
 		exit
 	fi
