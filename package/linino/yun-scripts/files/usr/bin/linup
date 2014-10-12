@@ -163,11 +163,11 @@ online () {
 
 verifyupgrade () {
   
-    d1=`echo $1 | sed 's/-/ /g' | awk {'print $1'} | xargs printf %02d`
+    d1=`echo $1 | sed 's/-/ /g' | awk {'print $1'} | xargs printf %s`
     m1=`convertmonth $(echo $1 | sed 's/-/ /g' | awk {'print $2'})`
     y1=`echo $1 | sed 's/-/ /g' | awk {'print $3'}`
     
-    d2=`echo $2 | sed 's/-/ /g' | awk {'print $1'} | xargs printf %02d`
+    d2=`echo $2 | sed 's/-/ /g' | awk {'print $1'} | xargs printf %s`
     m2=`convertmonth $(echo $2 | sed 's/-/ /g' | awk {'print $2'})`
     y2=`echo $2 | sed 's/-/ /g' | awk {'print $3'}`
     
