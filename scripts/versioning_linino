@@ -1,0 +1,34 @@
+#!/bin/bash
+
+OPENWRTFILE="target/linux/ar71xx/base-files/etc/openwrt_version"
+LININOFILE="target/linux/ar71xx/base-files/etc/linino_version"
+
+writeinfo () {
+	
+	touch $LININOFILE
+	
+	branchname=`git rev-parse --abbrev-ref HEAD`
+	gitcommit=`git rev-parse --short HEAD`
+	builddate=`date +"%Y-%m-%d"`
+	#gittag=`git describe --tags --abbrev=0`
+	
+	echo "DISTRIB_ID="\""Linino"\""" >> $LININOFILE
+	echo "DISTRIB_RELEASE="\""$branchname"\""" >> $LININOFILE
+	echo "DISTRIB_REVISION="\""$gitcommit"\""" >> $LININOFILE
+	echo "DISTRIB_CODENAME="\""attitude_adjustment"\""" >> $LININOFILE
+	echo "DISTRIB_TARGET="\""ar71xx/generic"\""" >> $LININOFILE
+	echo "BUILD_DATE="\""$builddate"\""" >> $LININOFILE
+	
+}
+
+if [ -e $LININOFILE ]
+then
+	
+	rm $LININOFILE 2>&1 > /dev/null
+	writeinfo
+	
+else 	
+	
+	writeinfo
+		
+fi
