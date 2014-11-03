@@ -1,0 +1,19 @@
+--- a/SConscript	2014-10-24 15:48:03.441325981 +0200
++++ b/SConscript	2014-10-24 15:49:08.969328078 +0200
+@@ -59,11 +59,12 @@
+      env['os'] + '/ajs_obs_stubs.c'
+ ]
+ 
+-if os.environ.get('YUN_BUILD', '0') == '1':
+-    io_sources = [Glob(env['os'] + '/lininoio/*.c')]
+-else:
+-    io_sources = [env['os'] + '/io/io_info.c', env['os'] + '/io/io_simulation.c', env['os'] + '/io/io_stubs.c']
++io_sources = [Glob(env['os'] + '/lininoio/*.c')]
+ 
++#if os.environ.get('YUN_BUILD', '0') == '1':
++#    io_sources = [Glob(env['os'] + '/lininoio/*.c')]
++#else:
++#    io_sources = [env['os'] + '/io/io_info.c', env['os'] + '/io/io_simulation.c', env['os'] + '/io/io_stubs.c']
+ 
+ sources = []
+ sources.append(ajs_sources)
