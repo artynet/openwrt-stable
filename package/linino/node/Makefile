@@ -25,6 +25,7 @@ include $(INCLUDE_DIR)/package.mk
 
 define Package/node
   DEPENDS:=+libpthread +librt +uclibcxx
+  SUBMENU:=Node.js
   SECTION:=lang
   CATEGORY:=Languages
   TITLE:=Node.js is a platform built on Chrome's JavaScript runtime

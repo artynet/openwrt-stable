@@ -1,0 +1,11 @@
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/arduino/openwrt-packages-yun/!svn/ver/64/trunk/arduino/node-serialport
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/arduino/openwrt-packages-yun/!svn/ver/64/trunk/arduino/node-serialport/Makefile
+END
