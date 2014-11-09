@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=gcc
 PKG_VERSION:=4.6.3
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 PKG_SOURCE_URL:=ftp://ftp.fu-berlin.de/unix/languages/gcc/releases/gcc-$(PKG_VERSION) \
      http://mirrors.rcn.net/pub/sourceware/gcc/releases/gcc-$(PKG_VERSION) \
     ftp://ftp.gnu.org/gnu/gcc/releases/gcc-$(PKG_VERSION)
@@ -79,6 +79,7 @@ define Build/Configure
 			--disable-libgomp \
 			--disable-libquadmath \
 			--disable-libssp \
+			--disable-subdir-texinfo MAKEINFO=missing \
 			--disable-decimal-float \
 			--disable-libstdcxx-pch \
 			--with-host-libstdcxx=-lstdc++ \
