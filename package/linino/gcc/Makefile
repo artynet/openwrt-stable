@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=gcc
 PKG_VERSION:=4.6.3
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 PKG_SOURCE_URL:=ftp://ftp.fu-berlin.de/unix/languages/gcc/releases/gcc-$(PKG_VERSION) \
      http://mirrors.rcn.net/pub/sourceware/gcc/releases/gcc-$(PKG_VERSION) \
     ftp://ftp.gnu.org/gnu/gcc/releases/gcc-$(PKG_VERSION)
@@ -39,13 +39,13 @@ RSTRIP:= \
 define Package/gcc
   SECTION:=devel
   CATEGORY:=Development
-  TITLE:=The Gnu C language compiler
+  TITLE:=The GNU C language compiler
   MAINTAINER:=Christian Beier <cb@shoutrlabs.com>
   DEPENDS:= +binutils +libstdcpp
 endef
 
 define Package/gcc/description
-	GNU c and c++ native executables for compiling on target
+	build a native toolchain for compiling on target
 endef
 
 
@@ -79,6 +79,7 @@ define Build/Configure
 			--disable-libgomp \
 			--disable-libquadmath \
 			--disable-libssp \
+			--disable-subdir-texinfo MAKEINFO=missing \
 			--disable-decimal-float \
 			--disable-libstdcxx-pch \
 			--with-host-libstdcxx=-lstdc++ \
