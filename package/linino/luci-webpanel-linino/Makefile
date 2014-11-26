@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013 Arduino LLC. All right reserved.
+# Copyright (c) 2014 Dog Hungter AG - All rights reserved.
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-webpanel-linino
-PKG_VERSION:=1.0.2
+PKG_VERSION:=1.0.3
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 #PKG_SOURCE_URL:=http://github.com/linino/luci-webpanel-linino/archive
 PKG_SOURCE_URL:=http://download.linino.org/pkg-src
-PKG_MD5SUM:=3d8489fb6129eeb6f18f4cb13fd270b1
+PKG_MD5SUM:=751cbfb8575255fe20611d6b058ac079
 
 include $(INCLUDE_DIR)/package.mk
 
