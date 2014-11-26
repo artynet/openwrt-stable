@@ -18,7 +18,8 @@ PKG_SOURCE_PROTO:=git
 PKG_SOURCE_VERSION:=38f42dbfce9e13629263db3bd3b81f14c69bb733
 
 PKG_FIXUP:=autoreconf
-PKG_INSTALL:=1
+
+# PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -49,8 +50,10 @@ endef
 
 define Package/lowpan-tools/install
 	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/{iz,izattach,izchat,izcoordinator} $(1)/usr/sbin/
+	$(INSTALL_DIR) $(1)/usr/bin
+
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/{iz,izattach,izcoordinator} $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/izchat $(1)/usr/sbin
 endef
 
 $(eval $(call BuildPackage,lowpan-tools))
-
