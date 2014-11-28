@@ -27,6 +27,7 @@ define Package/node
   DEPENDS:=+libpthread +librt +uclibcxx
   SECTION:=lang
   CATEGORY:=Languages
+  SUBMENU:=Node.js
   TITLE:=Node.js is a platform built on Chrome's JavaScript runtime
   URL:=http://nodejs.org/
 endef
