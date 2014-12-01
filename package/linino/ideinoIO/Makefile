@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013 Arduino LLC. All right reserved
+# Copyright (C) 2014 Dog Hunter AG
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,10 +8,15 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ideinoIO
-PKG_VERSION:=0.1.0
+PKG_VERSION:=0.1.1
 PKG_RELEASE:=5
 
 GIT_SOURCE:=https://github.com/ideino/ideino-linino-dist.git
+
+MAIN_HASH:=8b9d80d944ff99f4b6de11e7e86036567a1d3fd3
+IDEINO_HASH:=a1aea30a33b8f0f42b73eb35bdfb8d3603b77e37
+LIB_HASH:=fd5690bab6813e962a6ec5f31428a9c28796863b
+EXAMPLES_HASH:=7bfa0822ac05c90f5042bf25fe4d937a0b19a13c
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -25,7 +30,7 @@ define Package/ideinoIO
 endef
 
 define Package/ideinoIO/description
-	Node.Js IDE
+	Node.Js IDE with LininoIO support
 endef
 
 define Build/Compile
@@ -34,7 +39,11 @@ endef
 
 define Build/Prepare
 	(git clone --recursive ${GIT_SOURCE} -b master ${PKG_BUILD_DIR}; \
-	cd ${PKG_BUILD_DIR};\
+	cd ${PKG_BUILD_DIR} && git checkout ${MAIN_HASH};\
+	cd ${PKG_BUILD_DIR}/ideino && git checkout ${IDEINO_HASH};\
+	cd ${PKG_BUILD_DIR}/ideino-linino-lib && git checkout ${LIB_HASH};\
+	cd ${PKG_BUILD_DIR}/ideino-workspace && git checkout ${EXAMPLES_HASH};\
+	sleep 3;\
 	rm -rf .git;\
 	rm .gitignore);
 endef
@@ -48,15 +57,6 @@ define Package/ideinoIO/install
 	$(CP) $(PKG_BUILD_DIR)/ideino-autorun $(1)
 	$(CP) $(PKG_BUILD_DIR)/ideino-workspace $(1)
 	$(CP) $(PKG_BUILD_DIR)/ideino-linino-lib $(1)/usr/lib/node_modules
-endef
-
-define Package/ideinoIO/preinst
-#!/bin/sh
-# # check if we are on real system
-if [ ! -d /opt ]
-then
-	mkdir -p /opt  
-fi
 endef
 
 define Package/ideinoIO/postinst
@@ -97,13 +97,11 @@ define Package/ideinoIO/prerm
 # # check if we are on real system
 if [ -x /etc/init.d/ideino ] && [ -x /etc/init.d/ideinoautorun ]
 then
-	ps www | grep -i [n]ode | awk {'print $1'} | xargs kill -9 > /dev/null 2>&1
-	
-	echo "Stopping ideino services...."
-	/etc/init.d/ideino stop
- 	/etc/init.d/ideinoautorun stop
-	
-	echo "Disabling rc.d symlink for ideino"
+	# Killing all the ideino istances
+	ps www | grep '[i]deino.js' | awk {'print $1'} | xargs kill -9 > /dev/null 2>&1	
+
+	# Disabling ideino services
+	echo "Disabling rc.d symlink for ideino..."
 	/etc/init.d/ideino disable
  	/etc/init.d/ideinoautorun disable
 fi
@@ -113,7 +111,7 @@ endef
 define Package/ideinoIO/postrm
 #!/bin/sh
 # # check if we are on real system
-if [ -d /opt/ideino ] && [ -e /etc/init.d/ideino ] && [ -e /etc/init.d/ideinoautorun ] && [ -e /www/luci-static/resources/linino/ideino.js ] && [ -e /usr/lib/lua/luci/view/linino/homepage.htm ] && [ -e /usr/lib/lua/luci/view/linino/homepage.htm.bak ]
+if [ -d /opt/ideino ]
 then
 	rm -rf /opt/ideino
 	rm -rf /opt/ideino-autorun

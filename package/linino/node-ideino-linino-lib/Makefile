@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2014 Dog Hunter AG
+# Copyright (C) 2014 Dog Hunter AG 
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -9,33 +9,35 @@ include $(TOPDIR)/rules.mk
 
 PKG_NPM_NAME:=ideino-linino-lib
 PKG_NAME:=node-$(PKG_NPM_NAME)
-PKG_VERSION:=0.1.0
-PKG_RELEASE:=4
+PKG_VERSION:=0.1.1
+PKG_RELEASE:=1
 
-# PKG_SOURCE:=$(PKG_VERSION).tar.gz
-# PKG_SOURCE_URL:=https://github.com/ideino/ideino-linino-dist/archive/
+PKG_SOURCE:=$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:=https://github.com/ideino/ideino-linino-lib/archive/
 # PKG_MD5SUM:=60e0c8577596d3f925df48ed8c5e0dc4
+
+# PKG_INSTALL:=1
 
 PKG_BUILD_DEPENDS:=node
 PKG_NODE_VERSION:=0.10.25
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/node-ideino-linino-lib
+define Package/$(PKG_NAME)
   DEPENDS:=+node +libstdcpp
   SUBMENU:=Node.js
   SECTION:=lang
   CATEGORY:=Languages
   TITLE:=Linino library for Dog Hunter boards
-  URL:=https://github.com/ideino/ideino-linino-dist
+  URL:=https://github.com/ideino/ideino-linino-lib
 endef
 
-define Package/node-ideino-linino-lib/description
+define Package/$(PKG_NAME)/description
 	Linino library for Dog Hunter boards
 endef
 
 define Build/Prepare
-	git clone --recursive https://github.com/ideino/ideino-linino-dist.git -b master ${PKG_BUILD_DIR}
+	/bin/tar zxvf $(DL_DIR)/$(PKG_SOURCE) -C $(PKG_BUILD_DIR) --strip-components=1
 	$(Build/Patch)
 endef
 
@@ -52,23 +54,23 @@ define Build/Compile
 	npm_config_arch=mips \
 	npm_config_nodedir=$(BUILD_DIR)/node-v$(PKG_NODE_VERSION)/ \
 	PREFIX="$(PKG_INSTALL_DIR)/usr/" \
-	npm install --target_arch=mips -g $(PKG_BUILD_DIR)/ideino-linino-lib
+	npm install --target_arch=mips -g $(PKG_BUILD_DIR)
 endef
 
-define Package/node-ideino-linino-lib/install
+define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/lib
 	
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/node_modules $(1)/usr/lib
 endef
 
-define Package/node-ideino-linino-lib/postrm
+define Package/$(PKG_NAME)/postrm
 #!/bin/sh
 if [ `df | grep /opt` ]
 then
 	rm -rvf /opt/usr/lib/node_modules/$(PKG_NPM_NAME)
-else	
+else
 	rm -rvf /usr/lib/node_modules/$(PKG_NPM_NAME)
 fi
 endef
 
-$(eval $(call BuildPackage,node-ideino-linino-lib))
+$(eval $(call BuildPackage,$(PKG_NAME)))
