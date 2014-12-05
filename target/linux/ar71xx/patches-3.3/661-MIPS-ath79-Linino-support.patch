@@ -45,7 +45,7 @@
 +
 +config ATH79_MACH_LININO_CHOWCHOW
 +	bool "Linino Chowchow support"
-+	select SOC_AR933X
++	select SOC_AR934X
 +	select ATH79_DEV_ETH
 +	select ATH79_DEV_GPIO_BUTTONS
 +	select ATH79_DEV_LEDS_GPIO
