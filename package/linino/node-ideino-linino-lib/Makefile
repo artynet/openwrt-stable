@@ -9,12 +9,12 @@ include $(TOPDIR)/rules.mk
 
 PKG_NPM_NAME:=ideino-linino-lib
 PKG_NAME:=node-$(PKG_NPM_NAME)
-PKG_VERSION:=0.1.1
+PKG_VERSION:=0.1.2
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/ideino/ideino-linino-lib/archive/
-# PKG_MD5SUM:=60e0c8577596d3f925df48ed8c5e0dc4
+PKG_MD5SUM:=e7998141feba0659dcacca97fc0fe009
 
 # PKG_INSTALL:=1
 
