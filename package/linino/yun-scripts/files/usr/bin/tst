@@ -1,0 +1,16 @@
+#!/bin/sh
+
+echo "start test"
+
+echo 7 > /sys/class/gpio/export; 
+echo "out" > /sys/class/gpio/gpio7/direction; 
+echo 1 > /sys/class/gpio/gpio7/value
+#echo 23 > /sys/class/gpio/export; 
+#echo "out" > /sys/class/gpio/gpio23/direction; 
+#echo 1 > /sys/class/gpio/gpio23/value
+echo 6 > /sys/class/gpio/export; 
+echo "out" > /sys/class/gpio/gpio6/direction; 
+echo 1 > /sys/class/gpio/gpio6/value
+echo 255 > /sys/devices/platform/leds-gpio/leds/ds:green:usb/brightness
+echo 255 > /sys/devices/platform/leds-gpio/leds/ds:green:wlan/brightness
+echo "end"
