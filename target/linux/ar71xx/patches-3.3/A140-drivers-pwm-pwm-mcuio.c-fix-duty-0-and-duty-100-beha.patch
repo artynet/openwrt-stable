@@ -1,0 +1,54 @@
+From 5556a1d0937d655722edcaa7e7d0e2af34b2fd78 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 17 Oct 2014 21:57:50 +0200
+Subject: [PATCH 140/141] drivers/pwm/pwm-mcuio.c: fix duty=0 and duty=100%
+ behaviour
+
+From Atmega16/32U4 documentation, we can read that "The extreme
+values for the OCRnx Register represent special cases when
+generating a PWM waveform output in the fast PWM mode".
+I tried to hide this in the past, but it's better to provide a
+straightforward control of pwm registers.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/pwm-mcuio.c |    9 ++-------
+ 1 file changed, 2 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/pwm/pwm-mcuio.c b/drivers/pwm/pwm-mcuio.c
+index b538dbf..b6be19c 100644
+--- a/drivers/pwm/pwm-mcuio.c
++++ b/drivers/pwm/pwm-mcuio.c
+@@ -69,11 +69,6 @@ set_duty:
+ 
+ 	duty_ticks = duty_ns / pwm->resolution;
+ 
+-	/* minimum duty_cycle is pwm->resolution; if a constant signal
+-	 * is needed, consider inverting polarity and setting
+-	 * duty_cycle=period */
+-	if (duty_ticks > 0)
+-		duty_ticks -= 1;
+ 	if (regmap_write(data->map, 0x040 * (idx + 1) + 0x14, duty_ticks))
+ 		return -EIO;
+ 
+@@ -163,7 +158,7 @@ static int mcuio_pwm_update_duty(struct pwm_chip *chip,
+ 	if (regmap_read(data->map, 0x040 * (idx + 1) + 0x14, &val))
+ 		return -EIO;
+ 
+-	pwm->duty_cycle = (val + 1) * pwm->resolution;
++	pwm->duty_cycle = val * pwm->resolution;
+ 	return 0;
+ }
+ 
+@@ -258,7 +253,7 @@ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ 		regmap_read(data->map, 0x040 * (i + 1) + 0x08,
+ 			    &max_ticks);
+ 
+-		data->chip.pwms[i].max = (max_ticks + 1) *
++		data->chip.pwms[i].max = max_ticks *
+ 			data->chip.pwms[i].resolution;
+ 	}
+ 	return ret;
+-- 
+1.7.9.5
+

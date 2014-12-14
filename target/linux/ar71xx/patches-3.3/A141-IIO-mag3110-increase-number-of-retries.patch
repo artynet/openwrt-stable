@@ -1,0 +1,25 @@
+From 0f92483b687445730b3ceeee94fd545ec803071c Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 12 Nov 2014 17:48:30 +0100
+Subject: [PATCH 141/141] IIO, mag3110: increase number of retries
+
+---
+ drivers/iio/magnetometer/mag3110.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/iio/magnetometer/mag3110.c b/drivers/iio/magnetometer/mag3110.c
+index 48f1bca..21b90d8 100644
+--- a/drivers/iio/magnetometer/mag3110.c
++++ b/drivers/iio/magnetometer/mag3110.c
+@@ -56,7 +56,7 @@ struct mag3110_data {
+ 
+ static int mag3110_request(struct mag3110_data *data)
+ {
+-	int ret, tries = 150;
++	int ret, tries = 1500;
+ 
+ 	/* trigger measurement */
+ 	ret = i2c_smbus_write_byte_data(data->client, MAG3110_CTRL_REG1,
+-- 
+1.7.9.5
+
