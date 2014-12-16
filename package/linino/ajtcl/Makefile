@@ -1,8 +1,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl
-PKG_REVISION:=676383fc70057547b07352a2e81cb6b7e20fbf12
-PKG_VERSION:=$(PKG_REVISION)
+PKG_REVISION:=30639526523d9be7cdbbf243469158d1eb1cec95
+PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 PKG_MD5SUM:=
 
@@ -22,8 +22,8 @@ PKG_CONFIG_DEPENDS:= \
 include $(INCLUDE_DIR)/package.mk
 
 define Package/ajtcl/Default
-  SECTION:=net
-  CATEGORY:=Network
+  SECTION:=lang
+  CATEGORY:=Languages
   DEPENDS:=+libopenssl +libpthread +librt
   URL:=http://www.allseenalliance.org
   MAINTAINER:=AllSeen Alliance <allseen-core@lists.allseenalliance.org>
@@ -37,7 +37,9 @@ endef
 
 define Package/ajtcl/description
 	AllJoyn Thin Client Library is a basic, low-level C library for developing
-	ad hoc peer-to-peer applications that use the AllJoyn protocol.
+	ad hoc peer-to-peer applications that use the AllJoyn protocol. 
+
+	Release commit : 30639526523d9be7cdbbf243469158d1eb1cec95
 endef
 
 define Package/ajtcl-samples
@@ -61,7 +63,7 @@ define Build/Configure/Default
 endef
 
 define Build/Compile
-	CROSS_CFLAGS="$(TARGET_CFLAGS) $(EXTRA_CFLAGS) $(TARGET_CPPFLAGS) -DOPENWRT_MIPS" \
+	CROSS_CFLAGS="$(TARGET_CFLAGS) $(EXTRA_CFLAGS) $(FPIC) $(TARGET_CPPFLAGS) -DOPENWRT_MIPS" \
 	CROSS_LINKFLAGS="$(TARGET_LINKFLAGS) $(TARGET_LDFLAGS)" \
 	CROSS_PATH=$(TARGET_PATH) \
 	CROSS_PREFIX=mips-openwrt-linux-uclibc- \
