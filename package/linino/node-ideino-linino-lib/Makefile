@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 PKG_NPM_NAME:=ideino-linino-lib
 PKG_NAME:=node-$(PKG_NPM_NAME)
 PKG_VERSION:=0.1.2
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/ideino/ideino-linino-lib/archive/
@@ -65,7 +65,7 @@ endef
 
 define Package/$(PKG_NAME)/postrm
 #!/bin/sh
-if [ `df | grep /opt` ]
+if `grep -qs '/opt' /proc/mounts`
 then
 	rm -rvf /opt/usr/lib/node_modules/$(PKG_NPM_NAME)
 else

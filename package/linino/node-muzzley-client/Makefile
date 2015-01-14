@@ -64,7 +64,7 @@ endef
 define Package/$(PKG_NAME)/postrm
 #!/bin/sh
 # check if we are on a real system
-if [ 'df | grep /opt' ]
+if `grep -qs '/opt' /proc/mounts`
 then
 	rm -rvf /opt/usr/lib/node_modules/$(PKG_NPM_NAME)
 else
