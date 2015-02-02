@@ -14,50 +14,9 @@
 # 122	D12
 # 123	D6
 
-
-# 104	D8
-echo 104 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D8/direction
-
-# 105	D9
-echo 105 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D9/direction
-
-# 106	D10
-echo 106 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D10/direction
-
-# 107	D11
-echo 107 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D11/direction
-
-# 114	D5
-echo 114 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D5/direction
-
-# 115	D13
-echo 115 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D13/direction
-
-# 116	D3
-echo 116 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D3/direction
-
-# 117	D2
-echo 117 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D2/direction
-
-# 120	D4
-echo 120 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D4/direction
-
-# 122	D12
-echo 122 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D12/direction
-
-# 123	D6
-echo 123 > /sys/class/gpio/export	
-echo out > /sys/class/gpio/D6/direction
+for i in 104 105 106 107 114 115 116 117 120 122 123; do
+	echo $i > /sys/class/gpio/export
+done
 
 # enable ADC
 echo 1 > /sys/bus/iio/devices/iio:device0/enable
@@ -71,29 +30,12 @@ echo 1 > /sys/bus/iio/devices/iio:device0/enable
 #   4	   D5
 #   5	   D6
 
-#   0	   D3
-echo 0 > /sys/class/pwm/pwmchip0/export
-echo 1  > /sys/class/pwm/pwmchip0/D3/enable
+pwm=$(seq 0 5)
 
-#   1	   D9
-echo 1 > /sys/class/pwm/pwmchip0/export
-echo 1  > /sys/class/pwm/pwmchip0/D9/enable
+for i in $pwm;do
+	echo $i > /sys/class/pwm/pwmchip0/export
+done
 
-#   2	   D10
-echo 2 > /sys/class/pwm/pwmchip0/export
-echo 1  > /sys/class/pwm/pwmchip0/D10/enable
-
-#   3	   D11
-echo 3 > /sys/class/pwm/pwmchip0/export
-echo 1  > /sys/class/pwm/pwmchip0/D11/enable
-
-#   4	   D5
-echo 4 > /sys/class/pwm/pwmchip0/export
-echo 1  > /sys/class/pwm/pwmchip0/D5/enable
-
-#   5	   D6
-echo 5 > /sys/class/pwm/pwmchip0/export
-echo 1  > /sys/class/pwm/pwmchip0/D6/enable
 
 
 

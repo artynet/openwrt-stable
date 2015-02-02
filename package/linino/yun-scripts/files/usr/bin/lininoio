@@ -22,9 +22,71 @@
 
 #!/bin/sh
 
-# Shows script help
+# Check for ssh connection
+
+sshcheck () {
+
+	if [ ! `ps | grep -i [d]ropbear | wc -l` -ge 2 ]
+	then 
+		echo ""
+		echo "Please connect to your board by means of ssh before running this script ! Terminating..."
+		echo ""
+		
+		exit 0
+	else
+		echo ""
+		echo "WARNING ! Please be sure to run lininoio when connected by means of SSH to your board, otherwise you could damage your board !"
+		echo ""
+		
+		read -p "Do you want to proceed ? [y/n] " yn_ssh
+		
+		case $yn_ssh in
+			[Yy]*)
+				clear
+				;;
+			[Nn]*)
+				
+				echo ""
+				echo "Terminating the script for now..."
+				echo""
+				
+				exit 0
+				;;
+		esac
+	fi
+
+}
+
+# Shows script help and status
+
+bootargs_stop () {
+	
+	fw_setenv bootargs 'console=ttyATH0,250000 board=linino-'$boardname' mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),14656k(rootfs),1280k(kernel),64k(nvram),64k(art),15936k@0x50000(firmware) mem=64M rootfstype=squashfs,jffs2 noinitrd'
+
+}
+
+bootargs_start () {
+
+	fw_setenv bootargs 'console=spicons board=linino-'$boardname' mtdparts=spi0.0:256k(u-boot)ro,64k(u-boot-env),14656k(rootfs),1280k(kernel),64k(nvram),64k(art),15936k@0x50000(firmware) mem=64M rootfstype=squashfs,jffs2 noinitrd'
+
+}
+
+statusio () {
+
+	if [ `ls /etc/rc.d | grep "S11mcuio"` ]
+	then
+		echo ""
+		echo "STATUS : ENABLED"
+	else
+		echo ""
+		echo "STATUS : DISABLED"
+	fi
+
+}
 
 help () {
+
+	statusio
 
 	echo ""
 	echo "USAGE : lininoio <start/stop>"
@@ -177,6 +239,10 @@ then
 			
 				mcuio_ok
 				
+				# Detects active SSH connection
+
+				sshcheck
+				
 				p=1
 	
 				while [ $p != 0 ]
@@ -188,6 +254,8 @@ then
 	
 					case $yn in
 						[Yy]*)
+						
+							bootargs_start
 			
 							sed -i s/ttyATH0\:\:askfirst/ttySPI0\:\:respawn/g /etc/inittab
 							run-avrdude /etc/linino/bathos-$boardname.hex
@@ -229,6 +297,10 @@ then
 		
 				mcuio_ko
 				
+				# Detects active SSH connection
+
+				sshcheck
+				
 				q=1
 	
 				while [ $q != 0 ]
@@ -240,6 +312,8 @@ then
 					
 					case $yn in
 						[Yy]*)
+			
+							bootargs_stop
 			
 							sed -i s/ttySPI0\:\:respawn/ttyATH0\:\:askfirst/g /etc/inittab
 							/etc/init.d/mcuio disable
