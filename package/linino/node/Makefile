@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=node
 PKG_VERSION:=v0.10.25
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=node-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://nodejs.org/dist/${PKG_VERSION}
@@ -27,6 +27,7 @@ define Package/node
   DEPENDS:=+libpthread +librt +uclibcxx
   SECTION:=lang
   CATEGORY:=Languages
+  SUBMENU:=Node.js
   TITLE:=Node.js is a platform built on Chrome's JavaScript runtime
   URL:=http://nodejs.org/
 endef
@@ -37,11 +38,12 @@ endef
 
 define Build/Prepare
 	$(call Build/Prepare/Default)
-	$(CP) node.patch $(PKG_BUILD_DIR)/
+	$(CP) node.patch libcrypto.patch $(PKG_BUILD_DIR)/
 	(cd $(PKG_BUILD_DIR); \
 	rm -rf deps/v8; \
 	git clone $(GIT_SOURCE) deps/v8; \
 	patch -p1 < node.patch; \
+	patch -p1 < libcrypto.patch; \
 	);
 endef
 

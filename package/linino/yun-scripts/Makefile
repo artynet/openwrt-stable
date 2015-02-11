@@ -51,6 +51,9 @@ define Package/yun-scripts/install
 	$(INSTALL_BIN) ./files/usr/bin/extract-built-date-from-sysupgrade-image $(1)/usr/bin
 	$(INSTALL_BIN) ./files/usr/bin/prod $(1)/usr/bin
 	$(INSTALL_BIN) ./files/usr/bin/cali $(1)/usr/bin
+	$(INSTALL_BIN) ./files/usr/bin/linup $(1)/usr/bin
+	$(INSTALL_BIN) ./files/usr/bin/tst $(1)/usr/bin
+	$(INSTALL_BIN) ./files/usr/bin/tsto $(1)/usr/bin
 
 	$(INSTALL_BIN) ./files/etc/init.d/rename-wifi-if-access-point $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/generate_new_gpg_key $(1)/etc/init.d
