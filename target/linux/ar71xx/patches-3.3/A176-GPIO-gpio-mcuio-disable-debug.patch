@@ -1,0 +1,24 @@
+From ade328120ea971afbce761b14a82b5fa6a03edf7 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 20 Nov 2014 05:25:21 +0100
+Subject: [PATCH 176/188] GPIO gpio-mcuio: disable debug
+
+---
+ drivers/gpio/gpio-mcuio.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpio/gpio-mcuio.c b/drivers/gpio/gpio-mcuio.c
+index 3efccdd..1921fcb 100644
+--- a/drivers/gpio/gpio-mcuio.c
++++ b/drivers/gpio/gpio-mcuio.c
+@@ -4,6 +4,7 @@
+  *
+  * GNU GPLv2 or later
+  */
++/* #define DEBUG */
+ 
+ /* mcuio host controller driver */
+ 
+-- 
+1.7.9.5
+

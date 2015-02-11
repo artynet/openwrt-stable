@@ -1,0 +1,28 @@
+From f4ca984db3eb4a89f924470d2225612b529aecb8 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 17:20:05 +0200
+Subject: [PATCH 157/188] I2C, mcuio: check return value of
+ request_threaded_irq in probe
+
+---
+ drivers/i2c/busses/i2c-mcuio.c |    4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index 98d1a0f..67bf782 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -632,6 +632,10 @@ static int mcuio_simple_i2c_probe(struct mcuio_device *mdev)
+ 	ret = request_threaded_irq(mdev->irq, NULL, mcuio_i2c_irq_handler,
+ 				   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+ 				   "mcuio-i2c", i2cd);
++	if (ret < 0) {
++		dev_err(&mdev->dev, "failed requesting irq\n");
++		return ret;
++	}
+ 
+ 	i2c_set_adapdata(a, i2cd);
+ 
+-- 
+1.7.9.5
+

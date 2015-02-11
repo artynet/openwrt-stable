@@ -1,0 +1,455 @@
+From a18f3180ec136938ba609368ca2238492b2275da Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 14 Nov 2014 18:18:42 +0100
+Subject: [PATCH 175/188] I2C, mcuio: rewrite with simplified memory map
+
+---
+ drivers/i2c/busses/i2c-mcuio.c |  339 ++++++++++++++++++----------------------
+ 1 file changed, 156 insertions(+), 183 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index 67bf782..e2a2040 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -29,27 +29,41 @@
+ 
+ #define LOCAL_BUF_SIZE 2048
+ 
+-#define I2C_MCUIO_SADDR	   0x008
+-#define I2C_MCUIO_STATUS   0x00c
+-#define	  TRANSACTION_OK       0x1
+-#define	  LOW_OBUF_WATERMARK   0x2
+-#define   HI_IBUF_WATERMARK    0x4
+-#define	  NAK_RECEIVED	       0x80
+-#define I2C_MCUIO_CFG	   0x010
+-#define I2C_MCUIO_BRATE	   0x014
+-#define I2C_MCUIO_CMD	   0x018
+-#define	  START_TRANSACTION 0x1
+-
+-#define I2C_MCUIO_INTEN	   0x01c
+-#define I2C_MCUIO_BUF_SIZE 0x020
+-#define I2C_MCUIO_OBUF_LEN 0x024
+-#define I2C_MCUIO_IBUF_LEN 0x028
+-#define I2C_MCUIO_OBUF_HEAD 0x02c
+-#define I2C_MCUIO_OBUF_TAIL 0x030
+-#define I2C_MCUIO_IBUF_HEAD 0x034
+-#define I2C_MCUIO_IBUF_TAIL 0x038
+-#define I2C_MCUIO_OBUF	   0x040
+-#define I2C_MCUIO_IBUF	   (I2C_MCUIO_OBUF + I2C_MCUIO_OBUF_MAX_SIZE)
++/*
++ * Xfer data register (xfers are limited to 255 bytes)
++ *
++ * Byte  0   -> slave address
++ * Byte  1   -> obuf length
++ * Byte  2   -> ibuf length
++ */
++#define I2C_MCUIO_XFER_DATA	0x008
++#define I2C_REG_START		I2C_XFER_DATA
++
++/*
++ * Status register:
++ *
++ * Byte 0 -> flags
++ * Byte 1 -> ibuf count
++ * Byte 2 -> obuf space
++ */
++#define I2C_MCUIO_STATUS	0x00c
++#define	  TRANSACTION_OK	  0x1
++#define	  OBUF_LO_WM_REACHED	  0x02
++#define	  IBUF_HI_WM_REACHED	  0x04
++#define	  NAK_RECEIVED		  0x80
++#define	  INVALID_LEN		  0x81
++#define	  BUSY			  0x82
++
++#define I2C_MCUIO_CFG		0x010
++#define I2C_MCUIO_BRATE		0x014
++#define I2C_MCUIO_CMD		0x018
++#define	  START_TRANSACTION	  0x1
++#define	  INTEN			  0x2
++#define I2C_MCUIO_BUF_SIZE	0x020
++#define I2C_REG_END		(I2C_MCUIO_IBUF + I2C_MCUIO_IBUF_MAX_SIZE)
++
++#define I2C_MCUIO_OBUF		0x040
++#define I2C_MCUIO_IBUF		(I2C_MCUIO_OBUF + I2C_MCUIO_OBUF_MAX_SIZE)
+ 
+ struct mcuio_i2c_dev {
+ 	struct i2c_adapter adapter;
+@@ -68,152 +82,118 @@ struct mcuio_i2c_dev {
+ 	u8 buf[LOCAL_BUF_SIZE];
+ };
+ 
+-#ifdef DEBUG
+-static void __dump_ibuf(struct mcuio_i2c_dev *i2cd)
++static inline u8 __flags(u32 v)
+ {
+-	int i;
+-	printk(KERN_DEBUG "input buffer\n");
+-	for (i = 0; i < i2cd->received; i++) {
+-		printk("0x%02x\t", i2cd->buf[i]);
+-		if (i && !(i % 8)) {
+-			printk("\n");
+-			printk(KERN_DEBUG);
+-		}
+-	}
+-	printk("\n");
++	return v & 0xff;
+ }
+-#else
+-#define __dump_ibuf(a)
+-#endif
+ 
+-static int __send_obuf(struct mcuio_i2c_dev *i2cd)
++static inline u8 __space(u32 v)
+ {
+-	u32 h, t;
+-	int space, space_to_end;
+-	int stat, togo, l, l1, l2;
++	return (v >> 16) & 0xff;
++}
+ 
+-	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_OBUF_HEAD, &h);
+-	if (stat < 0) {
+-		dev_err(&i2cd->mdev->dev, "error reading obuf head\n");
++static inline u8 __count(u32 v)
++{
++	return (v >> 8) & 0xff;
++}
++
++static inline int __get_status(struct mcuio_i2c_dev *i2cd, u32 *s)
++{
++	return regmap_read(i2cd->map_dw, I2C_MCUIO_STATUS, s);
++}
++
++static inline int __get_space(struct mcuio_i2c_dev *i2cd)
++{
++	int stat;
++	u32 s;
++
++	stat = __get_status(i2cd, &s);
++	if (stat < 0)
+ 		return stat;
+-	}
+-	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_OBUF_TAIL, &t);
+-	if (stat < 0) {
+-		dev_err(&i2cd->mdev->dev, "error reading obuf tail\n");
++	return __space(s);
++}
++
++static inline int __get_count(struct mcuio_i2c_dev *i2cd)
++{
++	int stat;
++	u32 s;
++
++	stat = __get_status(i2cd, &s);
++	if (stat < 0)
+ 		return stat;
+-	}
+-	space = CIRC_SPACE(h, t, i2cd->buf_size);
+-	space_to_end = CIRC_SPACE_TO_END(h, t, i2cd->buf_size);
+-	dev_dbg(&i2cd->mdev->dev, "h = %u, t = %u, space = %d\n", h, t, space);
+-	if (!space) {
+-		dev_dbg(&i2cd->mdev->dev, "no space in output buffer\n");
+-		return 0;
+-	}
++	return __count(s);
++}
++
++static int ___send_obuf(struct mcuio_i2c_dev *i2cd, int space)
++{
++	int togo, l, stat;
++
+ 	togo = i2cd->olen - i2cd->sent;
++	/*
++	 * Make size an integer multiple of the number of data bytes in
++	 * a single wrb mcuio packet (with fill flag set).
++	 * This is to reduce the mcuio overhead (try sending as few single
++	 * byte packets as possible).
++	 */
++	if (space > 8)
++		space = (space >> 3) << 3;
+ 	l = min(space, togo);
+-	l1 = min(l, space_to_end);
+-	l2 = l - space_to_end;
+-	dev_dbg(&i2cd->mdev->dev, "togo = %d, l = %d\n", togo, l);
+-	stat = regmap_raw_write(i2cd->map_b, I2C_MCUIO_OBUF + h,
+-				&i2cd->buf[i2cd->sent], l1);
++	pr_debug("%s: space = %d, togo = %d, l = %d, sent = %d\n",
++		 __func__, space, togo, l, i2cd->sent);
++	stat = regmap_raw_write(i2cd->map_b, I2C_MCUIO_OBUF,
++				&i2cd->buf[i2cd->sent], l);
+ 	if (stat < 0) {
+-		dev_err(&i2cd->mdev->dev, "error sending obuf\n");
++		dev_err(&i2cd->mdev->dev, "error sending output buffer\n");
+ 		return stat;
+ 	}
+-	h = (h + l1) & (i2cd->buf_size - 1);
+-	i2cd->sent += l1;
+-	if (l2 > 0) {
+-		/* Wrap around */
+-		stat = regmap_raw_write(i2cd->map_b, I2C_MCUIO_OBUF + h,
+-					&i2cd->buf[i2cd->sent], l2);
+-		if (stat < 0) {
+-			dev_err(&i2cd->mdev->dev, "error sending obuf\n");
+-			return stat;
+-		}
+-		h = (h + l2) & (i2cd->buf_size - 1);
+-		i2cd->sent += l2;
+-	}
+-	dev_dbg(&i2cd->mdev->dev, "sent = %d\n", i2cd->sent);
+-
+-	stat = regmap_write(i2cd->map_dw, I2C_MCUIO_OBUF_HEAD, h);
+-	if (stat < 0)
+-		dev_err(&i2cd->mdev->dev, "error setting new obuf head\n");
++	i2cd->sent += l;
+ 	return stat;
+ }
+ 
+-static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
++static int __send_obuf(struct mcuio_i2c_dev *i2cd)
+ {
+-	u32 h, t;
+-	int count, count_to_end;
+-	int stat, togo, l, l1, l2;
++	int space;
+ 
+-	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_IBUF_TAIL, &t);
+-	if (stat < 0) {
+-		dev_err(&i2cd->mdev->dev, "error reading ibuf tail\n");
+-		return stat;
+-	}
+-	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_IBUF_HEAD, &h);
+-	if (stat < 0) {
+-		dev_err(&i2cd->mdev->dev,
+-			"error reading input buffer head\n");
+-		return stat;
+-	}
+-	count = CIRC_CNT(h, t, i2cd->buf_size);
+-	count_to_end = CIRC_CNT_TO_END(h, t, i2cd->buf_size);
+-	dev_dbg(&i2cd->mdev->dev, "h = %u, t = %u, count = %d\n", h, t, count);
+-	if (!count) {
+-		dev_dbg(&i2cd->mdev->dev, "nothing in input buffer\n");
+-		return 0;
+-	}
+-	if (i2cd->ilen == -1) {
+-		u8 v;
+-		/* SMBUS read block cmd, the device must tell us how many
+-		   bytes have to be read
+-		*/
+-		stat = regmap_raw_read(i2cd->map_b, I2C_MCUIO_IBUF + t,
+-				       &v, 1);
+-		if (stat < 0) {
+-			dev_err(&i2cd->mdev->dev, "error reading ibuf len\n");
+-			return stat;
+-		}
+-		i2cd->ilen = v;
+-		dev_dbg(&i2cd->mdev->dev, "smbus block, ilen = %d\n",
+-			i2cd->ilen);
++	space = __get_space(i2cd);
++	if (space < 0) {
++		dev_err(&i2cd->mdev->dev, "error reading output space\n");
++		return space;
+ 	}
++	return ___send_obuf(i2cd, space);
++}
++
++static int ___get_ibuf(struct mcuio_i2c_dev *i2cd, int count)
++{
++	int togo, l, stat;
++
+ 	togo = i2cd->ilen - i2cd->received;
+ 	l = min(count, togo);
+-	l1 = min(l, count_to_end);
+-	l2 = l - count_to_end;
+-	dev_dbg(&i2cd->mdev->dev, "togo = %d, l = %d\n", togo, l);
+-	stat = regmap_raw_read(i2cd->map_b, I2C_MCUIO_IBUF + t,
+-			       &i2cd->buf[i2cd->received], l1);
++	pr_debug("%s: count = %d, togo = %d, l = %d, received = %d\n",
++		 __func__, count, togo, l, i2cd->received);
++	stat = regmap_raw_read(i2cd->map_b, I2C_MCUIO_IBUF,
++			       &i2cd->buf[i2cd->received], l);
+ 	if (stat < 0) {
+-		dev_err(&i2cd->mdev->dev, "Error reading ibuf\n");
++		dev_err(&i2cd->mdev->dev, "error reading input buffer\n");
+ 		return stat;
+ 	}
+-	t = (t + l1) & (i2cd->buf_size - 1);
+-	i2cd->received += l1;
+-	if (l2 > 0) {
+-		/* Wrap around */
+-		stat = regmap_raw_read(i2cd->map_b, I2C_MCUIO_IBUF + t,
+-				       &i2cd->buf[i2cd->received], l2);
+-		if (stat < 0) {
+-			dev_err(&i2cd->mdev->dev, "Error reading ibuf\n");
+-			return stat;
+-		}
+-		t = (t + l2) & (i2cd->buf_size - 1);
+-		i2cd->received += l2;
+-	}
+-	__dump_ibuf(i2cd);
+-	dev_dbg(&i2cd->mdev->dev, "received = %d\n", i2cd->received);
++	i2cd->received += l;
++	return stat;
++}
+ 
+-	stat = regmap_write(i2cd->map_dw, I2C_MCUIO_IBUF_TAIL, t);
+-	if (stat < 0) {
+-		dev_err(&i2cd->mdev->dev,
+-			"error setting new ibuf tail\n");
+-		return stat;
++static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
++{
++	int count;
++
++	count = __get_count(i2cd);
++	if (count < 0) {
++		dev_dbg(&i2cd->mdev->dev, "error reading input count\n");
++		return count;
+ 	}
+-	return stat;
++	if (!count) {
++		dev_dbg(&i2cd->mdev->dev, "nothing in input buffer\n");
++		return count;
++	}
++	return ___get_ibuf(i2cd, count);
+ }
+ 
+ static irqreturn_t mcuio_i2c_irq_handler(int irq, void *devid)
+@@ -221,41 +201,54 @@ static irqreturn_t mcuio_i2c_irq_handler(int irq, void *devid)
+ 	/* Read status register and complete current transaction */
+ 	struct mcuio_i2c_dev *i2cd = devid;
+ 	u32 v;
++	u8 flags, count, space;
+ 	int stat;
+ 
+ 	BUG_ON(!i2cd || !i2cd->map_dw);
+-	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_STATUS, &v);
++	stat = __get_status(i2cd, &v);
+ 	if (stat < 0) {
+ 		dev_err(&i2cd->mdev->dev, "error reading i2c status\n");
+ 		/* This will make the transaction end with -EIO */
+ 		v = NAK_RECEIVED;
+ 	}
+ 	dev_dbg(&i2cd->mdev->dev, "%s: status = 0x%08x\n", __func__, v);
+-	if (v & LOW_OBUF_WATERMARK)
+-		__send_obuf(i2cd);
+-	if (v & HI_IBUF_WATERMARK)
+-		__get_ibuf(i2cd);
+-	if ((v & NAK_RECEIVED) || (v & TRANSACTION_OK)) {
++
++	flags = __flags(v);
++	count = __count(v);
++	space = __space(v);
++
++	if (!flags) {
++		dev_err(&i2cd->mdev->dev, "spurious irq\n");
++		return IRQ_HANDLED;
++	}
++
++	if ((flags & NAK_RECEIVED) || (flags & TRANSACTION_OK)) {
+ 		i2cd->xfer_status = (stat < 0 || (v & NAK_RECEIVED)) ? -EIO : 0;
+ 		dev_dbg(&i2cd->mdev->dev, "%s: flags = 0x%04x\n", __func__,
+ 			i2cd->flags);
+-		if (i2cd->flags & I2C_M_RD) {
++		if ((i2cd->flags & I2C_M_RD) && !i2cd->xfer_status) {
+ 			dev_dbg(&i2cd->mdev->dev, "%s: reading ibuf\n",
+ 				__func__);
+ 			__get_ibuf(i2cd);
+ 		}
+ 		complete(&i2cd->xfer_complete);
++		return IRQ_HANDLED;
+ 	}
++	if ((flags & OBUF_LO_WM_REACHED) && space && (i2cd->olen - i2cd->sent))
++		___send_obuf(i2cd, space);
++	if ((flags & IBUF_HI_WM_REACHED) && count &&
++	    (i2cd->ilen - i2cd->received))
++		___get_ibuf(i2cd, count);
+ 	dev_dbg(&i2cd->mdev->dev, "%s: xfer_status = %d\n", __func__,
+ 		i2cd->xfer_status);
+ 	return IRQ_HANDLED;
+ }
+ 
++#ifdef DEBUG
+ static void __dump_message(struct device *dev, struct i2c_msg *msg)
+ {
+ 	int i;
+ 	dev_dbg(dev, "i2c msg len = %u\n", msg->len);
+-#ifdef DEBUG
+ 	printk(KERN_DEBUG);
+ 	for (i = 0; i < msg->len; i++) {
+ 		printk("0x%02x\t", msg->buf[i]);
+@@ -265,8 +258,12 @@ static void __dump_message(struct device *dev, struct i2c_msg *msg)
+ 		}
+ 	}
+ 	printk("\n");
+-#endif
+ }
++#else
++static inline void __dump_message(struct device *dev, struct i2c_msg *msg)
++{
++}
++#endif
+ 
+ static int __do_xfer(struct i2c_adapter * a)
+ {
+@@ -274,12 +271,13 @@ static int __do_xfer(struct i2c_adapter * a)
+ 	int ret, timeout;
+ 	struct mcuio_i2c_dev *i2cd = i2c_get_adapdata(a);
+ 
+-	/* Set slave address + R/W */
+-	v = i2cd->addr << 1;
+-	dev_dbg(&i2cd->mdev->dev, "setting slave addr 0x%08x\n", v);
+-	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_SADDR, v);
++	/* Set slave address, ilength, olength */
++	v = (((u32)i2cd->addr) << 1) | (((u32)i2cd->olen) << 8) |
++		(((u32)i2cd->ilen) << 20);
++	dev_dbg(&i2cd->mdev->dev, "setting xfer data 0x%08x\n", v);
++	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_XFER_DATA, v);
+ 	if (ret < 0) {
+-		dev_err(&i2cd->mdev->dev, "error setting slave address\n");
++		dev_err(&i2cd->mdev->dev, "error setting xfer data\n");
+ 		return ret;
+ 	}
+ 
+@@ -296,37 +294,12 @@ static int __do_xfer(struct i2c_adapter * a)
+ 		}
+ 	}
+ 
+-	/* Write message length(s) */
+-	v = i2cd->olen;
+-	dev_dbg(&i2cd->mdev->dev, "writing msg olen = %u\n", v);
+-	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_OBUF_LEN, v);
+-	if (ret < 0) {
+-		dev_err(&i2cd->mdev->dev, "error writing message out length\n");
+-		return ret;
+-	}
+-	v = i2cd->ilen;
+-	dev_dbg(&i2cd->mdev->dev, "writing msg ilen = %u\n", v);
+-	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_IBUF_LEN, v);
+-	if (ret < 0) {
+-		dev_err(&i2cd->mdev->dev, "error writing message in length\n");
+-		return ret;
+-	}
+-
+-	/* Enable interrupt */
+-	v = TRANSACTION_OK | NAK_RECEIVED | LOW_OBUF_WATERMARK;
+-	dev_dbg(&i2cd->mdev->dev, "enabling interrupt\n");
+-	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_INTEN, v);
+-	if (ret < 0) {
+-		dev_err(&i2cd->mdev->dev, "error enabling interrupt\n");
+-		return ret;
+-	}
+-
+ 	/* Initialize xfer status and init xfer completion struct */
+ 	i2cd->xfer_status = -ETIMEDOUT;
+ 	init_completion(&i2cd->xfer_complete);
+ 
+-	/* Issue xmit command */
+-	v = START_TRANSACTION;
++	/* Issue xmit command and enable interrupt */
++	v = START_TRANSACTION | INTEN;
+ 	dev_dbg(&i2cd->mdev->dev, "starting transaction\n");
+ 	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_CMD, v);
+ 	if (ret < 0) {
+-- 
+1.7.9.5
+

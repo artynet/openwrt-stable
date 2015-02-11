@@ -1,0 +1,38 @@
+From 6e65353b9f338777d727e7d5b06387454f059cd9 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 06:00:59 +0200
+Subject: [PATCH 151/188] MCUIO, mcuio-soft-hc: automatically clear irq status
+ on read
+
+---
+ drivers/mcuio/mcuio-soft-hc.c |   12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-soft-hc.c b/drivers/mcuio/mcuio-soft-hc.c
+index 9afef96..01075f0 100644
+--- a/drivers/mcuio/mcuio-soft-hc.c
++++ b/drivers/mcuio/mcuio-soft-hc.c
+@@ -86,8 +86,20 @@ static int mcuio_soft_hc_reg_read(void *context, unsigned int reg,
+ 		*val = shc->irqno;
+ 		return sizeof(*val);
+ 	case MCUIO_IRQ_STAT:
++	{
++		struct circ_buf *buf = &shc->rx_circ_buf;
++		unsigned int new_irqstat;
++
+ 		*val = shc->irqstat;
++
++		pr_debug("%s: autoclear shc irqstat\n", __func__);
++		new_irqstat = CIRC_CNT(buf->head, buf->tail,
++				       sizeof(shc->rx_buf)) ? RX_RDY : 0;
++		shc->irqstat = new_irqstat;
++		pr_debug("%s: new shc irqstat = 0x%08x\n", __func__,
++			shc->irqstat);
+ 		return sizeof(*val);
++	}
+ 	default:
+ 		return -EPERM;
+ 	}
+-- 
+1.7.9.5
+

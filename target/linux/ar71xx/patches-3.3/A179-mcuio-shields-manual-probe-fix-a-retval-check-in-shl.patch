@@ -1,0 +1,38 @@
+From eba1093d4ed0acd0e6668a5184bca2af87f3ed58 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 17 Nov 2014 10:54:42 +0100
+Subject: [PATCH 179/188] mcuio: shields manual probe, fix a retval check in
+ shld_register
+
+The return value of mcuio_bus_find_hc is built by ERR_PTR, so IS_ERR
+must be used when checking it.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-shields-manprobe.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-shields-manprobe.c b/drivers/mcuio/mcuio-shields-manprobe.c
+index b081ae3..5b03244 100644
+--- a/drivers/mcuio/mcuio-shields-manprobe.c
++++ b/drivers/mcuio/mcuio-shields-manprobe.c
+@@ -14,6 +14,7 @@
+ #include <linux/slab.h>
+ #include <linux/ctype.h>
+ #include <linux/device.h>
++#include <linux/err.h>
+ #include <linux/mcuio.h>
+ #include <linux/mcuio_ids.h>
+ 
+@@ -59,7 +60,7 @@ int shld_register(struct shld_probe_info *info)
+ 	mdev->device = info->dev_nr;
+ 
+ 	hc = mcuio_bus_find_hc(mdev->bus);
+-	if (!hc)
++	if (IS_ERR(hc))
+ 		return -ENODEV;
+ 
+ 	pr_debug("mcuio shield: device = 0x%04x, vendor = 0x%04x, "
+-- 
+1.7.9.5
+

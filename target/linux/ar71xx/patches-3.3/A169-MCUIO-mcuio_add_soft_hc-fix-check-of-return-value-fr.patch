@@ -1,0 +1,28 @@
+From beda2b9ec9ee2291b74ef652647302286cbe6938 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 23 Oct 2014 18:12:34 +0200
+Subject: [PATCH 169/188] MCUIO, mcuio_add_soft_hc: fix check of return value
+ from __setup_hc()
+
+---
+ drivers/mcuio/mcuio-soft-hc.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-soft-hc.c b/drivers/mcuio/mcuio-soft-hc.c
+index b760b27..a364fa2 100644
+--- a/drivers/mcuio/mcuio-soft-hc.c
++++ b/drivers/mcuio/mcuio-soft-hc.c
+@@ -336,8 +336,8 @@ struct device *mcuio_add_soft_hc(struct mcuio_device_id *id,
+ 	struct mcuio_soft_hc *shc = __setup_shc(ops, priv);
+ 	struct device *out;
+ 	int stat;
+-	if (!shc)
+-		return ERR_PTR(-ENOMEM);
++	if (IS_ERR(shc))
++		return ERR_PTR(PTR_ERR(shc));
+ 	plat = kzalloc(sizeof(*plat), GFP_KERNEL);
+ 	if (!plat) {
+ 		kfree(shc);
+-- 
+1.7.9.5
+

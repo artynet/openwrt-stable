@@ -1,0 +1,31 @@
+From c2ad00e29d2d26d00ea13b7f084e61c826dc32fe Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 15 Sep 2014 21:48:00 +0200
+Subject: [PATCH 142/188] Revert "mcuio irq controller: do not unmask at the
+ end of irq handler"
+
+This reverts commit 0af0b7e12cd964f6ad88c27f3be4d4855acc601e.
+Just a test.
+---
+ drivers/mcuio/mcuio-irq-ctrl.c |    5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-irq-ctrl.c b/drivers/mcuio/mcuio-irq-ctrl.c
+index 2fddb01..1486698 100644
+--- a/drivers/mcuio/mcuio-irq-ctrl.c
++++ b/drivers/mcuio/mcuio-irq-ctrl.c
+@@ -71,6 +71,11 @@ static irqreturn_t irq_ctrl_irq_handler(int irq, void *__data)
+ 	for (i = 0; i < 32; i++)
+ 		if (status & (1 << i))
+ 			handle_nested_irq(priv->base_irq + i);
++	dev_dbg(&mdev->dev, "%s: handled, unmasking\n", __func__);
++	stat = regmap_write(priv->map, UNMASK_OFFSET, status);
++	if (stat < 0)
++		dev_err(&mdev->dev, "error unmasking irqs\n");
++	dev_dbg(&mdev->dev, "%s: unmasked\n", __func__);
+ 	return IRQ_HANDLED;
+ }
+ 
+-- 
+1.7.9.5
+

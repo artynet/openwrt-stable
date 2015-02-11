@@ -1,0 +1,35 @@
+From 4d5e877808156a90a7e13f482d970eee80d4d91a Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 23 Oct 2014 17:49:25 +0200
+Subject: [PATCH 167/188] MCUIO, mcuio-hc-drv: fix remove (stop __all__
+ threads)
+
+---
+ drivers/mcuio/mcuio-hc-drv.c |    4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 5e12646..c515b44 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -584,6 +584,8 @@ static void __do_enum(struct kthread_work *work)
+ 
+ 	for (edev = 1, efunc = 0, stop_enum = 0; !stop_enum;
+ 	     stop_enum = __next_enum(&edev, &efunc, &retry)) {
++		if (kthread_should_stop())
++			break;
+ 		stat = __do_one_enum(mdev, edev, efunc, &r);
+ 		if (!r) {
+ 			dev_err(&mdev->dev, "no request\n");
+@@ -709,6 +711,8 @@ static int mcuio_host_controller_remove(struct mcuio_device *mdev)
+ 	struct mcuio_hc_data *data = dev_get_drvdata(&mdev->dev);
+ 	atomic_set(&data->removing, 1);
+ 	barrier();
++	kthread_stop(data->enum_kworker_task);
++	kthread_stop(data->rx_thread);
+ 	flush_kthread_worker(&data->tx_kworker);
+ 	kthread_stop(data->tx_kworker_task);
+ 	__cleanup_outstanding_requests(data);
+-- 
+1.7.9.5
+

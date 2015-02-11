@@ -1,0 +1,45 @@
+From 2104c3e40a1bae50ec3239d33e4b1d0e534d8325 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 06:07:36 +0200
+Subject: [PATCH 154/188] MCUIO, mcuio-proto.h, mcuio_packet_type_to_str():
+ less verbose type strings
+
+---
+ include/linux/mcuio-proto.h |   16 ++++++++++------
+ 1 file changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/include/linux/mcuio-proto.h b/include/linux/mcuio-proto.h
+index e59d9e8..c8675c2 100644
+--- a/include/linux/mcuio-proto.h
++++ b/include/linux/mcuio-proto.h
+@@ -199,17 +199,21 @@ static inline const char *mcuio_packet_type_to_str(int t)
+ {
+ 	switch(t & mcuio_actual_type_mask) {
+ 	case mcuio_type_rdb:
+-		return "mcuio_type_rdb";
++		return "rdb";
+ 	case mcuio_type_wrb:
+-		return "mcuio_type_wrb";
++		return "wrb";
+ 	case mcuio_type_rdw:
+-		return "mcuio_type_rdw";
++		return "rdw";
+ 	case mcuio_type_wrw:
+-		return "mcuio_type_wrw";
++		return "wrw";
++	case mcuio_type_rddw:
++		return "rddw";
++	case mcuio_type_wrdw:
++		return "wrdw";
+ 	case mcuio_type_rdq:
+-		return "mcuio_type_rdq";
++		return "rdq";
+ 	case mcuio_type_wrq:
+-		return "mcuio_type_wrq";
++		return "wrq";
+ 	}
+ 	return "unknown";
+ }
+-- 
+1.7.9.5
+
