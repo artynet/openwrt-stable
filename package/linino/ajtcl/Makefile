@@ -1,15 +1,15 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl
-PKG_REVISION:=30639526523d9be7cdbbf243469158d1eb1cec95
-PKG_VERSION:=1.0.0
+PKG_REVISION:=c7246570b10c70913c2b983b5f9353672908f73d
+PKG_VERSION:=1.0.1
 PKG_RELEASE:=1
 PKG_MD5SUM:=
 
 PKG_SOURCE_PROTO:=git
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-src.tar.gz
-PKG_SOURCE_URL:=https://git.allseenalliance.org/cgit/core/ajtcl.git
+PKG_SOURCE_URL:=https://git.allseenalliance.org/gerrit/core/ajtcl.git
 PKG_SOURCE_VERSION:=$(PKG_REVISION)
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 
@@ -22,10 +22,11 @@ PKG_CONFIG_DEPENDS:= \
 include $(INCLUDE_DIR)/package.mk
 
 define Package/ajtcl/Default
-  SECTION:=lang
-  CATEGORY:=Languages
+  SECTION:=net
+  CATEGORY:=Network
   DEPENDS:=+libopenssl +libpthread +librt
   URL:=http://www.allseenalliance.org
+  TITLE:=The AllJoyn Thin Client Library
   MAINTAINER:=AllSeen Alliance <allseen-core@lists.allseenalliance.org>
 endef
 
@@ -37,9 +38,7 @@ endef
 
 define Package/ajtcl/description
 	AllJoyn Thin Client Library is a basic, low-level C library for developing
-	ad hoc peer-to-peer applications that use the AllJoyn protocol. 
-
-	Release commit : 30639526523d9be7cdbbf243469158d1eb1cec95
+	ad hoc peer-to-peer applications that use the AllJoyn protocol. Revision : c7246570b10c70913c2b983b5f9353672908f73d
 endef
 
 define Package/ajtcl-samples

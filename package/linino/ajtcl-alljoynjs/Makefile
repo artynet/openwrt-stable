@@ -1,8 +1,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl-alljoynjs
-PKG_REVISION:=3fef77460730f22231b8b5f74ed98e0df0df7949
-PKG_VERSION:=1.0.0
+PKG_REVISION:=a0271ab48c9f59d42553092ba3589e7dd0272e45
+PKG_VERSION:=1.0.1
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
@@ -22,8 +22,8 @@ include $(INCLUDE_DIR)/package.mk
 
 define Package/$(PKG_NAME)
   TITLE:=AllJoyn Thin Client - AllJoynJS
-  SECTION:=lang
-  CATEGORY:=Languages
+  SECTION:=net
+  CATEGORY:=Network
   DEPENDS:=ajtcl +ajtcl-services +duktape
   URL:=http://www.allseenalliance.org
   MAINTAINER:=AllSeen Alliance <allseen-core@lists.allseenalliance.org>
@@ -33,9 +33,7 @@ endef
 define Package/$(PKG_NAME)/description
 	AllJoyn Thin Client AllJoynJS binding is a basic, low-level JavaScript
 	interpreter that uses the Duktape embeddable JavaScript engine for developing
-	ad hoc peer-to-peer applications that use the AllJoyn protocol.
-
-	Release commit : 3fef77460730f22231b8b5f74ed98e0df0df7949
+	ad hoc peer-to-peer applications that use the AllJoyn protocol. Revision : a0271ab48c9f59d42553092ba3589e7dd0272e45
 endef
 
 define Package/$(PKG_NAME)-samples

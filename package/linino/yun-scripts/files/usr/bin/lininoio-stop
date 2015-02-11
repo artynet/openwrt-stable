@@ -1,7 +1,0 @@
-#!/bin/sh
-
-sed -i s/ttySPI0\:\:respawn/ttyATH0\:\:askfirst/g /etc/inittab
-/etc/init.d/mcuio disable
-run-avrdude /etc/linino/YunSerialTerminal.hex
-echo "Rebooting..."
-reboot && exit

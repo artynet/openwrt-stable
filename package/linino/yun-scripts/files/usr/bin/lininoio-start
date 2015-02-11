@@ -1,7 +1,0 @@
-#!/bin/sh
-
-sed -i s/ttyATH0\:\:askfirst/ttySPI0\:\:respawn/g /etc/inittab
-run-avrdude /etc/linino/bathos-mcuio.hex
-/etc/init.d/mcuio enable
-echo "Rebooting..."
-reboot && exit

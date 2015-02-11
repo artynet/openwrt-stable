@@ -3,6 +3,4 @@
 
 wifi-live-or-reset
 
-/bin/stty -F /dev/ttyATH0 230400
-
 exit 0
