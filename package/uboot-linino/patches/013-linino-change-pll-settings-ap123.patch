@@ -1,0 +1,20 @@
+--- a/include/configs/ap123.h
++++ b/include/configs/ap123.h
+@@ -221,7 +221,7 @@
+ #if !defined(CONFIG_AP123) && !defined(CONFIG_MI124)
+ #define CFG_PLL_FREQ    CFG_PLL_560_480_240
+ #else
+-#define CFG_PLL_FREQ    CFG_PLL_533_400_200
++#define CFG_PLL_FREQ    CFG_PLL_535_400_200
+ #endif
+ 
+ #undef CFG_HZ
+@@ -284,7 +284,7 @@
+ #   define CFG_HZ          (600000000/2)
+ #elif (CFG_PLL_FREQ == CFG_PLL_600_300_150)
+ #   define CFG_HZ          (600000000/2)
+-#elif (CFG_PLL_FREQ == CFG_PLL_533_400_200) || (CFG_PLL_FREQ == CFG_PLL_533_500_250)
++#elif (CFG_PLL_FREQ == CFG_PLL_533_400_200) || (CFG_PLL_FREQ == CFG_PLL_533_500_250) || (CFG_PLL_FREQ == CFG_PLL_535_400_200)
+ #   define CFG_HZ          (533000000/2)
+ #elif (CFG_PLL_FREQ == CFG_PLL_700_400_200)
+ #   define CFG_HZ          (700000000/2)

@@ -31,7 +31,8 @@ define uboot/linino
   TITLE:=U-boot for Linino project
 endef
 
-UBOOTS:=linino
+UBOOTS:=linino 
+
 
 define Package/uboot/template
 define Package/uboot-ar71xx-$(1)
@@ -75,7 +76,7 @@ endef
 ifdef BUILD_VARIANT
 $(eval $(call uboot/$(BUILD_VARIANT)))
 #UBOOT_CONFIG:=$(if $(CONFIG),$(CONFIG),$(BUILD_VARIANT))
-UBOOT_CONFIG:=linino
+UBOOT_CONFIG:=linino_934x
 UBOOT_IMAGE:=$(if $(IMAGE),$(IMAGE),openwrt-$(BOARD)-$(BUILD_VARIANT)-u-boot.bin)
 endif
 

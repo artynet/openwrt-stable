@@ -453,6 +453,9 @@ ar71xx_board_detect() {
 	*"Linino One")
 		name="linino-one"
 		;;
+        *"Linino ChowChow")
+                name="linino-chowchow"
+                ;;
 	*"Arduino Yun")
 		name="linino-yun"
 		;;

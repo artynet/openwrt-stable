@@ -75,6 +75,7 @@ endef
 define PatchKernelLzma
 	cp $(KDIR)/vmlinux $(KDIR_TMP)/vmlinux-$(1)
 	# $(STAGING_DIR_HOST)/bin/patch-cmdline $(KDIR_TMP)/vmlinux-$(1) "$(strip $(2))"
+
 	$(call CompressLzma,$(KDIR_TMP)/vmlinux-$(1),$(KDIR_TMP)/vmlinux-$(1).bin.lzma,$(3))
 endef
 
@@ -814,10 +815,10 @@ $(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_YUN,linino-yun,linino-yu
 $(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_ONE,linino-one,linino-one,ttySPI0,250000,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
 $(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_FREEDOG,linino-freedog,linino-freedog,ttySPI0,250000,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
 $(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_CHIWAWA,linino-chiwawa,linino-chiwawa,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
-
+$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_CHOWCHOW,linino-chowchow,linino-chowchow,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
 
 # LININO_SINGLE_PROFILES is the list of all available Linino's profiles
-LININO_SINGLE_PROFILES:=LININO_YUN LININO_ONE LININO_FREEDOG LININO_CHIWAWA
+LININO_SINGLE_PROFILES:=LININO_YUN LININO_ONE LININO_FREEDOG LININO_CHIWAWA LININO_CHOWCHOW
 
 $(eval $(call SingleProfile,ALFA,$(fs_64k),ALFANX,alfa-nx,ALFA-NX,ttyS0,115200,$$(alfa_mtdlayout_8M),1638400,6291456,vmlinux.gz.uImage,pb9x-2.6.31-jffs2))
 $(eval $(call SingleProfile,ALFA,$(fs_64k),HORNETUB,hornet-ub,HORNET-UB,ttyATH0,115200,$$(alfa_mtdlayout_8M),1638400,6291456,kernel_image,rootfs_image))

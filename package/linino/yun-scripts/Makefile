@@ -17,6 +17,7 @@ define Package/yun-scripts
   SECTION:=utils
   CATEGORY:=Base system
   TITLE:=Custom Yún scripts
+  DEPENDS:=+kmod-loop
 endef
 
 define Build/Compile
@@ -29,6 +30,7 @@ define Package/yun-scripts/install
 
 	$(INSTALL_BIN) ./files/usr/bin/blink-start $(1)/usr/bin/
 	$(INSTALL_BIN) ./files/usr/bin/blink-stop $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/usr/bin/boot-complete-notify $(1)/usr/bin/
 	$(INSTALL_BIN) ./files/usr/bin/update-file-available $(1)/usr/bin/
 	$(INSTALL_BIN) ./files/usr/bin/run-sysupgrade $(1)/usr/bin/
 	$(INSTALL_BIN) ./files/usr/bin/wifi-live-or-reset $(1)/usr/bin/
@@ -44,6 +46,9 @@ define Package/yun-scripts/install
 	$(INSTALL_BIN) ./files/usr/bin/reset-mcu $(1)/usr/bin/
 	$(INSTALL_BIN) ./files/usr/bin/special-storage-available $(1)/usr/bin/
 	$(INSTALL_BIN) ./files/usr/bin/pretty-wifi-info.lua $(1)/usr/bin
+	$(INSTALL_BIN) ./files/usr/bin/upgrade-all $(1)/usr/bin
+	$(INSTALL_BIN) ./files/usr/bin/extract-built-date $(1)/usr/bin
+	$(INSTALL_BIN) ./files/usr/bin/extract-built-date-from-sysupgrade-image $(1)/usr/bin
 	$(INSTALL_BIN) ./files/usr/bin/prod $(1)/usr/bin
 	$(INSTALL_BIN) ./files/usr/bin/cali $(1)/usr/bin
 	$(INSTALL_BIN) ./files/usr/bin/mcuio-gpio-blink-io13 $(1)/usr/bin
