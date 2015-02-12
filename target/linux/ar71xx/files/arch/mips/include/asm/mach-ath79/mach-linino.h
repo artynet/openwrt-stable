@@ -26,13 +26,12 @@
 #endif
 
 
-#define DS_GPIO_LED0			0
-#define DS_GPIO_LED1			1
 #if defined(LININO_CHOWCHOW)
 	#undef  DS_GPIO_OE
 	#define DS_GPIO_MCU_RESET	0
-	#define DS_GPIO_LED_WLAN	12
-	#define DS_GPIO_LED_USB		11
+	#define DS_GPIO_LED0		12
+	#define DS_GPIO_LED1		11
+
 	#define DS_GPIO_UART0_RX	9
 	#define DS_GPIO_UART0_TX	10
 	#define DS_GPIO_UART1_RX	13
@@ -40,8 +39,8 @@
 #else
 	#define DS_GPIO_OE			21
 	#define DS_GPIO_MCU_RESET		18
-	#define DS_GPIO_LED_WLAN		0
-	#define DS_GPIO_LED_USB			1
+	#define DS_GPIO_LED0			0
+	#define DS_GPIO_LED1			1
 #endif
 
 #define DS_GPIO_LED2			13
