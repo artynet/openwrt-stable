@@ -28,6 +28,8 @@
 #include "dev-usb.h"
 #include "dev-wmac.h"
 #include "machtypes.h"
+#include "gpio.h"
+#include "linux/gpio.h"
 
 static struct gpio_led chowchow_leds_gpio[] __initdata = {
 	{
