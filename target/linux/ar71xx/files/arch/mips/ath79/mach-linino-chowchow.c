@@ -29,46 +29,25 @@
 #include "dev-wmac.h"
 #include "machtypes.h"
 
-#define CHOWCHOW_GPIO_BTN_RESET	17
-#define CHOWCHOW_GPIO_LED_WLAN	12
-
-#define CHOWCHOW_GPIO_LED_USB	11
-
-#define CHOWCHOW_KEYS_POLL_INTERVAL		20	/* msecs */
-#define CHOWCHOW_KEYS_DEBOUNCE_INTERVAL	(3 * CHOWCHOW_KEYS_POLL_INTERVAL)
-
-#define CHOWCHOW_PCIE_CALDATA_OFFSET	0x5000
-
-#if 0
-static const char *tl_wr1041nv2_part_probes[] = {
-	"tp-link",
-	NULL,
-};
-
-static struct flash_platform_data tl_wr1041nv2_flash_data = {
-	.part_probes	= tl_wr1041nv2_part_probes,
-};
-#endif
-
 static struct gpio_led chowchow_leds_gpio[] __initdata = {
 	{
 		.name		= "usb",
-		.gpio		= CHOWCHOW_GPIO_LED_USB,
+		.gpio		= DS_GPIO_LED_USB,
 		.active_low	= 1,
 	}, {
 		.name		= "wlan",
-		.gpio		= CHOWCHOW_GPIO_LED_WLAN,
+		.gpio		= DS_GPIO_LED_WLAN,
 		.active_low	= 1,
 	}
 };
 
 static struct gpio_keys_button chowchow_gpio_keys[] __initdata = {
 	{
-		.desc		= "reset",
+		.desc		= "configuration button",
 		.type		= EV_KEY,
 		.code		= KEY_RESTART,
-		.debounce_interval = CHOWCHOW_KEYS_DEBOUNCE_INTERVAL,
-		.gpio		= CHOWCHOW_GPIO_BTN_RESET,
+		.debounce_interval = DS_KEYS_DEBOUNCE_INTERVAL,
+		.gpio		= DS_GPIO_CONF_BTN,
 		.active_low	= 1,
 	}
 };
@@ -100,10 +79,24 @@ static struct mdio_board_info db120_mdio0_info[] = {
 	},
 };
 
+/*
+ * Enable level shifters
+ */
+static void __init ds_setup_level_shifter_oe(void)
+{
+	int err;
+
+	/* enable OE2 of level shifter */
+    pr_info("Setting GPIO OE %d\n", DS_GPIO_OE2);
+    err= gpio_request_one(DS_GPIO_OE2,
+			GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED, "OE");
+	if (err)
+		pr_err("mach-linino: error setting GPIO OE\n");
+}
+
+
 static void __init chowchow_setup(void)
 {
-	//u8 *mac = (u8 *) KSEG1ADDR(0x1f01fc00);
-	//u8 *ee = (u8 *) KSEG1ADDR(0x1fff1000);
 	u8 *art = (u8 *) KSEG1ADDR(0x1fff0000);
 	static u8 mac[6];
 
@@ -111,7 +104,7 @@ static void __init chowchow_setup(void)
 
 	ath79_register_leds_gpio(-1, ARRAY_SIZE(chowchow_leds_gpio),
 			chowchow_leds_gpio);
-	ath79_register_gpio_keys_polled(-1, CHOWCHOW_KEYS_POLL_INTERVAL,
+	ath79_register_gpio_keys_polled(-1, DS_KEYS_POLL_INTERVAL,
 					 ARRAY_SIZE(chowchow_gpio_keys),
 					 chowchow_gpio_keys);
 	pr_info("mach-linino: enabling USB Controller");
@@ -142,6 +135,8 @@ static void __init chowchow_setup(void)
 	ath79_eth0_data.mii_bus_dev = &ath79_mdio0_device.dev;
 	ath79_eth0_pll_data.pll_1000 = 0x06000000;
 	ath79_register_eth(0);
+	
+	ds_setup_level_shifter_oe();
 }
 
 MIPS_MACHINE(ATH79_MACH_LININO_CHOWCHOW, "linino-chowchow", "Linino ChowChow", chowchow_setup);
