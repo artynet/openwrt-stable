@@ -8,8 +8,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=avrdude
-PKG_VER:=5.11.1
-PKG_REV:=1138
+PKG_VER:=6.1
+PKG_REV:=1353
 PKG_VERSION:=$(PKG_VER)-r$(PKG_REV)
 PKG_RELEASE:=1
 
