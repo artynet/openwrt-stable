@@ -1,7 +1,24 @@
 #!/bin/sh
 
-OE_PATH=/sys/class/gpio/gpio21/value
+boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
+
+case $boardname in
+	'chowchow')
+		GPIO=gpio15
+		PROGRAMMER=linuxgpio-chow;;
+	*)
+		GPIO=gpio21
+		PROGRAMMER=linuxgpio;;
+esac
+
+OE_PATH=/sys/class/gpio/$GPIO/value
 OE_VALUE=$(cat $OE_PATH)
+
+if [ "$boardname" == "chowchow" ]; then
+	echo 0 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio0/direction
+	echo 1 > /sys/class/gpio/gpio0/value
+fi
 
 # remove SPI driver to avoid conflicts while AVR programming
 TTY_PLAIN=$(lsmod | grep spi_tty_plain)
@@ -27,14 +44,14 @@ echo spi_gpio.1 > /sys/bus/platform/drivers/spi_gpio/unbind
 echo 1 > $OE_PATH
 
 # read efuse settings
-avrdude  -q -q -c linuxgpio -C /etc/avrdude.conf -p m32u4 -U efuse:r:/tmp/efuse:d
+avrdude  -q -q -c $PROGRAMMER -C /etc/avrdude.conf -p m32u4 -U efuse:r:/tmp/efuse:d
 read EFUSE < /tmp/efuse
 rm -f /tmp/efuse
 if [ "x$EFUSE" = "x203" ] # 203 = 0xCB
 then
-	avrdude -c linuxgpio -C /etc/avrdude.conf -p m32u4 -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xCB:m -Uflash:w:$1:i $2
+	avrdude -c $PROGRAMMER -C /etc/avrdude.conf -p m32u4 -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xCB:m -Uflash:w:$1:i $2
 else
-	avrdude -c linuxgpio -C /etc/avrdude.conf -p m32u4 -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xFB:m -Uflash:w:$1:i $2
+	avrdude -c $PROGRAMMER -C /etc/avrdude.conf -p m32u4 -U lfuse:w:0xFF:m -U hfuse:w:0xD8:m -U efuse:w:0xFB:m -Uflash:w:$1:i $2
 fi
 
 # bind spi_gpio driver
@@ -49,3 +66,9 @@ fi
 if [ "x$TTY_PLAIN" != "x" ]; then
 	insmod spi-tty-plain
 fi
+
+if [ "$boardname" == "chowchow" ]; then
+	echo 0 > /sys/class/gpio/gpio0/value
+	echo 0 > /sys/class/gpio/unexport
+fi
+

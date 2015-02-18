@@ -20,6 +20,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# v5.3 : added support for chowchow board
+
 #!/bin/sh
 
 # Check for ssh connection
@@ -86,10 +88,19 @@ statusio () {
 
 help () {
 
+	if [ "$1" = '-v' ] && [ -e /etc/linino_version ]
+	then
+		cat /etc/linino_version | sed -e /RELEASE/d | sed -e /CODENAME/d | sed -e /TARGET/d
+			
+		exit 0
+	fi 
+	
 	statusio
 
 	echo ""
-	echo "USAGE : lininoio <start/stop>"
+	echo "USAGE : lininoio <-v> / <-f> <start/stop>"
+	echo ""
+	echo -e "Use the '-f' argument to force anyway the start/stop procedure\nUse just '-v' argument to print out the release version details"
 	echo ""
 	
 }
@@ -164,7 +175,7 @@ reboot_io () {
 
 mcuio_ok () {
 
-	if [ `ls /etc/rc.d | grep "S11mcuio"` ] || `cat /etc/inittab | grep -qs SPI0`
+	if [ `ls /etc/rc.d | grep "S11mcuio"` ] && `cat /etc/inittab | grep -qs SPI0`
 	then
 	
 		echo ""
@@ -179,7 +190,7 @@ mcuio_ok () {
 
 mcuio_ko () {
 
-	if [ ! `ls /etc/rc.d | grep "S11mcuio"` ] || `cat /etc/inittab | grep -qs ATH0`
+	if [ ! `ls /etc/rc.d | grep "S11mcuio"` ] && `cat /etc/inittab | grep -qs ATH0`
 	then
 	
 		echo ""
@@ -207,6 +218,9 @@ then
 			'one')
 					FILE="LininoOneSerialTerminal.hex"
 				;;
+			'chowchow')
+					FILE="ChowChowSerialTerminal.hex"
+				;;
 					
 			*)
 			
@@ -231,13 +245,28 @@ fi
 
 #Main
 
+force=$1
+
+if [ $1=='-f' ] && [ $2!='-v' ]
+then 
+
+	shift 1
+
+fi
+
 if [ -e /etc/linino/bathos-$boardname.hex ]
 then
 
 	case $1 in
 			'start')
-			
-				mcuio_ok
+				
+				case $force in
+					'-f')
+						;;
+					*)
+						mcuio_ok
+						;;
+				esac
 				
 				# Detects active SSH connection
 
@@ -294,8 +323,14 @@ then
 				;;
 
 			'stop')
-		
-				mcuio_ko
+			
+				case $force in
+					'-f')
+						;;
+					*)
+						mcuio_ko
+						;;
+				esac
 				
 				# Detects active SSH connection
 
@@ -355,7 +390,7 @@ then
 
 			*)
 			
-				help && exit 0
+				help $1 && exit 0
 			
 				;;
 
