@@ -1,0 +1,29 @@
+From 8cf2ccbb8cd09ebc745ed9ac8d5d27faff10e1e6 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 17:19:06 +0200
+Subject: [PATCH 156/188] I2C, mcuio: check return value of regmap_read in irq
+ handler
+
+---
+ drivers/i2c/busses/i2c-mcuio.c |    5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index b9d6d03..98d1a0f 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -225,6 +225,11 @@ static irqreturn_t mcuio_i2c_irq_handler(int irq, void *devid)
+ 
+ 	BUG_ON(!i2cd || !i2cd->map_dw);
+ 	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_STATUS, &v);
++	if (stat < 0) {
++		dev_err(&i2cd->mdev->dev, "error reading i2c status\n");
++		/* This will make the transaction end with -EIO */
++		v = NAK_RECEIVED;
++	}
+ 	dev_dbg(&i2cd->mdev->dev, "%s: status = 0x%08x\n", __func__, v);
+ 	if (v & LOW_OBUF_WATERMARK)
+ 		__send_obuf(i2cd);
+-- 
+1.7.9.5
+

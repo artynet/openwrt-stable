@@ -1,0 +1,66 @@
+From 137ff763cf4e41a782e83e04de0d387fc1039b90 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 17 Nov 2014 14:58:05 +0100
+Subject: [PATCH 183/188] mcuio: lucky shield, use bus_notifier mechanism to
+ keep track of i2c devices
+
+This patch makes use of bus_register_notifier in order not to remove twice
+the same i2c devices, as it may be removed when deleting i2c adapter, prior
+to a call to mcuio_lucky_probe.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-lucky-shield.c |   30 ++++++++++++++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 1925c29..1ce429d 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -163,13 +163,43 @@ static struct mcuio_driver mcuio_lucky_driver = {
+ 	.remove = mcuio_lucky_remove,
+ };
+ 
++
++static int i2cdev_notifier_call(struct notifier_block *nb, unsigned long action,
++			 void *data)
++{
++	struct mcuio_shld_i2c_info *i;
++	struct i2c_client *c = to_i2c_client(data);
++	int cnt;
++
++	if (action == BUS_NOTIFY_DEL_DEVICE) {
++		for (cnt = 0; cnt < ARRAY_SIZE(i2c_lst); cnt++) {
++			i = &i2c_lst[cnt];
++			if (i->i2c_client == to_i2c_client(data))
++				i->i2c_client = NULL;
++		}
++	}
++	return 0;
++}
++
++static struct notifier_block i2cdev_notifier = {
++	.notifier_call = i2cdev_notifier_call,
++};
++
+ static int __init mcuio_lucky_init(void)
+ {
++	int ret;
++
++	/* Keep track of devices which will be added or removed later */
++	ret = bus_register_notifier(&i2c_bus_type, &i2cdev_notifier);
++	if (ret)
++		return ret;
++
+ 	return mcuio_driver_register(&mcuio_lucky_driver, THIS_MODULE);
+ }
+ 
+ static void __exit mcuio_lucky_exit(void)
+ {
++	bus_unregister_notifier(&i2c_bus_type, &i2cdev_notifier);
+ 	return mcuio_driver_unregister(&mcuio_lucky_driver);
+ }
+ 
+-- 
+1.7.9.5
+

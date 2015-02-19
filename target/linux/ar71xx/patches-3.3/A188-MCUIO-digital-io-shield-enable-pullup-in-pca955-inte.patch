@@ -1,0 +1,44 @@
+From 6c50cf88caf9403940a2d65637f38efb723a6b5a Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 6 Feb 2015 14:58:11 +0100
+Subject: [PATCH 188/188] MCUIO: digital-io shield, enable pullup in pca955
+ interrupt pin
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-dio-shield.c |   12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-dio-shield.c b/drivers/mcuio/mcuio-dio-shield.c
+index 7e633d9..081bc2f 100644
+--- a/drivers/mcuio/mcuio-dio-shield.c
++++ b/drivers/mcuio/mcuio-dio-shield.c
+@@ -46,7 +46,7 @@ static int mcuio_dio_probe(struct mcuio_device *mdev)
+ {
+ 	struct mcuio_shld_i2c_info *i;
+ 	int cnt;
+-
++	int ret;
+ 	struct mcuio_shld_data *data;
+ 
+ 	dev_dbg(&mdev->dev, "%s entered\n", __func__);
+@@ -74,6 +74,16 @@ static int mcuio_dio_probe(struct mcuio_device *mdev)
+ 	for (cnt = 0; cnt < data->i2c_cnt; cnt++) {
+ 		i = &data->i2c_info[cnt];
+ 		i->info.addr = *i->paddr;
++
++		/* HACK this is needed to enable pullup */
++		ret = devm_gpio_request_one(&mdev->dev, i->gpio_irq, GPIOF_DIR_IN,
++				    "digitalio-shield");
++		if (ret < 0)
++			return ret;
++		gpio_direction_output(i->gpio_irq, 1);
++		gpio_direction_input(i->gpio_irq);
++		devm_gpio_free(&mdev->dev, i->gpio_irq);
++
+ 		i->info.irq = (i->gpio_irq >= 0) ?
+ 			gpio_to_irq(i->gpio_irq) : 0;
+ 
+-- 
+1.7.9.5
+

@@ -1,0 +1,63 @@
+From bc26f3f8d9309ce28c841fe448521380c04b0952 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 18:24:37 +0200
+Subject: [PATCH 163/188] MCUIO, soft-hc: pointer to hc mcuio device to shc
+ data struct
+
+---
+ drivers/mcuio/mcuio-soft-hc.c |   11 +++++++++--
+ include/linux/mcuio-soft-hc.h |    2 ++
+ 2 files changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-soft-hc.c b/drivers/mcuio/mcuio-soft-hc.c
+index 737a925..7544056 100644
+--- a/drivers/mcuio/mcuio-soft-hc.c
++++ b/drivers/mcuio/mcuio-soft-hc.c
+@@ -263,6 +263,7 @@ struct device *mcuio_add_soft_hc(struct mcuio_device_id *id,
+ {
+ 	struct mcuio_hc_platform_data *plat;
+ 	struct mcuio_soft_hc *shc = __setup_shc(ops, priv);
++	struct device *out;
+ 	if (!shc)
+ 		return ERR_PTR(-ENOMEM);
+ 	plat = kzalloc(sizeof(*plat), GFP_KERNEL);
+@@ -272,8 +273,14 @@ struct device *mcuio_add_soft_hc(struct mcuio_device_id *id,
+ 	}
+ 	plat->setup_regmap = mcuio_soft_hc_setup_regmap;
+ 	plat->data = shc;
+-	return mcuio_add_hc_device(id ? id : &default_soft_hc_id, plat,
+-				   mcuio_soft_hc_release);
++	out = mcuio_add_hc_device(id ? id : &default_soft_hc_id, plat,
++				  mcuio_soft_hc_release);
++	if (IS_ERR(out)) {
++		kfree(shc);
++		return out;
++	}
++	shc->hc = to_mcuio_dev(out);
++	return out;
+ }
+ EXPORT_SYMBOL(mcuio_add_soft_hc);
+ 
+diff --git a/include/linux/mcuio-soft-hc.h b/include/linux/mcuio-soft-hc.h
+index 9d13b69..e69771b 100644
+--- a/include/linux/mcuio-soft-hc.h
++++ b/include/linux/mcuio-soft-hc.h
+@@ -35,6 +35,7 @@ struct mcuio_soft_hc_ops {
+  * @irq_kworker:
+  * @irq_kworker_task:
+  * @do_irq:
++ * @hc: pointer to host controller (mcuio device)
+  * @priv: client driver private data
+  */
+ struct mcuio_soft_hc {
+@@ -49,6 +50,7 @@ struct mcuio_soft_hc {
+ 	struct kthread_worker irq_kworker;
+ 	struct task_struct *irq_kworker_task;
+ 	struct kthread_work do_irq;
++	struct mcuio_device *hc;
+ 	void *priv;
+ };
+ 
+-- 
+1.7.9.5
+

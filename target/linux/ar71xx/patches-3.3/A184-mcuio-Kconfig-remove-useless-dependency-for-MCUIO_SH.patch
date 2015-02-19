@@ -1,0 +1,26 @@
+From 6e8086982bd511db204f1f6bc14cc1e54a136e18 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 17 Nov 2014 15:05:54 +0100
+Subject: [PATCH 184/188] mcuio Kconfig: remove useless dependency for
+ MCUIO_SHIELDS_MANUAL_PROBE
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/Kconfig |    1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index 98cbc31..4588270 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -45,7 +45,6 @@ config MCUIO_DOGOLED_SHIELD
+ 
+ config MCUIO_SHIELDS_MANUAL_PROBE
+ 	tristate "mcuio shields manual probe"
+-	depends on (MCUIO_LUCKY_SHIELD || MCUIO_DIGITALIO_SHIELD)
+ 	default y
+ 	help
+ 	  Since autoprobe of mcuio shields is not implemented yet, this option
+-- 
+1.7.9.5
+

@@ -1,0 +1,34 @@
+From 1ac4ab33f7373790f998c5f016c2dc925aeed306 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 17:23:24 +0200
+Subject: [PATCH 158/188] MCUIO, mcuio-hc-drv: verbose __write_message
+
+---
+ drivers/mcuio/mcuio-hc-drv.c |    7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index db27771..593f4ac 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -215,11 +215,16 @@ static void __request_timeout(struct work_struct *work)
+ static int __write_message(struct regmap *map, const u32 *ptr, int count)
+ {
+ 	int i, stat;
++
++	pr_debug("%s:", __func__);
++	dump_packet((struct mcuio_packet *)ptr);
+ 	for (i = 0; i < count; i++) {
+ 		stat = regmap_write(map,
+ 				    MCUIO_HC_OUTBUF + i * sizeof(u32), ptr[i]);
+-		if (stat < 0)
++		if (stat) {
++			pr_err("%s: error %d writing to hc\n", __func__, stat);
+ 			return stat;
++		}
+ 	}
+ 	return 0;
+ }
+-- 
+1.7.9.5
+

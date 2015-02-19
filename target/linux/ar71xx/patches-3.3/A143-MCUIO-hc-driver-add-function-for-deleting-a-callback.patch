@@ -1,0 +1,63 @@
+From ed3e0cc53c347f0af9a9dc40119782390ba84875 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 2 Oct 2014 06:11:38 +0200
+Subject: [PATCH 143/188] MCUIO hc driver: add function for deleting a
+ callback for incoming requests
+
+---
+ drivers/mcuio/mcuio-hc-drv.c |   20 ++++++++++++++++++++
+ include/linux/mcuio.h        |    7 +++++++
+ 2 files changed, 27 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index eb74b8e..1926c0e 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -450,6 +450,26 @@ int mcuio_setup_cb(struct mcuio_request *r)
+ }
+ EXPORT_SYMBOL(mcuio_setup_cb);
+ 
++int mcuio_cancel_cb(struct mcuio_request *r)
++{
++	struct mcuio_request *ptr, *tmp;
++	struct mcuio_hc_data *data;
++
++	if (!r->hc)
++		return -EINVAL;
++	data = dev_get_drvdata(&r->hc->dev);
++	list_for_each_entry_safe(ptr, tmp, &data->pending_requests, list) {
++		if (ptr == r) {
++			mutex_lock(&data->lock);
++			list_del(&r->list);
++			mutex_unlock(&data->lock);
++			return 0;
++		}
++	}
++	return -ENOENT;
++}
++EXPORT_SYMBOL(mcuio_cancel_cb);
++
+ int mcuio_hc_set_irqs(struct mcuio_device *hc, unsigned dev, int __irqs[])
+ {
+ 	struct mcuio_hc_data *data = dev_get_drvdata(&hc->dev);
+diff --git a/include/linux/mcuio.h b/include/linux/mcuio.h
+index d650569..fe6581d 100644
+--- a/include/linux/mcuio.h
++++ b/include/linux/mcuio.h
+@@ -118,6 +118,13 @@ int mcuio_submit_request(struct mcuio_request *r);
+ int mcuio_setup_cb(struct mcuio_request *r);
+ 
+ /*
++ * Cancel a callback for an incoming request
++ *
++ * @r: pointer to corresponding request
++ */
++int mcuio_cancel_cb(struct mcuio_request *r);
++
++/*
+  * Fill a non-dynamically allocated mcuio request
+  */
+ void mcuio_init_request(struct mcuio_request *r,
+-- 
+1.7.9.5
+
