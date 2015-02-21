@@ -4,14 +4,28 @@
 START=18
 
 start() {
-		MODE=`/sbin/uci get wireless.@wifi-iface[0].mode`
-		SSID=`/sbin/uci get wireless.@wifi-iface[0].ssid`
 
-		SSID_PREFIX=`/sbin/uci get wireless.@wifi-iface[0].ssid | sed s/-.*//`
+		boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
 
-		PREFIX=$(awk '/machine/ {print $3}' /proc/cpuinfo)
+		case $boardname in
+			'chowchow')
+						ID=1
+						;;
+					*)
+						ID=0
+						;;
+		esac
+
+		# echo $ID
+
+		MODE=`/sbin/uci get wireless.@wifi-iface[$ID].mode`
+		SSID=`/sbin/uci get wireless.@wifi-iface[$ID].ssid`
+
+		# SSID_PREFIX=`/sbin/uci get wireless.@wifi-iface[1].ssid | sed s/-.*//`
+
+		# PREFIX=$(awk '/machine/ {print $3}' /proc/cpuinfo)
 	
-		if [ "$SSID_PREFIX" != "Arduino" -a "$SSID_PREFIX" != "Linino" ]
+		if [ "$SSID" != "Arduino" -a "$SSID" != "Linino" ]
 		then
 				return
 		fi
@@ -19,8 +33,8 @@ start() {
 		if [ "$MODE" == "ap" ]
 		then
 				SSID_SUFFIX=`/sbin/ifconfig wlan0 | /usr/bin/head -n 1 | /bin/grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | /bin/sed 's/://g'`
-				SSID=$PREFIX-$SSID_SUFFIX
-				/sbin/uci "set" "wireless.@wifi-iface[0].ssid=$SSID"
+				SSID=$SSID-$SSID_SUFFIX
+				/sbin/uci "set" "wireless.@wifi-iface[$ID].ssid=$SSID"
 				/sbin/uci commit wireless
 				logger -t rename "WiFi renamed $SSID"
 		fi
