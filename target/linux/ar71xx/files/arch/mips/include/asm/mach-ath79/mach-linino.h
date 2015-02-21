@@ -25,13 +25,8 @@
 	#define GPIO_FUNC2_CLEAR (0)
 #endif
 
-
-
-#define DS_GPIO_OE			21
-#define DS_GPIO_MCU_RESET		18
 #define DS_GPIO_LED0			0
 #define DS_GPIO_LED1			1
-
 #define DS_GPIO_LED2			13
 #define DS_GPIO_LED3			14
 #define DS_GPIO_LED4			15
@@ -43,18 +38,18 @@
 #define DS_GPIO_LED_WLAN             	DS_GPIO_LED0
 #define DS_GPIO_LED_USB            	DS_GPIO_LED1       
 
-#define DS_GPIO_UART_ENA	23
+#define DS_GPIO_OE			21
+#define DS_GPIO_MCU_RESET		18
+#define DS_GPIO_UART_ENA		23
+#define DS_GPIO_CONF_BTN	20
 
 /* Configure level shifter enable GPIO */
 #if defined(LININO_FREEDOG)
-	#define DS_GPIO_OE2			11
-	#define DS_GPIO_CONF_BTN	20
 	#define DS_GPIO_SWD_EN		12
 	#define DS_GPIO_SWD_OE		11
 	#define DS_GPIO_UART_POL 	GPIOF_OUT_INIT_HIGH
 #else	/* YUN */
-	#define DS_GPIO_OE2			22
-	#define DS_GPIO_CONF_BTN	20
+	#define DS_GPIO_OE2		22
 	#define DS_GPIO_UART_POL        GPIOF_OUT_INIT_LOW
 #endif
 
@@ -65,23 +60,19 @@
 #define DS_MAC1_OFFSET			0x0006
 #define DS_CALDATA_OFFSET		0x1000
 #define DS_WMAC_MAC_OFFSET		0x1002
-#define DS_PCIE_CALDATA_OFFSET		0x5000
 
 /* SPI GPIOs */
 
 #if defined(LININO_FREEDOG)
-	#define	LININO_GPIO_SPI_SCK		7
-	#define	LININO_GPIO_SPI_MISO	8
-	#define	LININO_GPIO_SPI_MOSI	27
-	#define LININO_GPIO_SPI_CS0		26
+	#define	LININO_GPIO_SPI_SCK	7
 #else	/* YUN */
-	#define	LININO_GPIO_SPI_SCK		11
-	#define	LININO_GPIO_SPI_MISO	8
-	#define	LININO_GPIO_SPI_MOSI	27
-	#define LININO_GPIO_SPI_CS0		26
+	#define	LININO_GPIO_SPI_SCK	11
 #endif
 
-	#define	LININO_N_SPI_CHIP_SELECT	1
+#define	LININO_N_SPI_CHIP_SELECT	1
+#define	LININO_GPIO_SPI_MOSI		27
+#define	LININO_GPIO_SPI_MISO		8
+#define LININO_GPIO_SPI_CS0		26
 
 // HANDSHAKE signal
 #if defined(LININO_FREEDOG)
