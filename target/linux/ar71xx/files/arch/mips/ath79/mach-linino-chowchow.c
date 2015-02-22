@@ -52,6 +52,7 @@
 #define CHOWCHOW_GPIO_SPI_CS0	1
 
 #define CHOWCHOW_GPIO_SPI_INTERRUPT	16
+#define DS_PCIE_CALDATA_OFFSET	0x5000
 
 static struct gpio_led chowchow_leds_gpio[] __initdata = {
 	{

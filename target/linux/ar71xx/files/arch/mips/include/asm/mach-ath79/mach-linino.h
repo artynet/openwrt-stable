@@ -39,6 +39,7 @@
 #define DS_GPIO_LED_USB            	DS_GPIO_LED1       
 
 #define DS_GPIO_OE			21
+#define DS_GPIO_OE2			22
 #define DS_GPIO_MCU_RESET		18
 #define DS_GPIO_UART_ENA		23
 #define DS_GPIO_CONF_BTN	20
@@ -49,7 +50,6 @@
 	#define DS_GPIO_SWD_OE		11
 	#define DS_GPIO_UART_POL 	GPIOF_OUT_INIT_HIGH
 #else	/* YUN */
-	#define DS_GPIO_OE2		22
 	#define DS_GPIO_UART_POL        GPIOF_OUT_INIT_LOW
 #endif
 
