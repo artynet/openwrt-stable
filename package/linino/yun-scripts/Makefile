@@ -67,7 +67,7 @@ define Package/yun-scripts/install
 	$(INSTALL_BIN) ./files/etc/init.d/alljoynfixboot $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/avahifixboot $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/mcuio $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/etc/init.d/rename_iface $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/etc/init.d/rename-iface $(1)/etc/init.d
 
 endef
 
