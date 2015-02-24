@@ -1,23 +1,41 @@
 #!/bin/sh /etc/rc.common
+# Copyright (C) 2008 OpenWrt.org
 
 START=18
 
 start() {
-	MODE=`/sbin/uci get wireless.@wifi-iface[0].mode`
-	SSID=`/sbin/uci get wireless.@wifi-iface[0].ssid`
 
-	if [ "$SSID" != "Arduino" -a "$SSID" != "Linino" ]
-	then
-		return
-	fi
+		boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
 
-	if [ "$MODE" == "ap"  ]
-	then
-		SSID_SUFFIX=`/sbin/ifconfig wlan0 | /usr/bin/head -n 1 | /bin/grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | /bin/sed 's/://g'`
-		SSID="$SSID-$SSID_SUFFIX"
-		/sbin/uci "set" "wireless.@wifi-iface[0].ssid=$SSID"
-		/sbin/uci commit wireless
-		logger -t rename "WiFi renamed $SSID"
-	fi
+		case $boardname in
+			'chowchow')
+						ID=1
+						;;
+					*)
+						ID=0
+						;;
+		esac
+
+		# echo $ID
+
+		MODE=`/sbin/uci get wireless.@wifi-iface[$ID].mode`
+		SSID=`/sbin/uci get wireless.@wifi-iface[$ID].ssid`
+
+		SSID_PREFIX=`/sbin/uci get wireless.@wifi-iface[$ID].ssid | sed s/-.*//`
+
+		if [ "$SSID_PREFIX" != "Arduino" -a "$SSID_PREFIX" != "Linino" ]
+		then
+				return
+		fi
+		
+		machine=$(awk '/machine/ {print $3}' /proc/cpuinfo)
+		
+		if [ "$MODE" == "ap" ]
+		then
+				SSID_SUFFIX=`/sbin/ifconfig wlan0 | /usr/bin/head -n 1 | /bin/grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | /bin/sed 's/://g'`
+				SSID=$machine-$SSID_SUFFIX
+				/sbin/uci "set" "wireless.@wifi-iface[$ID].ssid=$SSID"
+				/sbin/uci commit wireless
+				logger -t rename "WiFi renamed $SSID"
+		fi
 }
-
