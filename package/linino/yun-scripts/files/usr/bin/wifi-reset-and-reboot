@@ -29,9 +29,9 @@ $UCI "set" "network.lan.ipaddr=192.168.240.1"
 $UCI "set" "network.lan.netmask=255.255.255.0"
 $UCI "set" "network.lan.proto=static"
 
-PREVIOUS_DNSMASQ_IFACE_LIST=`$UCI get "dhcp.@dnsmasq[$ID].interface"`
-$UCI del_list "dhcp.@dnsmasq[$ID].interface=$PREVIOUS_DNSMASQ_IFACE_LIST"
-$UCI add_list "dhcp.@dnsmasq[$ID].interface=lo,wlan0"
+PREVIOUS_DNSMASQ_IFACE_LIST=`$UCI get "dhcp.@dnsmasq[0].interface"`
+$UCI del_list "dhcp.@dnsmasq[0].interface=$PREVIOUS_DNSMASQ_IFACE_LIST"
+$UCI add_list "dhcp.@dnsmasq[0].interface=lo,wlan0"
 
 # $UCI "add_list" "dhcp.@dnsmasq[0].address=/#/192.168.240.1"
 
