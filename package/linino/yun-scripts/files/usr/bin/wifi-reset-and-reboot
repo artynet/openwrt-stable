@@ -3,23 +3,40 @@
 UCI="/sbin/uci"
 
 machine=$(awk '/machine/ {print $3}' /proc/cpuinfo)
+boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
 
-$UCI set "wireless.radio0.channel=11"
-$UCI set "wireless.@wifi-iface[0].mode=ap"
-$UCI set "wireless.@wifi-iface[0].ssid=$machine"
-$UCI set "wireless.@wifi-iface[0].encryption=none"
-$UCI delete "wireless.@wifi-iface[0].key"
-$UCI delete "wireless.radio0.country"
+case $boardname in
+        'chowchow')
+                ID=1
+                ;;
+        *)
+                ID=0
+                ;;
+esac
 
-$UCI set "network.lan.ipaddr=192.168.240.1"
-$UCI set "network.lan.netmask=255.255.255.0"
-$UCI set "network.lan.proto=static"
+echo $ID
 
-#$UCI add_list "dhcp.@dnsmasq[0].address=/#/192.168.240.1"
+sleep 1
+
+$UCI "set" "wireless.radio1.channel=auto"
+$UCI "set" "wireless.@wifi-iface[$ID].mode=ap"
+$UCI "set" "wireless.@wifi-iface[$ID].ssid=$machine"
+$UCI "set" "wireless.@wifi-iface[$ID].encryption=none"
+$UCI "delete" "wireless.@wifi-iface[$ID].key"
+$UCI "delete" "wireless.radio0.country"
+
+$UCI "set" "network.lan.ipaddr=192.168.240.1"
+$UCI "set" "network.lan.netmask=255.255.255.0"
+$UCI "set" "network.lan.proto=static"
+
+PREVIOUS_DNSMASQ_IFACE_LIST=`$UCI get "dhcp.@dnsmasq[$ID].interface"`
+$UCI del_list "dhcp.@dnsmasq[$ID].interface=$PREVIOUS_DNSMASQ_IFACE_LIST"
+$UCI add_list "dhcp.@dnsmasq[$ID].interface=lo,wlan0"
+
+# $UCI "add_list" "dhcp.@dnsmasq[0].address=/#/192.168.240.1"
 
 $UCI commit
 
-#/bin/sed -i "s/#C:192.168/C:192.168/g" /etc/httpd.conf
+# /bin/sed -i "s/#C:192.168/C:192.168/g" /etc/httpd.conf
 
 /sbin/reboot
-
