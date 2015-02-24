@@ -23,7 +23,7 @@ $UCI "set" "wireless.@wifi-iface[$ID].mode=ap"
 $UCI "set" "wireless.@wifi-iface[$ID].ssid=$machine"
 $UCI "set" "wireless.@wifi-iface[$ID].encryption=none"
 $UCI "delete" "wireless.@wifi-iface[$ID].key"
-$UCI "delete" "wireless.radio0.country"
+$UCI "delete" "wireless.radio$ID.country"
 
 $UCI "set" "network.lan.ipaddr=192.168.240.1"
 $UCI "set" "network.lan.netmask=255.255.255.0"
