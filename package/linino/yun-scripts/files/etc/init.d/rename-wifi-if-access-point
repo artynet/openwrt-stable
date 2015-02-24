@@ -21,7 +21,7 @@ start() {
 	
 	SSID_PREFIX=`/sbin/uci get wireless.@wifi-iface[$ID].ssid | sed s/-.*//`
 
-	if [ "$SSID_PREFIX" != "Arduino" -a "$SSID_PREFIX" != "Linino" ]
+	if [ "$SSID_PREFIX" != "Arduino" -a "$SSID_PREFIX" != "Linino" -a "$SSID_PREFIX" != "OpenWrt" ]
 	then
 		return
 	fi
