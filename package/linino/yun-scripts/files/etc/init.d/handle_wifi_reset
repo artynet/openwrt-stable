@@ -38,16 +38,16 @@ start() {
 		
 		# machine=$(awk '/machine/ {print $3}' /proc/cpuinfo)
 		
-        boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
-        
-        case $boardname in
-                'chowchow')
-                        ID=1
-                        ;;
-                        *)
-                        ID=0
-                        ;;
-        esac
+	        boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
+	        
+	        case $boardname in
+	                'chowchow')
+	                        ID=1
+	                        ;;
+	                        *)
+	                        ID=0
+	                        ;;
+	        esac
 		
 		set_or_delete "wireless.radio$ID.channel" $CHANNEL
 		set_or_delete "wireless.radio$ID.country" $COUNTRY
