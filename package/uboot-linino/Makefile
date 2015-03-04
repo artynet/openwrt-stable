@@ -122,12 +122,12 @@ define Package/uboot-ar71xx-$(1)/install
 	## Enable if COMPRESSED_BOOT is enabled
 	#$(CP) $(PKG_BUILD_DIR)/tuboot.bin $(BIN_DIR)/$(2)
 	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(2)
-	$(CP) ./$(CAL_DATA) $(BIN_DIR)/openwrt-ar71xx-generic-linino-caldata.bin && touch $(BIN_DIR)/openwrt-ar71xx-generic-linino-caldata.bin
+	$(CP) ./$(CAL_DATA) $(BIN_DIR)/linino-caldata.bin && touch $(BIN_DIR)/linino-caldata.bin
 endef
 endef
 
 $(foreach u,$(UBOOTS), \
-	$(eval $(call Package/uboot/install/template,$(u),openwrt-$(BOARD)-$(SUBTARGET)-$(u)-u-boot.bin)) \
+	$(eval $(call Package/uboot/install/template,$(u),u-boot-$(u).bin)) \
 )
 
 $(foreach u,$(UBOOTS), \
