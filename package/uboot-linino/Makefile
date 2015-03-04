@@ -12,7 +12,7 @@ PKG_VERSION:=linino
 PKG_RELEASE:=2
 PKG_MD5SUM:=
 
-PKG_REVISION:=75f7df48c135a0c91de4ee2428b816b8cd23ffd4
+PKG_REVISION:=3dada023a148a18a75efa3f82e319105149a561a
 
 PKG_SOURCE_PROTO:=git
 
@@ -35,23 +35,23 @@ define uboot/Default
   IMAGE:=
 endef
 
-define uboot/linino_yun
+define uboot/linino-yun
   TITLE:=U-boot for Linino project
 endef
 
-define uboot/linino_one
+define uboot/linino-one
   TITLE:=U-boot for Linino project
 endef
 
-define uboot/linino_free
+define uboot/linino-freedog
   TITLE:=U-boot for Linino project
 endef
 
-define uboot/linino_chow
+define uboot/linino-chowchow
   TITLE:=U-boot for Linino project
 endef
 
-UBOOTS:=linino_yun linino_one linino_free linino_chow
+UBOOTS:=linino-yun linino-one linino-freedog linino-chowchow
 
 define Package/uboot/template
 define Package/uboot-ar71xx-$(1)
