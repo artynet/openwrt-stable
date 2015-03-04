@@ -9,12 +9,20 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=u-boot
 PKG_VERSION:=linino
-PKG_RELEASE:=1
+PKG_RELEASE:=2
+PKG_MD5SUM:=
+
+PKG_REVISION:=5400d6421e9d1f268f1d4e8607ffd0a8549bf5ca
+
+PKG_SOURCE_PROTO:=git
+
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:=https://github.com/linino/uboot.git
+PKG_SOURCE_VERSION:=$(PKG_REVISION)
 
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=
-PKG_MD5SUM:=
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+
 PKG_TARGETS:=bin
 
 CAL_DATA:=art-linino.bin
@@ -31,8 +39,11 @@ define uboot/linino
   TITLE:=U-boot for Linino project
 endef
 
-UBOOTS:=linino 
+define uboot/linino_chow
+  TITLE:=U-boot for Linino project
+endef
 
+UBOOTS:=linino linino_chow
 
 define Package/uboot/template
 define Package/uboot-ar71xx-$(1)
@@ -75,16 +86,13 @@ endef
 
 ifdef BUILD_VARIANT
 $(eval $(call uboot/$(BUILD_VARIANT)))
-#UBOOT_CONFIG:=$(if $(CONFIG),$(CONFIG),$(BUILD_VARIANT))
-UBOOT_CONFIG:=linino_934x
+UBOOT_CONFIG:=$(if $(CONFIG),$(CONFIG),$(BUILD_VARIANT))
 UBOOT_IMAGE:=$(if $(IMAGE),$(IMAGE),openwrt-$(BOARD)-$(BUILD_VARIANT)-u-boot.bin)
 endif
 
 define Build/Prepare
-	$(CP) ./$(PKG_SOURCE) $(DL_DIR)/
 	$(call Build/Prepare/Default)
 	$(CP) ./files/* $(PKG_BUILD_DIR)	
-	find $(PKG_BUILD_DIR) -name .svn | $(XARGS) rm -rf
 endef
 
 define Build/Configure
@@ -106,7 +114,7 @@ define Package/uboot-ar71xx-$(1)/install
 	## Enable if COMPRESSED_BOOT is enabled
 	#$(CP) $(PKG_BUILD_DIR)/tuboot.bin $(BIN_DIR)/$(2)
 	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(2)
-	$(CP) ./$(PKG_SOURCE) $(DL_DIR)/; $(CP) ./$(CAL_DATA) $(BIN_DIR)/openwrt-ar71xx-generic-linino-caldata.bin && touch $(BIN_DIR)/openwrt-ar71xx-generic-linino-caldata.bin
+	$(CP) ./$(CAL_DATA) $(BIN_DIR)/openwrt-ar71xx-generic-linino-caldata.bin && touch $(BIN_DIR)/openwrt-ar71xx-generic-linino-caldata.bin
 endef
 endef
 
