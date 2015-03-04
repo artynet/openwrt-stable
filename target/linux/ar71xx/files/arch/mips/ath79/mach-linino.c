@@ -155,7 +155,6 @@ static void __init ds_common_setup(void)
 
 	if (ar93xx_wmac_read_mac_address(mac)) {
 		pr_info("%s-%d: MAC:%x:%x:%x:%x:%x:%x\n", __FUNCTION__, __LINE__, mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
-
 		ath79_register_wmac(NULL, NULL);
 	} else {
 		ath79_register_wmac(art + DS_CALDATA_OFFSET,
