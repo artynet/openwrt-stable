@@ -12,7 +12,7 @@ PKG_VERSION:=linino
 PKG_RELEASE:=2
 PKG_MD5SUM:=
 
-PKG_REVISION:=3dada023a148a18a75efa3f82e319105149a561a
+PKG_REVISION:=48e71573cff14b37c75c48e151fa18c4a049ad9a
 
 PKG_SOURCE_PROTO:=git
 
@@ -51,7 +51,11 @@ define uboot/linino-chowchow
   TITLE:=U-boot for Linino project
 endef
 
-UBOOTS:=linino-yun linino-one linino-freedog linino-chowchow
+define uboot/linino-chiwawa
+  TITLE:=U-boot for Linino project
+endef
+
+UBOOTS:=linino-yun linino-one linino-freedog linino-chowchow linino-chiwawa
 
 define Package/uboot/template
 define Package/uboot-ar71xx-$(1)
