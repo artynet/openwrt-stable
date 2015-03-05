@@ -16,7 +16,7 @@ PKG_REVISION:=3dada023a148a18a75efa3f82e319105149a561a
 
 PKG_SOURCE_PROTO:=git
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_REVISION).tar.gz
 PKG_SOURCE_URL:=https://github.com/linino/uboot.git
 PKG_SOURCE_VERSION:=$(PKG_REVISION)
 
@@ -101,6 +101,7 @@ endif
 define Build/Prepare
 	$(call Build/Prepare/Default)
 	$(CP) ./files/* $(PKG_BUILD_DIR)	
+	$(CP) ./$(CAL_DATA) $(BIN_DIR)/linino-caldata.bin && touch $(BIN_DIR)/linino-caldata.bin
 endef
 
 define Build/Configure
@@ -122,7 +123,6 @@ define Package/uboot-ar71xx-$(1)/install
 	## Enable if COMPRESSED_BOOT is enabled
 	#$(CP) $(PKG_BUILD_DIR)/tuboot.bin $(BIN_DIR)/$(2)
 	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(2)
-	$(CP) ./$(CAL_DATA) $(BIN_DIR)/linino-caldata.bin && touch $(BIN_DIR)/linino-caldata.bin
 endef
 endef
 
