@@ -1,0 +1,26 @@
+From e80051ba37a36a2fe710b44561ca679e15366467 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Wed, 11 Mar 2015 15:30:23 +0100
+Subject: [PATCH 196/198] MIPS yun_linino_defconfig: set
+ CONFIG_TWEAK_UART_BAUDRATES_FOR_ATMEGA32U4
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index ceef2cc..ea3085b 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -130,6 +130,7 @@ CONFIG_SOC_AR724X=y
+ CONFIG_SOC_AR913X=y
+ CONFIG_SOC_AR933X=y
+ CONFIG_SOC_AR934X=y
++CONFIG_TWEAK_UART_BAUDRATES_FOR_ATMEGA32U4=y
+ CONFIG_SOC_QCA955X=y
+ CONFIG_ATH79_DEV_AP9X_PCI=y
+ CONFIG_ATH79_DEV_DSA=y
+-- 
+1.7.9.5
+
