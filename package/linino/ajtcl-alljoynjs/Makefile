@@ -1,8 +1,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl-alljoynjs
-PKG_REVISION:=a0271ab48c9f59d42553092ba3589e7dd0272e45
-PKG_VERSION:=1.0.1
+PKG_REVISION:=24c5578fc142d67c92aa9e463e357b5eca11eac7
+PKG_VERSION:=14.12.0
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
@@ -33,7 +33,7 @@ endef
 define Package/$(PKG_NAME)/description
 	AllJoyn Thin Client AllJoynJS binding is a basic, low-level JavaScript
 	interpreter that uses the Duktape embeddable JavaScript engine for developing
-	ad hoc peer-to-peer applications that use the AllJoyn protocol. Revision : a0271ab48c9f59d42553092ba3589e7dd0272e45
+	ad hoc peer-to-peer applications that use the AllJoyn protocol. Revision : 24c5578fc142d67c92aa9e463e357b5eca11eac7
 endef
 
 define Package/$(PKG_NAME)-samples
@@ -61,7 +61,7 @@ define Build/Compile
 	CROSS_CFLAGS="-I$(STAGING_DIR)/usr/src/duktape/src -I$(STAGING_DIR)/usr/include/ajtcl $(TARGET_CFLAGS) $(EXTRA_CFLAGS) $(TARGET_CPPFLAGS)" \
 	CROSS_LINKFLAGS="$(TARGET_LINKFLAGS) $(TARGET_LDFLAGS) -lajtcl_services" \
 	CROSS_PATH=$(TARGET_PATH) \
-	CROSS_PREFIX=mips-openwrt-linux- \
+	CROSS_PREFIX=$(REAL_GNU_TARGET_NAME)- \
 	DUKTAPE_DIST="$(STAGING_DIR)/usr/src/duktape" \
 	scons -C $(PKG_BUILD_DIR) \
 		$(PKG_JOBS) \

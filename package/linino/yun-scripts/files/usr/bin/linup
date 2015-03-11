@@ -163,11 +163,11 @@ online () {
 
 verifyupgrade () {
   
-    d1=`echo $1 | sed 's/-/ /g' | awk {'print $1'} | xargs printf %s`
+    d1=`echo $1 | sed 's/-/ /g' | awk {'print $1'} | xargs printf %02d`
     m1=`convertmonth $(echo $1 | sed 's/-/ /g' | awk {'print $2'})`
     y1=`echo $1 | sed 's/-/ /g' | awk {'print $3'}`
     
-    d2=`echo $2 | sed 's/-/ /g' | awk {'print $1'} | xargs printf %s`
+    d2=`echo $2 | sed 's/-/ /g' | awk {'print $1'} | xargs printf %02d`
     m2=`convertmonth $(echo $2 | sed 's/-/ /g' | awk {'print $2'})`
     y2=`echo $2 | sed 's/-/ /g' | awk {'print $3'}`
     
@@ -343,7 +343,16 @@ systemupgrade () {
 
 detectbranch () {
 
-    branch=`cat /etc/linino_version | grep RELEASE | sed -e 's/^.*=//g' | sed -e 's/"//g'`
+	if  [ ! -e /etc/linino_version ]
+	then
+		echo ""
+		echo "linino_version info file not available on your system....aborting ! ! !"
+		echo ""
+
+		exit 0
+	else
+		branch=`cat /etc/linino_version | grep RELEASE | sed -e 's/^.*=//g' | sed -e 's/"//g'`
+	fi
 	
 	if [ -z $branch ] && [ $1 == "" ] 
     then

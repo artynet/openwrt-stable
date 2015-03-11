@@ -1,17 +1,19 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl-services
-PKG_REVISION:=7b875c76cb29304f955c5b5a4bafb2194c6f779e
-PKG_VERSION:=1.0.1
+# PKG_REVISION:=7b875c76cb29304f955c5b5a4bafb2194c6f779e
+PKG_VERSION:=14.12
 PKG_RELEASE:=1
 PKG_MD5SUM:=
 
-PKG_SOURCE_PROTO:=git
+# PKG_SOURCE_PROTO:=git
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-src.tar.gz
-PKG_SOURCE_URL:=https://git.allseenalliance.org/gerrit/services/base_tcl.git
-PKG_SOURCE_VERSION:=$(PKG_REVISION)
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE:=base_tcl-$(PKG_VERSION).tar.gz
+#PKG_SOURCE_URL:=https://git.allseenalliance.org/gerrit/services/base_tcl.git
+PKG_SOURCE_URL:=https://git.allseenalliance.org/cgit/services/base_tcl.git/snapshot/
+PKG_BUILD_DIR:=$(BUILD_DIR)/base_tcl-$(PKG_VERSION)
+# PKG_SOURCE_VERSION:=$(PKG_REVISION)
+# PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 
 # SCons supports parallel builds but does not support make's jobserver
 PKG_BUILD_PARALLEL:=$(if $(CONFIG_PKG_BUILD_USE_JOBSERVER),0,1)
@@ -39,7 +41,7 @@ endef
 define Package/$(PKG_NAME)/description
 	AllJoyn Thin Client Base Services is the standard AllJoyn services libraries for
 	the AllJoyn Thin Client C library for developing ad hoc peer-to-peer
-	applications that use the AllJoyn protocol. Revision : 7b875c76cb29304f955c5b5a4bafb2194c6f779e
+	applications that use the AllJoyn protocol. Revision : 7b875c76cb29304f955c5b5a4bafb2194c6f779e 
 endef
 
 #define Package/$(PKG_NAME)-samples

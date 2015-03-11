@@ -1,17 +1,20 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl
-PKG_REVISION:=c7246570b10c70913c2b983b5f9353672908f73d
-PKG_VERSION:=1.0.1
+# PKG_REVISION:=c7246570b10c70913c2b983b5f9353672908f73d
+PKG_VERSION:=14.12
 PKG_RELEASE:=1
 PKG_MD5SUM:=
 
-PKG_SOURCE_PROTO:=git
+#PKG_SOURCE_PROTO:=git
+#
+#PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-src.tar.gz
+#PKG_SOURCE_URL:=https://git.allseenalliance.org/gerrit/core/ajtcl.git
+#PKG_SOURCE_VERSION:=$(PKG_REVISION)
+#PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-src.tar.gz
-PKG_SOURCE_URL:=https://git.allseenalliance.org/gerrit/core/ajtcl.git
-PKG_SOURCE_VERSION:=$(PKG_REVISION)
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE:=ajtcl-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:=https://git.allseenalliance.org/cgit/core/ajtcl.git/snapshot/
 
 # SCons supports parallel builds but does not support make's jobserver
 PKG_BUILD_PARALLEL:=$(if $(CONFIG_PKG_BUILD_USE_JOBSERVER),0,1)
@@ -38,7 +41,7 @@ endef
 
 define Package/ajtcl/description
 	AllJoyn Thin Client Library is a basic, low-level C library for developing
-	ad hoc peer-to-peer applications that use the AllJoyn protocol. Revision : c7246570b10c70913c2b983b5f9353672908f73d
+	ad hoc peer-to-peer applications that use the AllJoyn protocol. Revision : c7246570b10c70913c2b983b5f9353672908f73d 
 endef
 
 define Package/ajtcl-samples
