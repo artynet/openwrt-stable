@@ -159,18 +159,37 @@ static void __init ds_common_setup(void)
 	ath79_register_m25p80(NULL);
 
 	if (ar93xx_wmac_read_mac_address(mac)) {
+		pr_info("%s-%d: MAC:%x:%x:%x:%x:%x:%x\n", __FUNCTION__, __LINE__, mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
 		ath79_register_wmac(NULL, NULL);
 	} else {
 		ath79_register_wmac(art + DS_CALDATA_OFFSET,
 				art + DS_WMAC_MAC_OFFSET);
 		memcpy(mac, art + DS_WMAC_MAC_OFFSET, sizeof(mac));
+		pr_info("%s-%d: wlan0 MAC:%x:%x:%x:%x:%x:%x\n", __FUNCTION__, __LINE__, mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
 	}
 
-	mac[3] |= 0x08;
-	ath79_init_mac(ath79_eth0_data.mac_addr, mac, 0);
+        // Mapping device-inteface
+        // ag71xx.1 --> eth0    [ath79_eth1_data]
+        // ag71xx.0 --> eth1    [ath79_eth0_data]
 
-	mac[3] &= 0xF7;
-	ath79_init_mac(ath79_eth1_data.mac_addr, mac, 0);
+        if ((mac[3] & 0x08)==0) {
+                mac[3] |= 0x08;
+                ath79_init_mac(ath79_eth0_data.mac_addr, mac, 0);
+                pr_info("%s-%d: eth1 MAC:%x:%x:%x:%x:%x:%x\n", __FUNCTION__, __LINE__, mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+
+                mac[3] &= 0xF7;
+                ath79_init_mac(ath79_eth1_data.mac_addr, mac, 0);
+               //pr_info("%s-%d: eth0 MAC:%x:%x:%x:%x:%x:%x\n", __FUNCTION__, __LINE__, mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+
+       }else{
+               mac[3] |= 0x08;
+               ath79_init_mac(ath79_eth1_data.mac_addr, mac, 0);
+               //pr_info("%s-%d: eth0 MAC:%x:%x:%x:%x:%x:%x\n", __FUNCTION__, __LINE__, mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+
+               mac[3] &= 0xF7;
+               ath79_init_mac(ath79_eth0_data.mac_addr, mac, 0);
+               pr_info("%s-%d: eth1 MAC:%x:%x:%x:%x:%x:%x\n", __FUNCTION__, __LINE__, mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+       }
 
 	ath79_register_mdio(0, 0x0);
 
