@@ -967,7 +967,7 @@ $(eval $(call SingleProfile,ZyXEL,$(fs_64k),NBG_460N_550N_550NH,nbg460n_550n_550
 #                          of SingleProfile(s) to build. Here you must write
 #                          the SingleProfile names space separated.
 
-$(eval $(call MultiProfile,LININO_ALL_PROFILE, $(LININO_SINGLE_PROFILES))
+$(eval $(call MultiProfile,LININO_ALL_PROFILE, $(LININO_SINGLE_PROFILES)))
 $(eval $(call MultiProfile,LININO_YUNONECHOW_PROFILE, $(LININO_YUNONECHOW_PROFILES)))
 $(eval $(call MultiProfile,LININO_YUNONE_PROFILE, $(LININO_YUNONE_PROFILES)))
 
