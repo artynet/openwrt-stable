@@ -16,6 +16,28 @@ endef
 
 $(eval $(call Profile,LININO_ALL_PROFILE))
 
+define Profile/LININO_YUNONECHOW_PROFILE
+	NAME:=Linino YunOneChow
+	PACKAGES:=kmod-usb-core kmod-usb2
+endef
+
+define Profile/LININO_YUNONECHOW_PROFILE/Description
+	Select this in order to build an image for Yun, One and ChowChow
+endef
+
+$(eval $(call Profile,LININO_YUNONECHOW_PROFILE))
+
+define Profile/LININO_YUNONE_PROFILE
+	NAME:=Linino YunOne
+	PACKAGES:=kmod-usb-core kmod-usb2
+endef
+
+define Profile/LININO_YUNONE_PROFILE/Description
+	Select this in order to build an image for Yun and One 
+endef
+
+$(eval $(call Profile,LININO_YUNONE_PROFILE))
+
 define Profile/LININO_YUN
 	NAME:=Linino Arduino Yun
 	PACKAGES:=kmod-usb-core kmod-usb2 luci-app-arduino-webpanel
