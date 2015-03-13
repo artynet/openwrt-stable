@@ -35,11 +35,11 @@ start() {
 		ENCRYPTION=`$UCI get "arduino.@wifi-iface[0].encryption"`
 		KEY=`$UCI get "arduino.@wifi-iface[0].key"`
 		PROTO=`$UCI get "arduino.lan.proto"`
-		
+
 		# machine=$(awk '/machine/ {print $3}' /proc/cpuinfo)
-		
+
 	        boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
-	        
+
 	        case $boardname in
 	                'chowchow')
 	                        ID=1
@@ -48,7 +48,7 @@ start() {
 	                        ID=0
 	                        ;;
 	        esac
-		
+
 		set_or_delete "wireless.radio$ID.channel" $CHANNEL
 		set_or_delete "wireless.radio$ID.country" $COUNTRY
 		set_or_delete "wireless.@wifi-iface[$ID].mode" $MODE
@@ -69,4 +69,3 @@ start() {
 		#/bin/sed -i "s/C:192.168/#C:192.168/g" /etc/httpd.conf
 	fi
 }
-

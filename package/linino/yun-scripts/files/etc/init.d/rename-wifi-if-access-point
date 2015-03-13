@@ -1,39 +1,39 @@
 #!/bin/sh /etc/rc.common
 # Copyright (C) 2008 OpenWrt.org
 
-START=18
+UCI="/sbin/uci"
+WIFI="/sbin/wifi"
 
-start() {
+START=17
+
+start () {
 
 	boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
 
-	case $boardname in
-		'chowchow')
-			ID=1
-			;;
-			*)
-			ID=0
-			;;
-	esac
-
-	MODE=`/sbin/uci get wireless.@wifi-iface[$ID].mode`
-	SSID=`/sbin/uci get wireless.@wifi-iface[$ID].ssid`
-	
-	SSID_PREFIX=`/sbin/uci get wireless.@wifi-iface[$ID].ssid | sed s/-.*//`
-
-	if [ "$SSID_PREFIX" != "Arduino" -a "$SSID_PREFIX" != "Linino" -a "$SSID_PREFIX" != "OpenWrt" ]
+	if [ $boardname="chowchow" ]
 	then
-		return
+
+		sed -i s/eth1/eth0/g /etc/config/network
+		# sed -i s#\'0\'#\'1\'#g /etc/config/wireless
+
+		IFNAME=$($UCI get wireless.@wifi-iface[1].network)
+                COUNTRY=$($UCI "get" "arduino.radio0.country")
+
+		uci "set" "wireless.@wifi-device[0].disabled=1";
+		uci "set" "wireless.@wifi-device[1].disabled=0";
+		uci "set" "wireless.@wifi-device[1].channel=auto"
+		$UCI "set" "wireless.radio1.country=$COUNTRY"
+
+		if [ "$IFNAME" != "lan" ]
+                then
+                        $UCI "set" "wireless.@wifi-iface[0].network=lan2.4"
+                        $UCI "set" "wireless.@wifi-iface[1].network=lan"
+                fi
+
+		$UCI commit
+		$WIFI down
+		$WIFI up
+
 	fi
-		
-	PREFIX=$(awk '/machine/ {print $3}' /proc/cpuinfo)
-		
-	if [ "$MODE" == "ap" ]
-	then
-		SSID_SUFFIX=`/sbin/ifconfig wlan0 | /usr/bin/head -n 1 | /bin/grep -o -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}' | /bin/sed 's/://g'`
-		SSID=$PREFIX-$SSID_SUFFIX
-		/sbin/uci "set" "wireless.@wifi-iface[$ID].ssid=$SSID"
-		/sbin/uci commit wireless
-		logger -t rename "WiFi renamed $SSID"
-	fi
+
 }
