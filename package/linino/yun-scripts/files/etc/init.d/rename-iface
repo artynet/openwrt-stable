@@ -10,7 +10,7 @@ start () {
 
 	boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
 
-	if [ $boardname="chowchow" ]
+	if [ $boardname = "chowchow" ]
 	then
 
 		sed -i s/eth1/eth0/g /etc/config/network
