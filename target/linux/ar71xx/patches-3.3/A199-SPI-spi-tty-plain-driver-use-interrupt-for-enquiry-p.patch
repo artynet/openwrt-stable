@@ -1,0 +1,137 @@
+From 66699ee02d519ec8f7da8fc643fa0d8393583cd6 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 16 Mar 2015 16:43:58 +0100
+Subject: [PATCH 199/200] SPI: spi-tty-plain driver, use interrupt for enquiry
+ polling
+
+Enquiry polling on SPI line is no more executed by an always running workqueue,
+but is now driven by the interrupt line.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/spi/spi-tty-plain.c |   49 +++++++++++++++++--------------------------
+ 1 file changed, 19 insertions(+), 30 deletions(-)
+
+diff --git a/drivers/spi/spi-tty-plain.c b/drivers/spi/spi-tty-plain.c
+index 9029c51..7084d25 100644
+--- a/drivers/spi/spi-tty-plain.c
++++ b/drivers/spi/spi-tty-plain.c
+@@ -11,6 +11,7 @@
+ #include <linux/types.h>
+ #include <linux/init.h>
+ #include <linux/interrupt.h>
++#include <linux/gpio.h>
+ #include <linux/spi/spi.h>
+ #include <linux/spinlock.h>
+ #include <linux/serial.h>
+@@ -19,10 +20,10 @@
+ #include <linux/tty_flip.h>
+ #include <linux/moduleparam.h>
+ #include <linux/jiffies.h>
+-#include <linux/workqueue.h>
+ #include <linux/platform_device.h>
+ 
+-/* ASCII char 0x5 is 'enquiry' and is here used to poll MCU */
++/* ASCII char 0x5 is 'enquiry' and is here used to poll MCU at when
++ * interrupt line is asserted (set to high) */
+ #define SPI_TTY_ENQUIRY 0x5
+ #define SPI_TTY_ENQ_INT_MS 200
+ #define SPI_TTY_MSG_LEN 64
+@@ -44,8 +45,6 @@ struct spi_tty {
+ 	struct tty_port port;
+ 
+ 	char enq_buf[SPI_TTY_MSG_LEN + 1];
+-	struct workqueue_struct *wq;
+-	struct delayed_work work;
+ 	struct mutex mtx;
+ };
+ 
+@@ -55,9 +54,6 @@ static struct tty_struct *ttys[SPI_SERIAL_TTY_MINORS];
+ 
+ /* * * * TTY Operations * * * */
+ 
+-static void spi_poll_work_handler(struct work_struct *w);
+-static unsigned long wqinterval;
+-
+ /*
+  * The kernel invokes this function when a program opens the TTY interface of
+  * this driver
+@@ -249,15 +245,11 @@ static const struct tty_port_operations spi_serial_port_ops = {
+ 	.dtr_rts = spi_serial_port_dtr_rts, /* required, even if empty */
+ };
+ 
+-static void spi_poll_work_handler(struct work_struct *w)
++static irqreturn_t spi_tty_irq_handler(int irq, void *__data)
+ {
+-	struct spi_tty *stty;
+-
+-	stty = container_of(to_delayed_work(w), struct spi_tty, work);
+-
++	struct spi_tty *stty = __data;
+ 	__spi_serial_tty_write(stty, stty->enq_buf, sizeof(stty->enq_buf), 0);
+-	if (!delayed_work_pending(&stty->work))
+-		queue_delayed_work(stty->wq, &stty->work, wqinterval);
++	return IRQ_HANDLED;
+ }
+ 
+ /* * * * Driver Initialization * * * */
+@@ -267,6 +259,8 @@ static int spi_tty_probe(struct spi_device *spi)
+ 	struct spi_tty *stty;
+ 	int err = 0;
+ 	unsigned long flags;
++	int gpio_irq = (unsigned int)spi->dev.platform_data;
++	int irq;
+ 
+ 	if (dev_count >= SPI_SERIAL_TTY_MINORS)
+ 		return -ENOMEM;
+@@ -284,6 +278,17 @@ static int spi_tty_probe(struct spi_device *spi)
+ 
+ 	mutex_init(&stty->mtx);
+ 
++	irq = gpio_to_irq(gpio_irq);
++
++	err = devm_request_threaded_irq(&spi->dev, irq, NULL,
++					spi_tty_irq_handler,
++					IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
++					dev_name(&spi->dev),
++					stty);
++
++	if (err)
++		goto err_req_tty;
++
+ 	/* Initialize port */
+ 	tty_port_init(&stty->port);
+ 	stty->port.ops = &spi_serial_port_ops;
+@@ -305,18 +310,6 @@ static int spi_tty_probe(struct spi_device *spi)
+ 	dev_count++;
+ 	spin_unlock_irqrestore(&lock, flags);
+ 
+-	/* start workqueue for enquiry poll */
+-	wqinterval = msecs_to_jiffies(SPI_TTY_ENQ_INT_MS);
+-	pr_info("spi_poll_wq called every %u jiffies\n",
+-		(unsigned)wqinterval);
+-
+-	stty->wq = create_singlethread_workqueue("spi_poll_wq");
+-
+-	if (stty->wq) {
+-		INIT_DELAYED_WORK(&stty->work, spi_poll_work_handler);
+-		queue_delayed_work(stty->wq, &stty->work, 0);
+-	}
+-
+ 	return 0;
+ 
+ err_req_tty:
+@@ -329,10 +322,6 @@ static int spi_tty_remove(struct spi_device *spi)
+ 	unsigned long flags;
+ 	struct spi_tty *stty = spi_get_drvdata(spi);
+ 
+-	cancel_delayed_work_sync(&stty->work);
+-	flush_workqueue(stty->wq);
+-	destroy_workqueue(stty->wq);
+-
+ 	dev_info(&spi->dev, "%s\n", __func__);
+ 
+ 	stty = spi_get_drvdata(spi);
+-- 
+1.7.9.5
+
