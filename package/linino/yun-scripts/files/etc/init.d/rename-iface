@@ -17,7 +17,7 @@ start () {
 		# sed -i s#\'0\'#\'1\'#g /etc/config/wireless
 
 		IFNAME=$($UCI get wireless.@wifi-iface[1].network)
-        COUNTRY=$($UCI "get" "arduino.radio0.country")
+		COUNTRY=$($UCI "get" "arduino.radio0.country")
 
 		$UCI "set" "wireless.@wifi-device[0].disabled=1";
 		$UCI "set" "wireless.@wifi-device[1].disabled=0";
@@ -25,10 +25,10 @@ start () {
 		$UCI "set" "wireless.radio1.country=$COUNTRY"
 
 		if [ "$IFNAME" != "lan" ]
-        then
-            $UCI "set" "wireless.@wifi-iface[0].network=lan2.4"
-        	$UCI "set" "wireless.@wifi-iface[1].network=lan"
-        fi
+		then
+			$UCI "set" "wireless.@wifi-iface[0].network=lan2.4"
+			$UCI "set" "wireless.@wifi-iface[1].network=lan"
+		fi
 
 		$UCI commit
 		$WIFI down
