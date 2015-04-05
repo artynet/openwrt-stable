@@ -98,4 +98,17 @@ endef
 
 $(eval $(call Profile,LININO_CHIWAWA))
 
+define Profile/LININO_YUN_MINI
+        NAME:=Linino Yun mini
+        PACKAGES:=kmod-usb-core kmod-usb2 luci-webpanel-linino
+endef
+
+define Profile/LININO_YUN_MINI/Description
+        Package set optimized for the Linino Yun mini based on
+        Atheros AR9331.
+endef
+
+$(eval $(call Profile,LININO_YUN_MINI))
+
+
 
