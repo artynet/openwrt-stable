@@ -9,10 +9,10 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=u-boot
 PKG_VERSION:=linino
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 PKG_MD5SUM:=
 
-PKG_REVISION:=416530788aa5b3f99496a4002f3be28c434519de
+PKG_REVISION:=4f5d9980a267302d9984a269a8fe077bb39663f5
 
 PKG_SOURCE_PROTO:=git
 
@@ -39,6 +39,10 @@ define uboot/linino-yun
   TITLE:=U-boot for Linino project
 endef
 
+define uboot/linino-yun-mini
+  TITLE:=U-boot for Linino project
+endef
+
 define uboot/linino-one
   TITLE:=U-boot for Linino project
 endef
@@ -55,7 +59,7 @@ define uboot/linino-chiwawa
   TITLE:=U-boot for Linino project
 endef
 
-UBOOTS:=linino-yun linino-one linino-freedog linino-chowchow linino-chiwawa
+UBOOTS:=linino-yun linino-one linino-freedog linino-chowchow linino-chiwawa linino-yun-mini
 
 define Package/uboot/template
 define Package/uboot-ar71xx-$(1)
