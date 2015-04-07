@@ -102,7 +102,7 @@
  #endif /* _ATH79_MACHTYPE_H */
 --- a/arch/mips/ath79/Makefile
 +++ b/arch/mips/ath79/Makefile
-@@ -59,6 +59,11 @@ obj-$(CONFIG_ATH79_MACH_EAP7660D)	+= mac
+@@ -59,6 +59,12 @@ obj-$(CONFIG_ATH79_MACH_EAP7660D)	+= mac
  obj-$(CONFIG_ATH79_MACH_JA76PF)		+= mach-ja76pf.o
  obj-$(CONFIG_ATH79_MACH_JWAP003)	+= mach-jwap003.o
  obj-$(CONFIG_ATH79_MACH_HORNET_UB)	+= mach-hornet-ub.o
@@ -111,6 +111,7 @@
 +obj-$(CONFIG_ATH79_MACH_LININO_FREEDOG)	+= mach-linino-freedog.o
 +obj-$(CONFIG_ATH79_MACH_LININO_CHOWCHOW)+= mach-linino-chowchow.o
 +obj-$(CONFIG_ATH79_MACH_LININO_CHIWAWA) += mach-linino-chiwawa.o
++obj-$(CONFIG_ATH79_MACH_LININO_YUN_MINI)+= mach-linino-yun.o
  obj-$(CONFIG_ATH79_MACH_MR600)		+= mach-mr600.o
  obj-$(CONFIG_ATH79_MACH_MZK_W04NU)	+= mach-mzk-w04nu.o
  obj-$(CONFIG_ATH79_MACH_MZK_W300NH)	+= mach-mzk-w300nh.o
