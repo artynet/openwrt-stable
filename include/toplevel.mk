@@ -95,6 +95,11 @@ defconfig: scripts/config/conf prepare-tmpinfo FORCE
 	touch .config
 	$< -D .config Config.in
 
+defconfig_linino: scripts/config/conf prepare-tmpinfo FORCE
+	touch .config
+	@if [ -e $(TOPDIR)/configfiles/lininoconfig ]; then cp $(TOPDIR)/configfiles/lininoconfig .config; fi
+	$< --defconfig=.config Config.in
+
 oldconfig: scripts/config/conf prepare-tmpinfo FORCE
 	$< -$(if $(CONFDEFAULT),$(CONFDEFAULT),o) Config.in
 
