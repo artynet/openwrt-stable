@@ -1,46 +1,46 @@
-
-# linup v33 : A simple system update script
-# Copyright (C) 2014 Dog Hunter AG  
-# 
+# provisioning.sh v40 : A simple system update script
+# Copyright (C) 2014 Dog Hunter AG
+#
 # Author : Arturo Rinaldi
-# E-mail : arturo@doghunter.org 
+# E-mail : arturo@doghunter.org
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# v33 : Fixed tab spaces
+# v40 : adding yun-mini, fixing detection of the branch according to linino_version
 #
 
 #!/bin/sh
 
 convertmonth () {
-    
+
     months="Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec"
     month=$1
     string="${months%$month*}"
     temp="$((${#string}/4 + 1))"
-    
+
     printf "%02d\n" $temp
 
 }
 
 doubledigit () {
 
-    if [[ ${#1} -lt 2 ]] 
+    if [[ ${#1} -lt 2 ]]
     then
 
-    	number=$(printf %02d $1)
-    
+	printf "%02d\n" $1
+    	#number=$(printf %02d $1)
+
     fi
 
 }
@@ -51,13 +51,13 @@ settings () {
 
     datelatest=$(wget -c -q -O 2>&1 - http://download.linino.org/linino_distro/$1/$2/ | grep $boardname -m 1 | awk {'print $7'} | sed 's/align="right">//g')
 
-    if [ -z $datelatest ]
-    then
+	if [ -z $datelatest ]
+	then
 
-        echo "Run linup --help for USAGE" 
+		echo "The required Linino image is not available...aborting..."
 		exit 0
-        
-    fi
+
+	fi
 
 }
 
@@ -65,15 +65,14 @@ checkarguments () {
 
     if [ -z $1 ] && [ -z $2 ]
     then
-	
+
         echo ""
-        echo "USAGE : linup <revision> ( latest or YYYYMMDD.x where x=0,1,2...n ) \ 
-            <branch> ( optional : lininoIO or master ) "
+        echo "USAGE : provisioning.sh <revision> ( latest or YYYYMMDD.x where x=0,1,2...n ) <branch> ( optional : lininoIO or master ) "
         echo ""
         exit 0
-	
+
     fi
-	
+
 }
 
 templateimage () {
@@ -106,9 +105,9 @@ templateimage () {
 	    template='lininoIO-generic-linino-'$1'-squashfs-sysupgrade.bin'
 
     fi
-    
+
 }
-      
+
 infos () {
 
     echo "Current kernel date : "$dateonboard
@@ -120,17 +119,19 @@ infos () {
 
 }
 
-boardavailable () {
+# Deprecated function
 
-    if ( [ $boardname != 'yun' ] && [ $boardname != 'one' ] && [ $boardname != 'freedog' ] && [ $boardname != 'chiwawa' ] )
-    then
-    
-	    echo "Your board is not supported ! Aborting..."    
-	    exit 0
-	
-    fi
-      
-} 
+# boardavailable () {
+#
+#     if ( [ $boardname != 'yun' ] && [ $boardname != 'one' ] && [ $boardname != 'freedog' ] && [ $boardname != 'chiwawa' ] )
+#     then
+#
+# 	    echo "Your board is not supported ! Aborting..."
+# 	    exit 0
+#
+#     fi
+#
+# }
 
 boardavailable2 () {
 
@@ -139,6 +140,7 @@ boardavailable2 () {
 	    "chiwawa") ;;
 	    "freedog") ;;
 	    "one") ;;
+        "yun-mini") ;;
 	    *) echo "Your board is not supported ! Aborting..." && exit 0;;
     esac
 
@@ -148,51 +150,51 @@ online () {
 
     echo "Verifying internet connection..."
     echo ""
-    
-        ping -c 3 8.8.8.8 > /dev/null 2>&1
-    
+
+	ping -c 3 8.8.8.8 > /dev/null 2>&1
+
     if [ $? -eq 1 ]
     then
-	
-	    echo "No internet connection available, aborting..."
-	    exit 0
-	
+
+		echo "No internet connection available, aborting..."
+		exit 0
+
     fi
 
 }
 
 
 verifyupgrade () {
-  
-    d1=`echo $1 | sed 's/-/ /g' | awk {'print $1'} | xargs printf %s`
+
+    d1=`echo $1 | sed 's/-/ /g' | awk {'print $1'} | xargs printf "%02d" `
     m1=`convertmonth $(echo $1 | sed 's/-/ /g' | awk {'print $2'})`
     y1=`echo $1 | sed 's/-/ /g' | awk {'print $3'}`
-    
-    d2=`echo $2 | sed 's/-/ /g' | awk {'print $1'} | xargs printf %s`
+
+    d2=`echo $2 | sed 's/-/ /g' | awk {'print $1'} | xargs printf "%02d" `
     m2=`convertmonth $(echo $2 | sed 's/-/ /g' | awk {'print $2'})`
     y2=`echo $2 | sed 's/-/ /g' | awk {'print $3'}`
-    
-    
+
+
     echo "The current kernel date is : "$d1" "$m1" "$y1
     echo "Linino OS image date is : "$d2" "$m2" "$y2
     echo ""
 
     if [ $y1$m1$d1 -lt $y2$m2$d2 ]
     then
-	
+
 	    echo "A new upgrade is available for your system !"
-    
+
     elif [ $y1$m1$d1 -gt $y2$m2$d2 ]
     then
-    
+
 	    echo "You're going to revert your system to a previous version of the os !"
-	
+
     elif [ $y1$m1$d1 -eq $y2$m2$d2 ]
     then
-	
+
 	    echo "Your system is up-to-date !"
 	    exit 0
-	
+
     fi
 
 }
@@ -201,15 +203,15 @@ verifyupgrade_old () {
 
     if [ $dateonboard!=$datelatest ]
     then
-	
-	    infos	
+
+	    infos
 	    echo "A new upgrade is available for your system ?"
-    
+
     else
-    
+
 	    echo "Your system is up-to-date !"
 	    exit 0
-	
+
     fi
 
 }
@@ -218,30 +220,30 @@ download () {
 
     if [ ! -e $1 ]
     then
-	
+
 	    wget http://download.linino.org/linino_distro/$2/$3/$1
-	
+
     fi
-   
+
     if [ $? -eq 1 ]
     then
-	
+
 	    rm $1 > /dev/null 2>&1
 	    echo "Download failed !"
 	    exit 0
-	
+
     elif [ $? -eq 2 ]
     then
-    
+
 	    rm $1 > /dev/null 2>&1
 	    rm lininosum_$4 > /dev/null 2>&1
-    
+
     fi
 
 }
 
 hashsum () {
-    
+
     echo ""
     echo "Calculating MD5 checksums..."
     echo ""
@@ -249,33 +251,33 @@ hashsum () {
 		wget -q -O - http://download.linino.org/linino_distro/$2/$3/md5sums | grep $1 > lininosum_$4
 
 		md5sum -c lininosum_$4
-    
+
     if [ $? -eq 1 ]
     then
-    
+
 	    rm $1 > /dev/null 2>&1
     	rm lininosum_$4 > /dev/null 2>&1
     	echo "md5sum mismatch ! Aborting process !"
     	exit 0
-    	
+
     elif [ $? -eq 2 ]
     then
-	
+
 	    rm $1 > /dev/null 2>&1
     	rm lininosum_$4 > /dev/null 2>&1
-    	
+
     else
-	
+
 	    flashimage=$1
 	    hashfile=lininosum_$4
 	    systemupgrade $flashimage $hashfile
-	
+
     fi
 
 }
 
 systemupgrade () {
-    
+
     echo ""
 
     while [ "$done" != "true" ]
@@ -285,48 +287,48 @@ systemupgrade () {
 		echo "1. Upgrade and keep your current setting"
 		echo "2. Upgrade and revert to default settings"
 		echo "0. Exit"
-			
+
 		echo " "
 		echo "Choose : "
 		echo " "
-		
+
 		read choice
-		
+
 		case $choice in
 			#------------------Choice-1----------------------
-			1) 
-				done="true"
-								
+			1)
+				# done="true"
+
 				sysupgrade -v $1
 			;;
-	
+
 			#------------------Choice-2----------------------
 			2)
-				done="true"
-				
+				# done="true"
+
 				sysupgrade -v -n $1
 			;;
-			  
+
 			#------------------Choice-0----------------------
 			0)
 				done="true"
 				echo ""
 				echo "Aborting and deleting files..."
-				
+
 				if [ -e $1 ]
 				then
-				
+
 					rm $1
-				
+
 				fi
-				
+
 				if [ -e $2 ]
 				then
-				
+
 					rm $2
-				
+
 				fi
-				
+
 				exit 0
 			;;
 			#------------------Choice-any----------------------
@@ -334,40 +336,48 @@ systemupgrade () {
 				echo ""
 				echo "You have to make a choice !"
 				echo ""
-			;; 
-			
+			;;
+
 		esac
-	
+
     done
-		      
+
 }
 
 detectbranch () {
 
-    branch=`cat /etc/linino_version | grep RELEASE | sed -e 's/^.*=//g' | sed -e 's/"//g'`
-	
-	if [ -z $branch ] && [ $1 == "" ] 
+    if [ -e /etc/linino_version ]
     then
-		
-		echo ""
-		echo "Can't detect the branch ! Please specify one : master/lininoIO"
-		echo ""
-		exit 0
-    
-    elif [ -z $1 ] || [ $1 == $branch ]
+
+        branch=`cat /etc/linino_version 2> /dev/null | grep RELEASE | sed -e 's/^.*=//g' | sed -e 's/"//g'`
+
+	fi
+
+    # checking if $branch is a null string
+
+    if [ -z $branch ] && [ -z $1 ]
     then
-   
+
+        echo ""
+        echo "Can't detect the branch ! Please force one : master/lininoIO"
+        echo ""
+
+        exit 0
+
+    elif [ -z $1 ] || [ "$1" == "$branch" ]
+    then
+
 		echo ""
-		echo "the current branch is $branch"
+		echo "the current branch is "$branch"..."
 		echo ""
-    
+
     else
 
 		branch=$1
 		echo ""
-		echo "overriding branch with $branch"
+		echo "forcing branch with $branch..."
 		echo ""
-    
+
     fi
 
 }
@@ -392,38 +402,38 @@ p=1
 
 while [ $p != 0 ]
 do
-    
+
     echo ""
     echo "Do you want to upgrade your board now ? (y/n)"
     echo ""
 
     read YN
-    
+
     case $YN in
 		#------------------Choice-YES----------------------
-		[yY]*)			
+		[yY]*)
 			echo ""
 			cd /tmp
-			
+
 			download $template $branch $1
-			
+
 			sleep 2
-			
+
 			hashsum $template $branch $1 $boardname
-			
+
 			sleep 2
-			
+
 			p=0
 			exit 0
 		;;
-		#------------------Choice-NO----------------------	  
-		[nN]*) 	
+		#------------------Choice-NO----------------------
+		[nN]*)
 			echo ""
 			echo "Good Bye for now...."
 			echo ""
-			
+
 			p=0
-			exit 0				    
+			exit 0
 		;;
 		#------------------Choice-any----------------------
 		*)
@@ -431,7 +441,7 @@ do
 			echo "You have to make a choice !"
 			echo ""
 		;;
-	  
+
     esac
-    
+
 done
