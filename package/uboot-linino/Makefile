@@ -9,12 +9,20 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=u-boot
 PKG_VERSION:=linino
-PKG_RELEASE:=1
+PKG_RELEASE:=4
+PKG_MD5SUM:=
+
+PKG_REVISION:=4f5d9980a267302d9984a269a8fe077bb39663f5
+
+PKG_SOURCE_PROTO:=git
+
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_REVISION).tar.gz
+PKG_SOURCE_URL:=https://github.com/linino/uboot.git
+PKG_SOURCE_VERSION:=$(PKG_REVISION)
 
 PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=
-PKG_MD5SUM:=
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+
 PKG_TARGETS:=bin
 
 CAL_DATA:=art-linino.bin
@@ -27,11 +35,31 @@ define uboot/Default
   IMAGE:=
 endef
 
-define uboot/linino
+define uboot/linino-yun
   TITLE:=U-boot for Linino project
 endef
 
-UBOOTS:=linino
+define uboot/linino-yun-mini
+  TITLE:=U-boot for Linino project
+endef
+
+define uboot/linino-one
+  TITLE:=U-boot for Linino project
+endef
+
+define uboot/linino-freedog
+  TITLE:=U-boot for Linino project
+endef
+
+define uboot/linino-chowchow
+  TITLE:=U-boot for Linino project
+endef
+
+define uboot/linino-chiwawa
+  TITLE:=U-boot for Linino project
+endef
+
+UBOOTS:=linino-yun linino-one linino-freedog linino-chowchow linino-chiwawa linino-yun-mini
 
 define Package/uboot/template
 define Package/uboot-ar71xx-$(1)
@@ -74,16 +102,14 @@ endef
 
 ifdef BUILD_VARIANT
 $(eval $(call uboot/$(BUILD_VARIANT)))
-#UBOOT_CONFIG:=$(if $(CONFIG),$(CONFIG),$(BUILD_VARIANT))
-UBOOT_CONFIG:=linino
+UBOOT_CONFIG:=$(if $(CONFIG),$(CONFIG),$(BUILD_VARIANT))
 UBOOT_IMAGE:=$(if $(IMAGE),$(IMAGE),openwrt-$(BOARD)-$(BUILD_VARIANT)-u-boot.bin)
 endif
 
 define Build/Prepare
-	$(CP) ./$(PKG_SOURCE) $(DL_DIR)/
 	$(call Build/Prepare/Default)
 	$(CP) ./files/* $(PKG_BUILD_DIR)	
-	find $(PKG_BUILD_DIR) -name .svn | $(XARGS) rm -rf
+	$(CP) ./$(CAL_DATA) $(BIN_DIR)/linino-caldata.bin && touch $(BIN_DIR)/linino-caldata.bin
 endef
 
 define Build/Configure
@@ -105,12 +131,11 @@ define Package/uboot-ar71xx-$(1)/install
 	## Enable if COMPRESSED_BOOT is enabled
 	#$(CP) $(PKG_BUILD_DIR)/tuboot.bin $(BIN_DIR)/$(2)
 	$(CP) $(PKG_BUILD_DIR)/u-boot.bin $(BIN_DIR)/$(2)
-	$(CP) ./$(PKG_SOURCE) $(DL_DIR)/; $(CP) ./$(CAL_DATA) $(BIN_DIR)/openwrt-ar71xx-generic-linino-caldata.bin && touch $(BIN_DIR)/openwrt-ar71xx-generic-linino-caldata.bin
 endef
 endef
 
 $(foreach u,$(UBOOTS), \
-	$(eval $(call Package/uboot/install/template,$(u),openwrt-$(BOARD)-$(SUBTARGET)-$(u)-u-boot.bin)) \
+	$(eval $(call Package/uboot/install/template,$(u),u-boot-$(u).bin)) \
 )
 
 $(foreach u,$(UBOOTS), \

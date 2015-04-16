@@ -1,0 +1,42 @@
+From 659d94d97f8164ef749de7e286b85c1b375577e9 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 16 Mar 2015 16:48:47 +0100
+Subject: [PATCH 200/200] SPI: spi-tty-plain driver, tweak clock and delay
+ values
+
+When sending enquiry bytes, clock is here decreased to 9600 and a 25us delay
+is set between each byte. This permits a more reliable transmission with no
+data lost.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/spi/spi-tty-plain.c |    5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/spi/spi-tty-plain.c b/drivers/spi/spi-tty-plain.c
+index 7084d25..4c60724 100644
+--- a/drivers/spi/spi-tty-plain.c
++++ b/drivers/spi/spi-tty-plain.c
+@@ -27,8 +27,10 @@
+ #define SPI_TTY_ENQUIRY 0x5
+ #define SPI_TTY_ENQ_INT_MS 200
+ #define SPI_TTY_MSG_LEN 64
+-#define SPI_TTY_FREQ_HZ_RX 38400
++#define SPI_TTY_FREQ_HZ_RX 9600
+ #define SPI_TTY_FREQ_HZ_TX 115200
++#define SPI_TTY_DELAY_US 25
++
+ static unsigned int dev_count = 0;
+ static spinlock_t lock;
+ 
+@@ -147,6 +149,7 @@ static int __spi_serial_tty_write(struct spi_tty *stty,
+ 	t->len = len;
+ 	t->tx_buf = buf;
+ 	t->rx_buf = rx_buf;
++	t->delay_usecs = SPI_TTY_DELAY_US;
+ 	t->speed_hz = discard_rx ? SPI_TTY_FREQ_HZ_TX : SPI_TTY_FREQ_HZ_RX;
+ 
+ 	spi_message_add_tail(t, m);
+-- 
+1.7.9.5
+

@@ -1,0 +1,41 @@
+From 07a3bf52a2e03d7c10c2435f00aae303a4a3a1ba Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 5 Feb 2015 14:53:24 +0100
+Subject: [PATCH 187/188] bme280 sensor added to lucky shield
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-lucky-shield.c |    3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 1ce429d..537bb3d 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -43,6 +43,7 @@ static unsigned short sht21_addr = 0x40;
+ static unsigned short ssd1307_addr = 0x3c;
+ static unsigned short mma8491_addr = 0x55;
+ static unsigned int mma8491_rst = 200;
++static unsigned short bme280_addr = 0x77;
+ module_param(pca9555_base, uint, 0644);
+ module_param(pca9555_addr, ushort, 0644);
+ module_param(mpl3115_addr, ushort, 0644);
+@@ -51,6 +52,7 @@ module_param(sht21_addr, ushort, 0644);
+ module_param(ssd1307_addr, ushort, 0644);
+ module_param(mma8491_addr, ushort, 0644);
+ module_param(mma8491_rst, uint, 0644);
++module_param(bme280_addr, uint, 0644);
+ 
+ static struct ssd1307_platform_data ssd1307_plat = {
+ 	.type = SSD1307_TYPE_1306,
+@@ -70,6 +72,7 @@ static struct mcuio_shld_i2c_info i2c_lst[] = {
+ 	MCUIO_SHLD_I2C_DEV("mag3110", &mag3110_addr, NULL, -1),
+ 	MCUIO_SHLD_I2C_DEV("sht21", &sht21_addr, NULL, -1),
+ 	MCUIO_SHLD_I2C_DEV("ssd1307fb", &ssd1307_addr, &ssd1307_plat, -1),
++	MCUIO_SHLD_I2C_DEV("bme280", &bme280_addr, NULL, -1),
+ };
+ 
+ static int mcuio_lucky_probe(struct mcuio_device *mdev)
+-- 
+1.7.9.5
+

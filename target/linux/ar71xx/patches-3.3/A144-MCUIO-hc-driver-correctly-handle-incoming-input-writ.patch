@@ -1,0 +1,33 @@
+From 1ee7aded068b012e3c7f17d39b67abff4c012dbf Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 2 Oct 2014 15:37:13 +0200
+Subject: [PATCH 144/188] MCUIO, hc driver: correctly handle incoming input
+ write requests
+
+---
+ drivers/mcuio/mcuio-hc-drv.c |    8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 1926c0e..105a8fb 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -380,8 +380,14 @@ static int __receive_messages(void *__data)
+ 		}
+ 		r->status = mcuio_packet_is_error(p);
+ 		cancel_delayed_work_sync(&r->to_work);
+-		if (mcuio_packet_is_read(p))
++		if (mcuio_packet_is_reply(p)) {
++			if (mcuio_packet_is_read(p))
++				__copy_data(r->data, p, 1);
++		} else {
++			r->offset = mcuio_packet_offset(p);
++			r->fill = mcuio_packet_is_fill_data(p);
+ 			__copy_data(r->data, p, 1);
++		}
+ 		if (r->cb)
+ 			r->cb(r);
+ 		__dequeue_request(r);
+-- 
+1.7.9.5
+

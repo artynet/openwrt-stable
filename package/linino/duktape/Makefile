@@ -8,7 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=duktape
-PKG_VERSION:=1.1.1
+PKG_VERSION:=1.2.x
 PKG_RELEASE:=1
 # PKG_MD5SUM:=b8a8e4505311e7f2cdd8015dd6cad089
 

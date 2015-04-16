@@ -1,0 +1,27 @@
+From 6f2eeec3a6885bdd0a166498e119f37e51bdac5b Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Wed, 11 Mar 2015 15:29:46 +0100
+Subject: [PATCH 2/2] MIPS: yun_linino_defconfig, compile chow chow and
+ chiwawa support
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index ea3085b..b49fad6 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -125,6 +125,8 @@ CONFIG_ATH79_MACH_NBG460N=y
+ CONFIG_ATH79_MACH_LININO_YUN=y
+ CONFIG_ATH79_MACH_LININO_ONE=y
+ CONFIG_ATH79_MACH_LININO_FREEDOG=y
++CONFIG_ATH79_MACH_LININO_CHOWCHOW=y
++CONFIG_ATH79_MACH_LININO_CHIWAWA=y
+ CONFIG_SOC_AR71XX=y
+ CONFIG_SOC_AR724X=y
+ CONFIG_SOC_AR913X=y
+-- 
+1.7.9.5
+

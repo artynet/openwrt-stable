@@ -10,3 +10,4 @@
 
 MIPS_MACHINE(ATH79_MACH_LININO_YUN, "linino-yun", "Arduino Yun", ds_setup);
 MIPS_MACHINE(ATH79_MACH_LININO_ONE, "linino-one", "Linino One", ds_setup);
+MIPS_MACHINE(ATH79_MACH_LININO_YUN_MINI, "linino-yun-mini", "Arduino Yun-Mini", ds_setup);

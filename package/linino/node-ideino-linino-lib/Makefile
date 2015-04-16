@@ -17,7 +17,6 @@ PKG_SOURCE_URL:=https://github.com/ideino/ideino-linino-lib/archive/
 PKG_MD5SUM:=e7998141feba0659dcacca97fc0fe009
 
 # PKG_INSTALL:=1
-
 PKG_BUILD_DEPENDS:=node
 PKG_NODE_VERSION:=0.10.25
 

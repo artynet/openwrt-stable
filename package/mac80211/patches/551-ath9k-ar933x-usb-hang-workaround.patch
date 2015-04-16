@@ -11,10 +11,10 @@
 +	 * might be changed while doing wlan reset so the registers must
 +	 * be reprogrammed after each reset.
 +	 */
-+	REG_CLR_BIT(ah, AR_PHY_USB_CTRL1, BIT(20));
-+	REG_RMW(ah, AR_PHY_USB_CTRL2,
-+		(1 << 21) | (0xf << 22),
-+		(1 << 21) | (0x3 << 22));
++		volatile u_int32_t *usb_ctrl_r1 = (u_int32_t *) 0xb8116c84; // AR_PHY_USB_CTRL1
++		volatile u_int32_t *usb_ctrl_r2 = (u_int32_t *) 0xb8116c88; // AR_PHY_USB_CTRL2
++		*usb_ctrl_r1 = (*usb_ctrl_r1 & 0xffefffff);
++		*usb_ctrl_r2 = (*usb_ctrl_r2 & 0xfc1fffff) | (1 << 21) | (3 << 22);
 +}
 +
  /******************/

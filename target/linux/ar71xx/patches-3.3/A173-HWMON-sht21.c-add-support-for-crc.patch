@@ -1,0 +1,70 @@
+From fbed3492d2485950d278e8c384d25efd4bab64bd Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 4 Nov 2014 18:00:46 +0100
+Subject: [PATCH 173/188] HWMON, sht21.c: add support for crc
+
+---
+ drivers/hwmon/sht21.c |   23 ++++++++++++++++++++---
+ 1 file changed, 20 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/hwmon/sht21.c b/drivers/hwmon/sht21.c
+index e988f42..45b1c21 100644
+--- a/drivers/hwmon/sht21.c
++++ b/drivers/hwmon/sht21.c
+@@ -29,6 +29,7 @@
+ #include <linux/err.h>
+ #include <linux/mutex.h>
+ #include <linux/device.h>
++#include <linux/crc8.h>
+ 
+ #define SHT21_MODE_HOLD_MASTER	  1
+ #define SHT21_MODE_NO_HOLD_MASTER 2
+@@ -61,6 +62,8 @@ struct sht21 {
+ 	int (*update_measurements)(struct i2c_client *);
+ };
+ 
++uint8_t crc_table[CRC8_TABLE_SIZE];
++
+ /**
+  * sht21_temp_ticks_to_millicelsius() - convert raw temperature ticks to
+  * milli celsius
+@@ -110,12 +113,25 @@ static int sht21_update_measurements_hold(struct i2c_client *client)
+ 	 * maximum two measurements per second at 12bit accuracy shall be made.
+ 	 */
+ 	if (time_after(jiffies, sht21->last_update + HZ / 2) || !sht21->valid) {
+-		ret = i2c_smbus_read_word_data(client,
+-					       SHT21_TRIG_T_MEASUREMENT_HM);
++		u8 data[3];
++		u16 raw;
++
++
++		ret = i2c_smbus_read_i2c_block_data(client,
++						    SHT21_TRIG_T_MEASUREMENT_HM,
++						    3, data);
+ 		if (ret < 0)
+ 			goto out;
++
++		if (crc8(crc_table, data, 2, 0) != data[2]) {
++			dev_err(&client->dev, "WRONG CRC8\n");
++			goto out;
++		}
++
++		raw = (data[0] << 8) | data[1];
++
+ 		sht21->temperature =
+-			sht21_temp_ticks_to_millicelsius(be16_to_cpu(ret));
++			sht21_temp_ticks_to_millicelsius(raw);
+ 		ret = i2c_smbus_read_word_data(client,
+ 					       SHT21_TRIG_RH_MEASUREMENT_HM);
+ 		if (ret < 0)
+@@ -342,6 +358,7 @@ static int __devinit sht21_probe(struct i2c_client *client,
+ 		WARN_ON(1);
+ 		break;
+ 	}
++	crc8_populate_msb(crc_table, 0x31);
+ 
+ 	dev_info(&client->dev, "initialized\n");
+ 
+-- 
+1.7.9.5
+

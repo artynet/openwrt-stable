@@ -1,0 +1,26 @@
+From acf6fca3c950ac824d5def85372ec4f5eeb8ede0 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 16 Feb 2015 12:05:29 +0100
+Subject: [PATCH 189/190] CONFIG: yun_linino_defconfig, compile BME280 driver
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index 5c483d7..ceef2cc 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -1649,6 +1649,8 @@ CONFIG_INPUT_CM109=m
+ CONFIG_INPUT_GPIO_ROTARY_ENCODER=m
+ # CONFIG_INPUT_ADXL34X is not set
+ # CONFIG_INPUT_CMA3000 is not set
++CONFIG_BME280=y
++CONFIG_BME280_I2C=y
+ 
+ #
+ # Hardware I/O ports
+-- 
+1.7.9.5
+
