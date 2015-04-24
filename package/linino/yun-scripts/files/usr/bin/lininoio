@@ -19,6 +19,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+# v5.24 : commenting out initial sed of io args
+#
+# v5.23 : mcuio enable/disable is now redirected to /dev/null
+#
+# v5.22 : introducing detect-console script in boot options
+#
 # v5.21 : fixing uboot environment arguments
 #
 # v5.19 : adding support for Yun Mini board
@@ -383,9 +389,11 @@ then
 
 							iosettings_start
 
-							sed -i "s/ttyATH0\:\:askfirst/ttySPI0\:\:respawn/g" /etc/inittab
+							# sed -i "s/ttyATH0\:\:askfirst/ttySPI0\:\:respawn/g" /etc/inittab
 							run-avrdude /etc/linino/bathos-$boardname.hex
-							/etc/init.d/mcuio enable
+							/etc/init.d/mcuio enable &>/dev/null
+							# Check if spi-tty module is enabled
+							/usr/bin/detect-console
 
 							# echo "Rebooting..."
 							# reboot && exit
@@ -447,9 +455,11 @@ then
 
 							iosettings_stop
 
-							sed -i "s/ttySPI0\:\:respawn/ttyATH0\:\:askfirst/g" /etc/inittab
-							/etc/init.d/mcuio disable
+							# sed -i "s/ttySPI0\:\:respawn/ttyATH0\:\:askfirst/g" /etc/inittab
+							/etc/init.d/mcuio disable &>/dev/null
 							run-avrdude /etc/linino/$FILE
+							# Check if spi-tty module is enabled
+							/usr/bin/detect-console
 
 							# echo "Rebooting..."
 							# reboot && exit

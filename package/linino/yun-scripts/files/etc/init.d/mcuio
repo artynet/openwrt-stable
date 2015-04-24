@@ -10,7 +10,7 @@ baudcmd="\xaa"
 
 start() {
 	# Remove spi-tty-ds if loaded
-	/sbin/lsmod | grep spi_tty && /sbin/rmmod spi_tty_ds
+	# /sbin/lsmod | grep spi_tty && /sbin/rmmod spi_tty_ds
 	# Reset mcu
 	mcu-reset
 	sleep 2
