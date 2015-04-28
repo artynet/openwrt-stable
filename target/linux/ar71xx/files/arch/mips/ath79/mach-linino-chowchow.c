@@ -202,19 +202,21 @@ static void __init chowchow_setup(void)
 	pr_info("mach-linino: enabling USB Controller");
 	ath79_register_usb();
 
-	ath79_init_mac(mac, art + DS_WMAC_MAC_OFFSET, -1);
+	ath79_init_mac(mac, art + DS_WMAC_MAC_OFFSET, 0);
+	mac[3] |= 0x08;
 	ath79_register_wmac(art + DS_CALDATA_OFFSET, mac);
-
-	ath79_init_mac(mac, art + DS_WMAC_MAC_OFFSET, -2);
+	pr_info("%s-%d: wlan0 MAC:%02x:%02x:%02x:%02x:%02x:%02x\n", __FUNCTION__, __LINE__, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	
+	mac[3] &= 0xF7;
+	pr_info("%s-%d: eth0  MAC:%02x:%02x:%02x:%02x:%02x:%02x\n", __FUNCTION__, __LINE__, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	ap91_pci_init(art + DS_PCIE_CALDATA_OFFSET, mac);
+	ath79_init_mac(ath79_eth0_data.mac_addr, mac, 0);
 
 	ath79_setup_ar934x_eth_cfg(AR934X_ETH_CFG_RGMII_GMAC0 |
 				   AR934X_ETH_CFG_SW_ONLY_MODE);
 
 	ath79_register_mdio(1, 0x0);
 	ath79_register_mdio(0, 0x0);
-
-	ath79_init_mac(ath79_eth0_data.mac_addr, art + DS_WMAC_MAC_OFFSET, -2);
 
 	mdiobus_register_board_info(db120_mdio0_info,
 				    ARRAY_SIZE(db120_mdio0_info));
