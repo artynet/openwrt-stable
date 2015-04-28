@@ -1,5 +1,5 @@
 #
-# detect-console.sh : A simple console enabler/disabler script
+# detect-console.sh : A simple LininoIO enabler/disabler script
 #
 # Copyright (C) 2014 Dog Hunter AG
 #
@@ -18,6 +18,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# v0.14 : fixing consoleboot variable for old u-boot
 #
 # v0.13 : mcuio disable is now redirected to /dev/null ; fixing messages strings
 #
@@ -77,11 +79,13 @@ fw_printenv console &>/dev/null
 if [ $? -ne 0 ]
 then
 
-    consoleboot=$(fw_printenv bootargs | sed s/,.*//g | sed s/^.*console=//g)
+    # fixed for old u-boot versions
+    consoleboot=$(fw_printenv bootargs | sed s/,.*//g | sed s/board.*//g | sed s/^.*console=//g | sed s/\ //g)
 
 else
 
-    consoleboot=$(fw_printenv console | sed s/,.*//g | sed s/^.*console=//g)
+    # fixed for old u-boot versions
+    consoleboot=$(fw_printenv console | sed s/,.*//g | sed s/board.*//g | sed s/^.*console=//g | sed s/\ //g)
 
 fi
 
