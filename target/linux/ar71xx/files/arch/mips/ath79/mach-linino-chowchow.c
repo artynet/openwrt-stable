@@ -34,7 +34,7 @@
 #include "linux/gpio.h"
 #include <linux/spi/spi_gpio.h>
 
-#define CHOWCHOW_GPIO_MCU_RESET	0
+#define CHOWCHOW_GPIO_MCU_RESET	17
 #define CHOWCHOW_GPIO_LED0		12
 #define CHOWCHOW_GPIO_LED1		11
 
@@ -43,7 +43,7 @@
 #define CHOWCHOW_GPIO_UART1_RX	13
 #define CHOWCHOW_GPIO_UART1_TX	14
 #define CHOWCHOW_GPIO_OE2		15
-#define CHOWCHOW_GPIO_CONF_BTN	17
+#define CHOWCHOW_GPIO_CONF_BTN	0
 #define CHOWCHOW_GPIO_UART_POL	GPIOF_OUT_INIT_LOW
 
 #define	CHOWCHOW_GPIO_SPI_SCK	4
