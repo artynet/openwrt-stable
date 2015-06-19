@@ -8,12 +8,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=openocd
-PKG_VERSION:=0.9.0
-PKG_RELEASE:=3
+PKG_VERSION:=v0.9.0
+PKG_RELEASE:=2
 
-PKG_SOURCE_URL:=@SF/openocd
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_MD5SUM:=665cc98ae9e7297e09ec6ac7235fee49
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=git://git.code.sf.net/p/openocd/code
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+PKG_SOURCE_VERSION:=$(PKG_VERSION)
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.gz
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=COPYING
 
@@ -54,6 +56,7 @@ endef
 CONFIGURE_ARGS += \
 	--prefix="/usr" \
 	--disable-werror \
+	MAKEINFO=true \
 	--enable-dummy \
 	--enable-sysfsgpio \
 	--enable-usb_blaster_libftdi \
@@ -68,8 +71,12 @@ endef
 define Package/openocd/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_DIR) $(1)/usr/share/openocd
+	$(INSTALL_DIR) $(1)/usr/share/openocd/scripts/board
+
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/openocd $(1)/usr/bin/
 	$(CP) $(PKG_INSTALL_DIR)/usr/share/openocd/scripts $(1)/usr/share/openocd
+	$(CP) ./files/freedog_kl25.cfg $(1)/usr/share/openocd/scripts/board
+	$(CP) ./files/ghostdog_samd21.cfg $(1)/usr/share/openocd/scripts/board
 endef
 
 $(eval $(call BuildPackage,openocd))
