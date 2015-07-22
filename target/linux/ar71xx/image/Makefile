@@ -815,12 +815,12 @@ $(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_YUN,linino-yun,linino-yu
 $(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_ONE,linino-one,linino-one,ttySPI0,250000,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
 $(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_FREEDOG,linino-freedog,linino-freedog,ttySPI0,250000,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
 $(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_CHIWAWA,linino-chiwawa,linino-chiwawa,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
-$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_CHOWCHOW,linino-chowchow,linino-chowchow,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
+$(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_LEI,linino-lei,linino-lei,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
 $(eval $(call SingleProfile,LininoLzma,$(fs_64k),LININO_YUN_MINI,linino-yun-mini,linino-yun-mini,ttyATH0,115200,$$(linino_mtdlayout_16M),1310720,15007744,RKuImage))
 
 # LININO_SINGLE_PROFILES is the list of all available Linino's profiles
-LININO_SINGLE_PROFILES:=LININO_YUN LININO_ONE LININO_FREEDOG LININO_CHIWAWA LININO_CHOWCHOW LININO_YUN_MINI
-LININO_YUNONECHOW_PROFILES:=LININO_YUN LININO_ONE LININO_CHOWCHOW LININO_YUN_MINI
+LININO_SINGLE_PROFILES:=LININO_YUN LININO_ONE LININO_FREEDOG LININO_CHIWAWA LININO_LEI LININO_YUN_MINI
+LININO_YUNONELEI_PROFILES:=LININO_YUN LININO_ONE LININO_LEI LININO_YUN_MINI
 LININO_YUNONE_PROFILES:=LININO_YUN LININO_ONE LININO_YUN_MINI
 
 $(eval $(call SingleProfile,ALFA,$(fs_64k),ALFANX,alfa-nx,ALFA-NX,ttyS0,115200,$$(alfa_mtdlayout_8M),1638400,6291456,vmlinux.gz.uImage,pb9x-2.6.31-jffs2))
@@ -969,7 +969,7 @@ $(eval $(call SingleProfile,ZyXEL,$(fs_64k),NBG_460N_550N_550NH,nbg460n_550n_550
 #                          the SingleProfile names space separated.
 
 $(eval $(call MultiProfile,LININO_ALL_PROFILE, $(LININO_SINGLE_PROFILES)))
-$(eval $(call MultiProfile,LININO_YUNONECHOW_PROFILE, $(LININO_YUNONECHOW_PROFILES)))
+$(eval $(call MultiProfile,LININO_YUNONELEI_PROFILE, $(LININO_YUNONELEI_PROFILES)))
 $(eval $(call MultiProfile,LININO_YUNONE_PROFILE, $(LININO_YUNONE_PROFILES)))
 
 $(eval $(call MultiProfile,AP121,AP121_2M AP121_4M))

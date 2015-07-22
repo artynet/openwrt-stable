@@ -1,16 +1,19 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl-alljoynjs
-# PKG_REVISION:=24c5578fc142d67c92aa9e463e357b5eca11eac7
-PKG_VERSION:=14.12.0
+PKG_VERSION:=15.04.x
 PKG_RELEASE:=1
 
+# PKG_REVISION:=992638d3cddff3ec4783c25e946833063b94bffd
 # PKG_SOURCE_PROTO:=git
 
 PKG_SOURCE:=alljoyn-js-master.tar.gz
-PKG_SOURCE_URL:=https://git.allseenalliance.org/cgit/core/alljoyn-js.git/snapshot/
-PKG_SOURCE_VERSION:=$(PKG_REVISION)
+PKG_SOURCE_URL:=https://git.allseenalliance.org/cgit/core/alljoyn-js.git/snapshot
+
+# PKG_SOURCE_VERSION:=$(PKG_REVISION)
+# PKG_SOURCE_URL:=https://git.allseenalliance.org/gerrit/core/alljoyn-js.git
 # PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+
 PKG_BUILD_DIR:=$(BUILD_DIR)/alljoyn-js-master
 
 # SCons supports parallel builds but does not support make's jobserver
@@ -34,7 +37,7 @@ endef
 define Package/$(PKG_NAME)/description
 	AllJoyn Thin Client AllJoynJS binding is a basic, low-level JavaScript
 	interpreter that uses the Duktape embeddable JavaScript engine for developing
-	ad hoc peer-to-peer applications that use the AllJoyn protocol. Revision : a0271ab48c9f59d42553092ba3589e7dd0272e45
+	ad hoc peer-to-peer applications that use the AllJoyn protocol. MASTER Revision
 endef
 
 define Package/$(PKG_NAME)-samples
@@ -57,6 +60,11 @@ endif
 define Build/Configure/Default
 	# Override default to do nothing
 endef
+
+TARGET_CFLAGS += \
+	-Wno-error \
+	-Wno-unused-function \
+	-Wno-implicit-function-declaration
 
 define Build/Compile
 	CROSS_CFLAGS="-I$(STAGING_DIR)/usr/src/duktape/src -I$(STAGING_DIR)/usr/include/ajtcl $(TARGET_CFLAGS) $(EXTRA_CFLAGS) $(TARGET_CPPFLAGS)" \

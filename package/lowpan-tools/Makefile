@@ -8,14 +8,17 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=lowpan-tools
-PKG_VERSION:=0.3.x
+PKG_VERSION:=0.3.1
 PKG_RELEASE=$(PKG_SOURCE_VERSION)
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_URL:=git://linux-zigbee.git.sourceforge.net/gitroot/linux-zigbee/linux-zigbee
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=38f42dbfce9e13629263db3bd3b81f14c69bb733
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:=@SF/linux-zigbee
+PKG_MD5SUM:=a57b6a8ed18b80f57c5d3974391f2bc4
+
+# PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+# PKG_SOURCE_URL:=git://linux-zigbee.git.sourceforge.net/gitroot/linux-zigbee/linux-zigbee
+# PKG_SOURCE_PROTO:=git
+# PKG_SOURCE_VERSION:=38f42dbfce9e13629263db3bd3b81f14c69bb733
 
 PKG_FIXUP:=autoreconf
 

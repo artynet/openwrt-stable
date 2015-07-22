@@ -16,16 +16,16 @@ endef
 
 $(eval $(call Profile,LININO_ALL_PROFILE))
 
-define Profile/LININO_YUNONECHOW_PROFILE
-	NAME:=Linino YunOneChow
+define Profile/LININO_YUNONELEI_PROFILE
+	NAME:=Linino YunOneLei
 	PACKAGES:=kmod-usb-core kmod-usb2
 endef
 
-define Profile/LININO_YUNONECHOW_PROFILE/Description
+define Profile/LININO_YUNONELEI_PROFILE/Description
 	Select this in order to build an image for Yun, One and ChowChow
 endef
 
-$(eval $(call Profile,LININO_YUNONECHOW_PROFILE))
+$(eval $(call Profile,LININO_YUNONELEI_PROFILE))
 
 define Profile/LININO_YUNONE_PROFILE
 	NAME:=Linino YunOne
@@ -74,17 +74,17 @@ endef
 
 $(eval $(call Profile,LININO_FREEDOG))
 
-define Profile/LININO_CHOWCHOW
-	NAME:=Linino Chowchow
+define Profile/LININO_LEI
+	NAME:=Linino Lei
 	PACKAGES:=kmod-usb-core kmod-usb2 luci-webpanel-linino
 endef
 
-define Profile/LININO_CHOWCHOW/Description
+define Profile/LININO_LEI/Description
 	Package set optimized for the Linino Chowchow based on
 	Atheros AR9331.
 endef
 
-$(eval $(call Profile,LININO_CHOWCHOW))
+$(eval $(call Profile,LININO_LEI))
 
 define Profile/LININO_CHIWAWA
         NAME:=Linino Chiwawa
