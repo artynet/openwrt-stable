@@ -8,7 +8,7 @@ start() {
 	boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
 
 	case $boardname in
-		'chowchow')
+		'lei')
 			ID=1
 			;;
 			*)
