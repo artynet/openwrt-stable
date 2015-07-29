@@ -54,8 +54,8 @@ define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/src
 	$(INSTALL_DIR) $(1)/usr/src/duktape
 	$(INSTALL_DIR) $(1)/usr/src/duktape/src
-	$(CP) $(PKG_BUILD_DIR)/src/duktape.c $(1)/usr/src/duktape/src
-	$(CP) $(PKG_BUILD_DIR)/src/duktape.h $(1)/usr/src/duktape/src
+	$(CP) $(PKG_BUILD_DIR)/src/*.c $(1)/usr/src/duktape/src
+	$(CP) $(PKG_BUILD_DIR)/src/*.h $(1)/usr/src/duktape/src
 endef
 
 define Package/duktape/install
