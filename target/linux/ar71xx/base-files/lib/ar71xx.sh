@@ -444,20 +444,23 @@ ar71xx_board_detect() {
 	*EmbWir-Dorin-Router)
 		name="ew-dorin-router"
 		;;
-        *"Linino Chiwawa")
-                name="linino-chiwawa"
-                ;;
+	*"Linino Chiwawa")
+		name="linino-chiwawa"
+		;;
 	*"Linino Freedog")
 		name="linino-freedog"
 		;;
 	*"Linino One")
 		name="linino-one"
 		;;
-        *"Linino ChowChow")
-                name="linino-chowchow"
-                ;;
-        *"Arduino Yun-Mini")
-                name="linino-yun-mini"
+	*"Linino ChowChow")
+		name="linino-chowchow"
+		;;
+	*"Linino Lei")
+		name="linino-lei"
+		;;
+	*"Arduino Yun-Mini")
+		name="linino-yun-mini"
 		;;
 	*"Arduino Yun")
 		name="linino-yun"
