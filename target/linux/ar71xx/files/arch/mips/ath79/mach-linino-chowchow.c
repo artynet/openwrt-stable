@@ -152,7 +152,7 @@ static void ds_register_spi(void) {
 	pr_info("mach-linino: enabling GPIO SPI Controller");
 
 	/* Enable level shifter on SPI signals */
-	gpio_set_value(CHOWCHOW_GPIO_OE2, 1);
+	gpio_set_value(CHOWCHOW_GPIO_OE2, 0);
 	/* Register SPI devices */
 	spi_register_board_info(linino_spi_info, ARRAY_SIZE(linino_spi_info));
 	/* Register GPIO SPI controller */
