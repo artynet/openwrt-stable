@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl-services
-PKG_VERSION:=15.04x-rc2
+PKG_VERSION:=15.04
 PKG_RELEASE:=1
 PKG_MD5SUM:=
 

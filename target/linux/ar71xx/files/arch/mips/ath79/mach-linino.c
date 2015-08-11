@@ -69,6 +69,16 @@ static struct gpio_led ds_leds_gpio[] __initdata = {
 		.active_low = 0,
 		.default_trigger = "netdev"
 	},
+	{
+		.name = "wlan",
+		.gpio = DS_GPIO_LED0,
+		.active_low = 0,
+	},
+	{
+		.name = "rgb:green",
+		.gpio = DS_GPIO_LED1,
+		.active_low = 0,
+    },
 #endif
 };
 

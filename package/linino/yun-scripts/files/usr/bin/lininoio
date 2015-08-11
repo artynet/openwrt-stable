@@ -293,8 +293,8 @@ then
 			'one')
 					FILE="LininoOneSerialTerminal.hex"
 				;;
-			'chowchow')
-					FILE="ChowChowSerialTerminal.hex"
+			'lei')
+					FILE="LeiSerialTerminal.hex"
 				;;
 
 			*)

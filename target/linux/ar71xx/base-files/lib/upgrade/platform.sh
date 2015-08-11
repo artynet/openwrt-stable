@@ -98,6 +98,7 @@ platform_check_image() {
 	linino-yun-mini | \
 	linino-chiwawa | \
 	linino-chowchow | \
+	linino-lei | \
 	linino-one | \
 	linino-freedog | \
 	linino-yun)

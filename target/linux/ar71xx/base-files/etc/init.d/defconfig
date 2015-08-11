@@ -8,6 +8,8 @@ START=05
 start() {
 	. /lib/ar71xx.sh
 
+	ar71xx_board_detect	
+
 	local board=$(ar71xx_board_name)
 
 	[ ! -d /etc/defconfig/$board ] && return 0
