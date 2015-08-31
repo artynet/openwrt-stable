@@ -1,11 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl-alljoynjs
-PKG_VERSION:=15.04.x
+PKG_VERSION:=150529
 PKG_RELEASE:=1
 
-# PKG_REVISION:=992638d3cddff3ec4783c25e946833063b94bffd
-PKG_REVISION:=278a95181254f65fd9191a2d6c3d5fc3ed6dc8d2
+# PKG_REVISION:=0ec4242d726df6f09f780a1448ad5ee424b790a4
+PKG_REVISION:=e6524e1f3004bf2bb7cdb58f647f88c505e8d1fc
+
 # PKG_SOURCE_PROTO:=git
 
 PKG_SOURCE:=alljoyn-js-$(PKG_REVISION).tar.gz
@@ -63,6 +64,7 @@ define Build/Configure/Default
 endef
 
 define Build/Compile
+	YUN_BUILD=1 \
 	CROSS_CFLAGS="-I$(STAGING_DIR)/usr/src/duktape/src -I$(STAGING_DIR)/usr/include/ajtcl $(TARGET_CFLAGS) $(EXTRA_CFLAGS) $(TARGET_CPPFLAGS)" \
 	CROSS_LINKFLAGS="$(TARGET_LINKFLAGS) $(TARGET_LDFLAGS) -lajtcl_services" \
 	CROSS_PATH=$(TARGET_PATH) \

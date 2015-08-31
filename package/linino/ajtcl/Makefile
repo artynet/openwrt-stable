@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl
-PKG_VERSION:=15.04a
+PKG_VERSION:=15.04b
 PKG_RELEASE:=1
 PKG_MD5SUM:=
 
@@ -12,7 +12,7 @@ PKG_MD5SUM:=
 # PKG_SOURCE_VERSION:=$(PKG_REVISION)
 # PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 
-# PKG_BUILD_DIR:=$(BUILD_DIR)/ajtcl-master
+PKG_BUILD_DIR:=$(BUILD_DIR)/ajtcl-$(PKG_VERSION)
 PKG_SOURCE:=ajtcl-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://git.allseenalliance.org/cgit/core/ajtcl.git/snapshot/
 
