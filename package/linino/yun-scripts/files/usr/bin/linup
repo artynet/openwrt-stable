@@ -67,7 +67,7 @@ checkarguments () {
     then
 
         echo ""
-        echo "USAGE : provisioning.sh <revision> ( latest or YYYYMMDD.x where x=0,1,2...n ) <branch> ( optional : lininoIO or master ) "
+        echo "USAGE : linup <revision> ( latest or YYYYMMDD.x where x=0,1,2...n ) <branch> ( optional : lininoIO or master ) "
         echo ""
         exit 0
 
