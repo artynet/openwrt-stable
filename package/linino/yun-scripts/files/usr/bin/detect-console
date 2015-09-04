@@ -94,7 +94,6 @@ then
     consoleboot="ttySPI0"
 	ins_spittyplain
 else
-	/etc/init.d/mcuio stop &>/dev/null
 	/etc/init.d/mcuio disable &>/dev/null
 	rm_spittyplain
 fi
