@@ -456,6 +456,7 @@ then
 							iosettings_stop
 
 							# sed -i "s/ttySPI0\:\:respawn/ttyATH0\:\:askfirst/g" /etc/inittab
+							/etc/init.d/mcuio stop &>/dev/null
 							/etc/init.d/mcuio disable &>/dev/null
 							run-avrdude /etc/linino/$FILE
 							# Check if spi-tty module is enabled
