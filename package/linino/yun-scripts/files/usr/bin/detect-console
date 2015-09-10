@@ -41,6 +41,8 @@ change_console () {
                     echo "Need to change console settings to ttyATH0" > /dev/kmsg
                     ;;
         esac
+	# refreshing /etc/inittab
+	init -q &
     else
         echo "No need to change console settings" > /dev/kmsg
         exit 0
