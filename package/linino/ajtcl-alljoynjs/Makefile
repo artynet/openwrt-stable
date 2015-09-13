@@ -1,24 +1,24 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ajtcl-alljoynjs
-PKG_VERSION:=150831
-PKG_RELEASE:=3
+PKG_VERSION:=15.04
+PKG_RELEASE:=1
 
-# PKG_REVISION:=0ec4242d726df6f09f780a1448ad5ee424b790a4
-# PKG_REVISION:=ab5afcfded9d723714528075e5895eed9ffd1983 # (17 Jun)
-PKG_REVISION:=1303a77588209808d682faf7fb5ff14bf8088a40
+# PKG_REVISION:=ab5afcfded9d723714528075e5895eed9ffd1983 # (17 Jun 2015)
+# PKG_REVISION:=1303a77588209808d682faf7fb5ff14bf8088a40 # (31 Aug 2015)
 
 # PKG_SOURCE_PROTO:=git
 
-PKG_SOURCE:=alljoyn-js-$(PKG_REVISION).tar.gz
+PKG_SOURCE:=alljoyn-js-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://git.allseenalliance.org/cgit/core/alljoyn-js.git/snapshot/
-PKG_MD5SUM:=03c1310af8e93d438ba8e080e6c1c449
+
+PKG_MD5SUM:=276767da532bf845ca014c7a5d8f7885
 
 # PKG_SOURCE_VERSION:=$(PKG_REVISION)
 # PKG_SOURCE_URL:=https://git.allseenalliance.org/gerrit/core/alljoyn-js.git
 # PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/alljoyn-js-$(PKG_REVISION)
+PKG_BUILD_DIR:=$(BUILD_DIR)/alljoyn-js-$(PKG_VERSION)
 
 # SCons supports parallel builds but does not support make's jobserver
 PKG_BUILD_PARALLEL:=$(if $(CONFIG_PKG_BUILD_USE_JOBSERVER),0,1)
