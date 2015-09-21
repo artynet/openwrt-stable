@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=python
 PKG_VERSION:=2.7.3
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 
 PKG_SOURCE:=Python-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=http://www.python.org/ftp/python/$(PKG_VERSION)
@@ -52,7 +52,7 @@ endef
 define Package/python
 $(call Package/python/Default)
   TITLE+= (full)
-  DEPENDS:=+libpthread +zlib +libffi +python-mini
+  DEPENDS:=+libpthread +zlib +libffi +libopenssl +python-mini
 endef
 
 define Package/python/description
@@ -64,7 +64,7 @@ endef
 define Package/python-mini
 $(call Package/python/Default)
   TITLE+= (minimal)
-  DEPENDS:=+libpthread +zlib
+  DEPENDS:=+libpthread +zlib +libopenssl
 endef
 
 define Package/python-mini/description
