@@ -9,8 +9,8 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ciao
 PKG_REVISION:=f68db8215c2217c2c965c444fce7dfb2f3f700f9
-PKG_VERSION:=1.0.0
-PKG_RELEASE:=5
+PKG_VERSION:=0.0.1
+PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
 
@@ -32,6 +32,18 @@ endef
 
 define Package/ciao/description
  The new Ciao Bridge lets linux and arduino communicate
+endef
+
+define Download/sleekxmpp
+	URL:=http://download.linino.org/sources
+	FILE:=sleekxmpp.tar.gz
+	MD5SUM:=9a49f33ce532f92c58e569342b951e65
+endef
+
+define Build/Prepare
+	$(call Build/Prepare/Default)
+	$(eval $(call Download,sleekxmpp))
+	$(TAR) -xvf $(DL_DIR)/sleekxmpp.tar.gz -C $(PKG_BUILD_DIR)
 endef
 
 define Build/Compile
@@ -57,7 +69,8 @@ define Package/ciao/install
 
 	# Installing "sleekxmpp" python module
 	$(INSTALL_DIR) $(1)/usr/lib/python2.7
-	$(CP) -R ./files/sleekxmpp $(1)/usr/lib/python2.7
+	$(CP) -R $(PKG_BUILD_DIR)/sleekxmpp $(1)/usr/lib/python2.7
+
 	# Installing ciaotools.py
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/ciaotools.py $(1)/usr/lib/python2.7
 endef
