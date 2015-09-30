@@ -5,9 +5,11 @@ boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
 case $boardname in
 	'lei')
 		GPIO=gpio15
+		OE_LEVEL=0
 		PROGRAMMER=linuxgpio-lei;;
 	*)
 		GPIO=gpio21
+		OE_LEVEL=1
 		PROGRAMMER=linuxgpio;;
 esac
 
@@ -35,7 +37,7 @@ fi
 echo spi_gpio.1 > /sys/bus/platform/drivers/spi_gpio/unbind 
 
 # program AVR
-echo 1 > $OE_PATH
+echo $OE_LEVEL > $OE_PATH
 
 # read efuse settings
 avrdude  -q -q -c $PROGRAMMER -C /etc/avrdude.conf -p m32u4 -U efuse:r:/tmp/efuse:d
