@@ -8,8 +8,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ciao
-PKG_REVISION:=f68db8215c2217c2c965c444fce7dfb2f3f700f9
-PKG_VERSION:=0.0.1
+PKG_REVISION:=47d7794cbcfd315c3481a09c8c8f64ac442b9c6e
+PKG_VERSION:=0.0.2
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
@@ -62,6 +62,9 @@ define Package/ciao/install
 
 	$(INSTALL_DIR) $(1)/usr/lib/python2.7/ciao/connectors/mqtt
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ciao/connectors/mqtt/* $(1)/usr/lib/python2.7/ciao/connectors/mqtt
+
+	$(INSTALL_DIR) $(1)/usr/lib/python2.7/ciao/connectors/phant
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ciao/connectors/phant/* $(1)/usr/lib/python2.7/ciao/connectors/phant
 
 	# Installing run-ciao script in /usr/bin
 	$(INSTALL_DIR) $(1)/usr/bin
