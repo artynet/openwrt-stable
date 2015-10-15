@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2014 Dog Hunter AG 
+# Copyright (C) 2014 Dog Hunter 2014
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -7,42 +7,37 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NPM_NAME:=ideino-linino-lib
+PKG_NPM_NAME:=autobahn
 PKG_NAME:=node-$(PKG_NPM_NAME)
-PKG_VERSION:=0.1.2
-PKG_RELEASE:=3
+PKG_VERSION:=0.9.7
+PKG_RELEASE:=1
 
-PKG_SOURCE_PROTO:=git
+PKG_SOURCE:=$(PKG_NPM_NAME)-$(PKG_VERSION).tgz
+PKG_SOURCE_URL:=http://registry.npmjs.org/$(PKG_NPM_NAME)/-/
+# PKG_MD5SUM:=60e0c8577596d3f925df48ed8c5e0dc4
 
-PKG_SOURCE_URL:=https://github.com/ideino/ideino-linino-lib.git
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_SOURCE_VERSION:=7f65c03d2dafe1d861fda6096c2ab7d031b7b31d
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-# PKG_SOURCE_URL:=https://github.com/ideino/ideino-linino-lib/archive/
-
-# PKG_INSTALL:=1
 PKG_BUILD_DEPENDS:=node
 PKG_NODE_VERSION:=0.10.25
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/$(PKG_NAME)
-  DEPENDS:=+node +libstdcpp
+define Package/node-autobahn
+  DEPENDS:=+node +libc +libstdcpp
   SUBMENU:=Node.js
   SECTION:=lang
   CATEGORY:=Languages
-  TITLE:=Linino library for Dog Hunter boards
-  URL:=https://github.com/ideino/ideino-linino-lib
+  TITLE:=An implementation of The Web Application Messaging Protocol (WAMP)
+  URL:=https://www.npmjs.org/package/autobahn
 endef
 
-define Package/$(PKG_NAME)/description
-	Linino library for Dog Hunter boards
+define Package/node-autobahn/description
+	An implementation of The Web Application Messaging Protocol (WAMP)
 endef
 
-# define Build/Prepare
-#	/bin/tar zxvf $(DL_DIR)/$(PKG_SOURCE) -C $(PKG_BUILD_DIR) --strip-components=1
-#	$(Build/Patch)
-# endef
+define Build/Prepare
+	/bin/tar xzf $(DL_DIR)/$(PKG_SOURCE) -C $(PKG_BUILD_DIR) --strip-components=1
+	$(Build/Patch)
+endef
 
 define Build/Compile
 	CC="$(TOOLCHAIN_DIR)/bin/mips-openwrt-linux-gcc" \
@@ -60,20 +55,21 @@ define Build/Compile
 	npm install --target_arch=mips -g $(PKG_BUILD_DIR)
 endef
 
-define Package/$(PKG_NAME)/install
-	$(INSTALL_DIR) $(1)/usr/lib
-	
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/node_modules $(1)/usr/lib
+define Package/node-autobahn/install
+	$(INSTALL_DIR) $(1)/usr/lib/
+
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/node_modules $(1)/usr/lib/
 endef
 
 define Package/$(PKG_NAME)/postrm
 #!/bin/sh
+# check if we are on a real system
 if `grep -qs '/opt' /proc/mounts`
 then
-	rm -rvf /opt/usr/lib/node_modules/$(PKG_NPM_NAME)
+    rm -rvf /opt/usr/lib/node_modules/$(PKG_NPM_NAME)
 else
-	rm -rvf /usr/lib/node_modules/$(PKG_NPM_NAME)
+    rm -rvf /usr/lib/node_modules/$(PKG_NPM_NAME)
 fi
 endef
 
-$(eval $(call BuildPackage,$(PKG_NAME)))
+$(eval $(call BuildPackage,node-autobahn))
