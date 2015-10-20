@@ -1,0 +1,11 @@
+--- a/src/watchdog/observers/inotify_c.py	2015-09-22 17:58:25.391429194 +0200
++++ b/src/watchdog/observers/inotify_c.py	2015-09-22 17:57:51.551901689 +0200
+@@ -43,7 +43,7 @@
+ 
+     # Fallbacks
+     try:
+-        return ctypes.CDLL('libc.so')
++        return ctypes.CDLL('libuClibc++.so.0')
+     except (OSError, IOError):
+         return ctypes.CDLL('libc.so.6')
+ 
