@@ -44,6 +44,19 @@ static struct gpio_led ds_leds_gpio[] __initdata = {
                 .gpio = DS_GPIO_RGB_LED_GREEN,
                 .active_low = 0,
         },
+#elif defined(LININO_CHIWAWA)
+
+	{
+		.name = "wan",
+		.gpio = DS_GPIO_LED6,
+		.active_low = 1,
+		.default_trigger = "netdev"
+	},
+	{
+		.name = "wlan",
+		.gpio = DS_GPIO_LED0,
+		.active_low = 0,
+	},
 #else
 	{
 		.name = "usb",
@@ -55,30 +68,6 @@ static struct gpio_led ds_leds_gpio[] __initdata = {
 		.gpio = DS_GPIO_LED_WLAN,
 		.active_low = 0,
 	},
-#endif
-#if defined(LININO_CHIWAWA)
-	{
-		.name = "ds:green:lan0",
-		.gpio = DS_GPIO_LED2,
-		.active_low = 0,
-		.default_trigger = "netdev"
-	},
-	{
-		.name = "ds:green:lan1",
-		.gpio = DS_GPIO_LED4,
-		.active_low = 0,
-		.default_trigger = "netdev"
-	},
-	{
-		.name = "wlan",
-		.gpio = DS_GPIO_LED0,
-		.active_low = 0,
-	},
-	{
-		.name = "rgb:green",
-		.gpio = DS_GPIO_LED1,
-		.active_low = 0,
-    },
 #endif
 };
 
@@ -280,7 +269,8 @@ static void __init ds_setup(void)
 	ath79_gpio_function_disable(AR933X_GPIO_FUNC_ETH_SWITCH_LED0_EN |
 	                            AR933X_GPIO_FUNC_ETH_SWITCH_LED1_EN |
 	                            AR933X_GPIO_FUNC_ETH_SWITCH_LED2_EN |
-	                            AR933X_GPIO_FUNC_ETH_SWITCH_LED3_EN);
+				    AR933X_GPIO_FUNC_ETH_SWITCH_LED3_EN |
+	                            AR933X_GPIO_FUNC_ETH_SWITCH_LED4_EN);
 
 	/*
 	 * Disable the Function for some pins to have GPIO functionality active

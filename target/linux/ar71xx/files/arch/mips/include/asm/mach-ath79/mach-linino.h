@@ -31,6 +31,7 @@
 #define DS_GPIO_LED3			14
 #define DS_GPIO_LED4			15
 #define DS_GPIO_LED5			16
+#define DS_GPIO_LED6			17
 
 #define DS_GPIO_RGB_LED_BLUE            DS_GPIO_LED0       
 #define DS_GPIO_RGB_LED_RED             DS_GPIO_LED1
