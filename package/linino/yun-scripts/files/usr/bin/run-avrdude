@@ -4,7 +4,7 @@ boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
 
 case $boardname in
 	'lei')
-		GPIO=gpio15
+		GPIO=gpio14
 		OE_LEVEL=0
 		PROGRAMMER=linuxgpio-lei;;
 	*)
