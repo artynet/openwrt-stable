@@ -1,0 +1,27 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008 OpenWrt.org
+
+START=99
+
+boot () {
+
+    [ ! -d /sys/class/gpio/gpiochip100 ] && echo "not exporting..." >> /dev/kmsg && exit0
+
+    VAR=`fw_printenv ext 2> /dev/null | sed s/^.*=//g`
+
+    if [ $VAR == "101" ]
+    then
+        echo "exporting for 101..." >> /dev/kmsg
+        # echo 23 > /sys/class/gpio/export
+        echo in > /sys/class/gpio/gpio23/direction
+        sleep 1
+        echo 122 > /sys/module/mcuio_dogoled_shield/parameters/ssd1307_rst
+        sleep 1
+        echo dogoled > /sys/devices/mcuio/shield_register
+        echo "exporting finished..." >> /dev/kmsg
+    else
+        echo "not exporting..." >> /dev/kmsg
+        exit 0
+    fi
+
+}

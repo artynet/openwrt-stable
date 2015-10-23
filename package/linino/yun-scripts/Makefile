@@ -8,7 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=yun-scripts
-PKG_VERSION:=1.1
+PKG_VERSION:=1.2
 PKG_RELEASE:=6
 
 include $(INCLUDE_DIR)/package.mk
@@ -71,6 +71,7 @@ define Package/yun-scripts/install
 	$(INSTALL_BIN) ./files/etc/init.d/avahifixboot $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/mcuio $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/console $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/etc/init.d/detect-101 $(1)/etc/init.d
 endef
 
 $(eval $(call BuildPackage,yun-scripts))

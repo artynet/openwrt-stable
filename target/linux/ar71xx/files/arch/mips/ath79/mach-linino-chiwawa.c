@@ -8,4 +8,4 @@
 
 #include "mach-linino.c"
 
-MIPS_MACHINE(ATH79_MACH_LININO_CHIWAWA, "linino-chiwawa", "Linino Chiwawa", ds_setup);
+MIPS_MACHINE(ATH79_MACH_LININO_CHIWAWA, "linino-chiwawa", "Arduino Chiwawa", ds_setup);

@@ -19,6 +19,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+# v5.28 : preliminary support for Arduino Tian
+#
+# v5.27 : faulty release (skipping)
+#
+# v5.26 : adding support for 'linino chiwawa'
+#
+# v5.25 : 'linino chowchow' is now 'linino lei'
+#
 # v5.24 : commenting out initial sed of io args
 #
 # v5.23 : mcuio enable/disable is now redirected to /dev/null
@@ -283,6 +291,9 @@ boardname=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
 if [ $boardname ]
 then
 
+	PROGRAMMER="/usr/bin/run-avrdude"
+	BATHOS=bathos-$boardname.hex
+
 	case $boardname in
 			'yun')
 					FILE="YunSerialTerminal.hex"
@@ -295,6 +306,14 @@ then
 				;;
 			'lei')
 					FILE="LeiSerialTerminal.hex"
+				;;
+			'chiwawa')
+					FILE="ChiwawaSerialTerminal.hex"
+				;;
+			'tian')
+					FILE="TianSerialTerminal.bin"
+					PROGRAMMER="/usr/bin/openocd"
+					BATHOS=bathos-$boardname.bin
 				;;
 
 			*)
@@ -357,7 +376,7 @@ then
 
 fi
 
-if [ -e /etc/linino/bathos-$boardname.hex ]
+if [ -e /etc/linino/$BATHOS ]
 then
 
 	case $1 in
@@ -390,7 +409,7 @@ then
 							iosettings_start
 
 							# sed -i "s/ttyATH0\:\:askfirst/ttySPI0\:\:respawn/g" /etc/inittab
-							run-avrdude /etc/linino/bathos-$boardname.hex
+							$PROGRAMMER /etc/linino/$BATHOS
 							/etc/init.d/mcuio enable &>/dev/null
 							# Check if spi-tty module is enabled
 							/usr/bin/detect-console
@@ -457,7 +476,7 @@ then
 
 							# sed -i "s/ttySPI0\:\:respawn/ttyATH0\:\:askfirst/g" /etc/inittab
 							/etc/init.d/mcuio disable &>/dev/null
-							run-avrdude /etc/linino/$FILE
+							$PROGRAMMER /etc/linino/$FILE
 							# Check if spi-tty module is enabled
 							/usr/bin/detect-console
 

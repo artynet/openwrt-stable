@@ -7,6 +7,14 @@
 
 FILE=/usr/bin/merge-sketch-with-bootloader.lua
 BOARD=`cat /proc/cpuinfo | grep machine | awk {'print $4'}`
-sed -i -e "s/Caterina-Yun.hex/Caterina-$BOARD.hex/g" $FILE
+
+case $BOARD in
+    'One'|'Lei'|'Chiwawa'|'Yun-Mini')
+        sed -i -e "s/Caterina-Yun.hex/Caterina-$BOARD.hex/g" $FILE
+        ;;
+	*)
+		exit 0
+		;;
+esac
 
 exit 0

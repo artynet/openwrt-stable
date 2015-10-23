@@ -444,7 +444,7 @@ ar71xx_board_detect() {
 	*EmbWir-Dorin-Router)
 		name="ew-dorin-router"
 		;;
-	*"Linino Chiwawa")
+	*"Arduino Chiwawa")
 		name="linino-chiwawa"
 		;;
 	*"Linino Freedog")
