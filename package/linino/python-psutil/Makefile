@@ -8,18 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=psutil
-PKG_VERSION:=3.1.1
+PKG_VERSION:=3.2.1
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://pypi.python.org/packages/source/p/psutil/
-#PKG_BUILD_DIR:=$(BUILD_DIR)/SleekXMPP-$(PKG_NAME)-$(PKG_VERSION)
 PKG_MD5SUM:=
-
-# PKG_BUILD_DEPENDS:=+python-expat +python-openssl +libopenssl
-
-# TARGET_LDFLAGS += -L${STAGING_DIR}/lib \
-		-L${STAGING_DIR}/usr/lib/python2.7
 
 include $(INCLUDE_DIR)/package.mk
 $(call include_mk, python-package.mk)
