@@ -1,0 +1,40 @@
+--- a/Makefile	2015-10-26 10:27:01.000000000 +0100
++++ b/Makefile	2015-10-26 10:27:44.000000000 +0100
+@@ -1,31 +1,3 @@
+-ifeq ($(LUA_VERSION),)
+-LUA_VERSION=5.2
+-endif
+-
+-ifeq ($(LUA_CPPFLAGS),)
+-LUA_CPPFLAGS=-I/usr/include/lua$(LUA_VERSION)
+-endif
+-
+-ifeq ($(LUA_LIBS),)
+-LUA_LIBS=-llua$(LUA_VERSION)
+-endif
+-
+-ifneq ($(DEBUG),)
+-EXTRA_CFLAGS+= -g -O0
+-endif
+-
+-UNAME := $(shell uname)
+-ifeq ($(UNAME), Darwin)
+-NO_UNDEFINED = -undefined,error
+-else
+-NO_UNDEFINED = --no-undefined
+-endif
+-
+-CFLAGS=-Wall -Werror -pedantic -std=c99 -fPIC -D_XOPEN_SOURCE=700 $(EXTRA_CFLAGS)
+-CPPFLAGS=$(LUA_CPPFLAGS)
+-LDFLAGS=-Wl,$(NO_UNDEFINED) $(LUA_LDFLAGS)
+-LIBS=$(LUA_LIBS) -lpam
+-
+ .PHONY: all
+ all: pam.so
+ 
+@@ -38,4 +10,4 @@
+ 
+ .SUFFIXES: .o .so
+ .o.so:
+-	$(CC) $(CFLAGS) $(LDFLAGS) -shared -o $@ $^ $(LIBS)
++	$(CC) $(CFLAGS) $(LDFLAGS) -shared -o $@ $^ -llua -lpam

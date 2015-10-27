@@ -1,0 +1,33 @@
+--- a/Makefile	2015-10-26 11:02:58.000000000 +0100
++++ b/Makefile	2015-10-26 11:03:13.000000000 +0100
+@@ -1,24 +1,3 @@
+-ifeq ($(LUA_VERSION),)
+-LUA_VERSION=5.2
+-endif
+-
+-ifeq ($(LUA_CPPFLAGS),)
+-LUA_CPPFLAGS=-I/usr/include/lua$(LUA_VERSION)
+-endif
+-
+-ifeq ($(LUA_LIBS),)
+-LUA_LIBS=-llua$(LUA_VERSION)
+-endif
+-
+-ifneq ($(DEBUG),)
+-EXTRA_CFLAGS+= -g -O0
+-endif
+-
+-CFLAGS=-Wall -Werror -pedantic -std=c99 -fPIC -D_XOPEN_SOURCE=700 $(EXTRA_CFLAGS)
+-CPPFLAGS=$(LUA_CPPFLAGS)
+-LDFLAGS=-Wl,--no-undefined $(LUA_LDFLAGS)
+-LIBS=$(LUA_LIBS)
+-
+ .PHONY: all
+ all: term.so
+ 
+@@ -30,4 +9,4 @@
+ 
+ .SUFFIXES: .o .so
+ .o.so:
+-	$(CC) $(CFLAGS) $(LDFLAGS) -shared -o $@ $^ $(LIBS)
++	$(CC) $(CFLAGS) $(LDFLAGS) -shared -o $@ $^ -llua
