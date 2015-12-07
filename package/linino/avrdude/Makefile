@@ -23,13 +23,14 @@ PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/nls.mk
 
 define Package/avrdude
   SECTION:=utils
   CATEGORY:=Utilities
   TITLE:=AVR Downloader/UploaDEr
   URL:=http://www.bsdhome.com/avrdude/
-  DEPENDS:=+libncurses +libreadline +libusb-compat +libc +libelf +libftdi1 $(CXX_DEPENDS)
+  DEPENDS:=+libncurses +libreadline +libusb-compat +libelf +libelf1 +libftdi1
 endef
 
 define Package/avrdude/description
