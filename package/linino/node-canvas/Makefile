@@ -9,12 +9,12 @@ include $(TOPDIR)/rules.mk
 
 PKG_NPM_NAME:=canvas
 PKG_NAME:=node-$(PKG_NPM_NAME)
-PKG_VERSION:=1.1.6
+PKG_VERSION:=1.3.12
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NPM_NAME)-$(PKG_VERSION).tgz
 PKG_SOURCE_URL:=http://registry.npmjs.org/$(PKG_NPM_NAME)/-/
-PKG_MD5SUM:=fa4034f98a2fbee4a48f0ff36b8c25dd
+PKG_MD5SUM:=390c610554e017f7f1c0f72582e3e298
 
 PKG_BUILD_DEPENDS:=node
 PKG_NODE_VERSION:=0.10.25
@@ -39,7 +39,8 @@ define Build/Prepare
 	$(Build/Patch)
 endef
 
-EXTRA_CXXFLAGS += -I$(STAGING_DIR)/usr/include/cairo/ 
+EXTRA_CXXFLAGS += -I$(STAGING_DIR)/usr/include/cairo/ -I$(STAGING_DIR)/usr/include/glib-2.0
+EXTRA_LDFLAGS += -lfreetype -lfontconfig -lcairo -lpng -lgif
 
 define Build/Compile
 	CC="$(TOOLCHAIN_DIR)/bin/mips-openwrt-linux-gcc" \
@@ -50,7 +51,7 @@ define Build/Compile
 	LD="$(TOOLCHAIN_DIR)/bin/mips-openwrt-linux-g++" \
 	PATH="/usr/bin/:$(PATH)" \
 	GYPFLAGS="-Dv8_use_mips_abi_hardfloat=false -Dv8_can_use_fpu_instructions=false" \
-	LDFLAGS="-L$(TOOLCHAIN_DIR)/lib/ -Wl,-rpath-link $(TOOLCHAIN_DIR)/lib/" \
+	LDFLAGS="-L$(TOOLCHAIN_DIR)/lib/ -Wl,-rpath-link $(TOOLCHAIN_DIR)/lib/ -L$(STAGING_DIR)/usr/lib $(EXTRA_LDFLAGS)" \
 	CFLAGS="$(TARGET_CFLAGS) $(EXTRA_CFLAGS) $(TARGET_CPPFLAGS) $(EXTRA_CPPFLAGS)" \
 	CXXFLAGS="$(TARGET_CXXFLAGS) $(EXTRA_CXXFLAGS) $(TARGET_CPPFLAGS) $(EXTRA_CPPFLAGS)" \
 	npm_config_arch=mips \
