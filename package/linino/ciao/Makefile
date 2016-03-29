@@ -8,9 +8,9 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ciao
-PKG_REVISION:=21b7161cbdc0a7dbb23b621f5087cfe168080219
+PKG_REVISION:=98b7a40072022ca068aca600a3a710d5b5071314
 PKG_VERSION:=0.0.4
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE_PROTO:=git
 
@@ -40,19 +40,10 @@ define Download/sleekxmpp
 	MD5SUM:=9a49f33ce532f92c58e569342b951e65
 endef
 
-define Download/webfiles
-	URL:=https://github.com/artynet/BraccioRemote/archive/
-	FILE:=BraccioRemote-v1.0.0.tar.gz
-	# MD5SUM:=6bc0d308bc6ba978e98e9d6aee12c889
-endef
-
 define Build/Prepare
 	$(call Build/Prepare/Default)
 	$(eval $(call Download,sleekxmpp))
 	$(TAR) -xvf $(DL_DIR)/sleekxmpp.tar.gz -C $(PKG_BUILD_DIR)
-	$(eval $(call Download,webfiles))
-	mkdir $(PKG_BUILD_DIR)/www
-	$(TAR) -xvf $(DL_DIR)/BraccioRemote-v1.0.0.tar.gz -C $(PKG_BUILD_DIR)/www --strip-components=1
 endef
 
 define Build/Compile
@@ -79,10 +70,6 @@ define Package/ciao/install
 
 	# Installing ciaotools.py
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/ciaotools.py $(1)/usr/lib/python2.7
-	
-	# Installing web pages
-	$(INSTALL_DIR) $(1)/www/braccio
-	$(CP) -r $(PKG_BUILD_DIR)/www/* $(1)/www/braccio
 endef
 
 define Package/ciao/postinst
@@ -93,13 +80,6 @@ then
 	sed -i '/kernel.printk/d' /etc/sysctl.conf
 	echo "kernel.printk = 3 4 1 3" >> /etc/sysctl.conf
 	/sbin/sysctl -p 2>&1 /dev/null
-fi
-
-FILE=$${IPKG_INSTROOT}/usr/lib/python2.7/ciao/conf/restserver.json.conf
-
-if [ -e $${FILE} ]
-then
-    sed -i -e '1,/false/s/false/true/' $${FILE}
 fi
 endef
 
