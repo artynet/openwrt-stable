@@ -10,12 +10,12 @@ include $(TOPDIR)/rules.mk
 
 PKG_NPM_NAME=muzzley-client
 PKG_NAME:=node-$(PKG_NPM_NAME)
-PKG_VERSION:=0.5.1
+PKG_VERSION:=0.5.4
 PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NPM_NAME)-$(PKG_VERSION).tgz
 PKG_SOURCE_URL:=http://registry.nodejitsu.com/$(PKG_NPM_NAME)/-/
-PKG_MD5SUM:=5ccd4dc0a91e83aaa4bcdd9ff3b8080d
+# PKG_MD5SUM:=5ccd4dc0a91e83aaa4bcdd9ff3b8080d
 
 PKG_BUILD_DEPENDS:=node
 PKG_NODE_VERSION:=0.10.25

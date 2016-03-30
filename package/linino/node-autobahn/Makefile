@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NPM_NAME:=autobahn
 PKG_NAME:=node-$(PKG_NPM_NAME)
-PKG_VERSION:=0.9.7
+PKG_VERSION:=0.9.9
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NPM_NAME)-$(PKG_VERSION).tgz

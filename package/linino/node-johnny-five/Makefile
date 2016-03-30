@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NPM_NAME:=johnny-five
 PKG_NAME:=node-$(PKG_NPM_NAME)
-PKG_VERSION:=0.8.103
+PKG_VERSION:=0.9.35
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NPM_NAME)-$(PKG_VERSION).tgz

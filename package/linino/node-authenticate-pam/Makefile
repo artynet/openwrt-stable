@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NPM_NAME:=authenticate-pam
 PKG_NAME:=node-$(PKG_NPM_NAME)
-PKG_VERSION:=0.2.2
+PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NPM_NAME)-$(PKG_VERSION).tgz
@@ -39,10 +39,6 @@ define Build/Prepare
 	$(Build/Patch)
 	(cd $(PKG_BUILD_DIR) && npm install --build-from-source --target_arch=mips nan@1.1.0)
 endef
-
-# mkdir -p $(PKG_BUILD_DIR)/node_modules
-# (cd $(PKG_BUILD_DIR) && npm install --build-from-source --target_arch=mips nan@1.1.0)
-# npm install --build-from-source --target_arch=mips --prefix $(PKG_BUILD_DIR)/node_modules
 
 EXTRA_CXXFLAGS += -I$(STAGING_DIR)/usr/include/security
 
