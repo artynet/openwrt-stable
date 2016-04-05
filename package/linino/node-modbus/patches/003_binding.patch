@@ -1,0 +1,17 @@
+--- a/binding.gyp	2014-01-07 08:39:09.000000000 +0100
++++ b/binding.gyp	2014-09-11 11:55:08.394637789 +0200
+@@ -9,10 +9,10 @@
+ 							'-Wall',
+ 						],
+ 						'ldflags': [
+-							'../libmodbus/src/.libs/modbus.o',
+-							'../libmodbus/src/.libs/modbus-data.o',
+-							'../libmodbus/src/.libs/modbus-rtu.o',
+-							'../libmodbus/src/.libs/modbus-tcp.o',
++							'../libmodbus/src/modbus.o',
++							'../libmodbus/src/modbus-data.o',
++							'../libmodbus/src/modbus-rtu.o',
++							'../libmodbus/src/modbus-tcp.o',
+ 						],
+ 						'include_dirs': [
+ 							'./libmodbus/src/',
