@@ -32,6 +32,16 @@ define Package/node
   URL:=http://nodejs.org/
 endef
 
+NODEJS:=node-$(PKG_VERSION)-linux-x86.tar.gz
+
+# Distribution URL doesn't always have the correct version
+# Using the OpenWrt/Linino mirror provides a stable version
+define Download/nodebin
+  URL:=https://nodejs.org/dist/$(PKG_VERSION)/
+  FILE:=$(NODEJS)
+  # MD5SUM:=8893f1f5ce16c612ba2805432edc0138
+endef
+
 define Package/node/description
 Node.js is a platform built on Chrome's JavaScript runtime for easily building fast, scalable network applications. Node.js uses an event-driven, non-blocking I/O model that makes it lightweight and efficient, perfect for data-intensive real-time applications that run across distributed devices.
 endef
@@ -45,6 +55,8 @@ define Build/Prepare
 	patch -p1 < node.patch; \
 	patch -p1 < libcrypto.patch; \
 	);
+	$(eval $(call Download,nodebin))
+	$(TAR) -xvf $(DL_DIR)/$(NODEJS) -C $(STAGING_DIR_HOST) --strip-components=1
 endef
 
 define Build/Configure

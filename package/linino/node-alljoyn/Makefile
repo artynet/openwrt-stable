@@ -52,7 +52,7 @@ define Build/Compile
 	npm_config_arch=mips \
 	npm_config_nodedir=$(BUILD_DIR)/node-v$(PKG_NODE_VERSION)/ \
 	PREFIX="$(PKG_INSTALL_DIR)/usr/" \
-	npm install --target_arch=mips -g $(PKG_BUILD_DIR)
+	$(STAGING_DIR_HOST)/bin/npm install --target_arch=mips -g $(PKG_BUILD_DIR)
 endef
 
 define Package/node-alljoyn/install
