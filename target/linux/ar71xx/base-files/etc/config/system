@@ -1,7 +1,7 @@
 # GENERAL PURPOSE
 
 config system
-	option hostname	linino
+	option hostname	arduino
 	option timezone	UTC
 
 config timeserver ntp
