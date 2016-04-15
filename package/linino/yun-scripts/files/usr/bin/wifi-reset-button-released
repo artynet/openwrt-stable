@@ -20,7 +20,6 @@ then
 	logger "resetting to factory"
 	sleep 2
 	reset-to-factory-anyway && reboot
-	rm /root/.osjs/settings.json
 	exit 0
 fi
  
