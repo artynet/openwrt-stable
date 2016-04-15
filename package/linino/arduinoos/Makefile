@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=arduinoos
-PKG_VERSION:=2.0.1
-PKG_REVISION:=166f90a
+PKG_VERSION:=2.0.2
+PKG_REVISION:=36c0e0b
 PKG_RELEASE:=$(PKG_REVISION)
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_REVISION).tar.gz
 PKG_SOURCE_URL:=http://download.linino.org/sources
-PKG_MD5SUM:=674ab3aae480669fdee0e185a305bef1
+PKG_MD5SUM:=dee13fa79994373f9ca1e7bf86f871c7
 PKG_BUILD_DIR:=$(BUILD_DIR)/arduinoos-$(PKG_VERSION)-$(PKG_REVISION)
 
 include $(INCLUDE_DIR)/package.mk
@@ -81,7 +81,7 @@ then
 	rm -rf /osjs
 
 	# Restarting uHttp server
-	/etc/init.d/uhttpd restart
+	# /etc/init.d/uhttpd restart
 fi
 exit 0
 endef
