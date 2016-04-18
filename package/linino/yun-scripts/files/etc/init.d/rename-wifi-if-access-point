@@ -26,3 +26,9 @@ start() {
 		logger -t rename "WiFi renamed $SSID"
 	fi
 }
+
+reload () {
+	
+	/usr/bin/wifi-reload
+
+}

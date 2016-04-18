@@ -62,6 +62,7 @@ define Package/yun-scripts/install
 	$(INSTALL_BIN) ./files/usr/bin/flash-kl25z $(1)/usr/bin
 	$(INSTALL_BIN) ./files/usr/bin/flash-samd21 $(1)/usr/bin
 	$(INSTALL_BIN) ./files/usr/bin/overlay-only $(1)/usr/bin
+	$(INSTALL_BIN) ./files/usr/bin/wifi-reload $(1)/usr/bin
 
 	$(INSTALL_BIN) ./files/etc/init.d/rename-wifi-if-access-point $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/generate_new_gpg_key $(1)/etc/init.d
