@@ -32,14 +32,14 @@ define Package/node
   URL:=http://nodejs.org/
 endef
 
-NODEJS:=node-$(PKG_VERSION)-linux-x86.tar.gz
+NODEJS:=node-$(PKG_VERSION)-linux-x64.tar.gz
 
 # Distribution URL doesn't always have the correct version
 # Using the OpenWrt/Linino mirror provides a stable version
 define Download/nodebin
   URL:=https://nodejs.org/dist/$(PKG_VERSION)/
   FILE:=$(NODEJS)
-  # MD5SUM:=8893f1f5ce16c612ba2805432edc0138
+  MD5SUM:=3738f6c24743f53f520d896ecff5e2b5
 endef
 
 define Package/node/description
