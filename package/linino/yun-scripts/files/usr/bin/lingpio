@@ -22,13 +22,19 @@ BOARD=$(awk '/machine/ {print tolower($4)}' /proc/cpuinfo)
 
 case $BOARD in
 	'chiwawa')
-		echo 114 > /sys/class/gpio/export
+		for t in 114 115 123; do
+			echo $t > /sys/class/gpio/export
+		done
+
+		echo out > /sys/class/gpio/D13/direction
 
 		echo ""
 		echo "GPIO exported"
 		echo ""
 
-		echo 4 > /sys/class/pwm/pwmchip0/export
+		for u in 4 5; do
+			echo $u > /sys/class/pwm/pwmchip0/export
+		done
 
 		echo ""
 		echo "PWM exported"
