@@ -48,12 +48,13 @@ endef
 
 define Build/Prepare
 	$(call Build/Prepare/Default)
-	$(CP) node.patch libcrypto.patch $(PKG_BUILD_DIR)/
+	$(CP) node.patch libcrypto.patch download-gyp.patch $(PKG_BUILD_DIR)/
 	(cd $(PKG_BUILD_DIR); \
 	rm -rf deps/v8; \
 	git clone $(GIT_SOURCE) deps/v8; \
 	patch -p1 < node.patch; \
 	patch -p1 < libcrypto.patch; \
+	patch -p1 < download-gyp.patch; \
 	);
 	$(eval $(call Download,nodebin))
 	$(TAR) -xvf $(DL_DIR)/$(NODEJS) -C $(STAGING_DIR_HOST) --strip-components=1
