@@ -50,6 +50,9 @@
 	#define DS_GPIO_SWD_EN		12
 	#define DS_GPIO_SWD_OE		11
 	#define DS_GPIO_UART_POL 	GPIOF_OUT_INIT_HIGH
+#elif defined(LININO_CHIWAWA)
+	/* INDUSTRIAL 101 */
+	#define DS_GPIO_UART_POL 	GPIOF_IN
 #else	/* YUN */
 	#define DS_GPIO_UART_POL        GPIOF_OUT_INIT_LOW
 #endif
