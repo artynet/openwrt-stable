@@ -81,6 +81,11 @@ then
 	echo "kernel.printk = 3 4 1 3" >> /etc/sysctl.conf
 	/sbin/sysctl -p 2>&1 /dev/null
 fi
+
+if [ -e /usr/lib/python2.7/asyncore.py ]
+then
+    sed -i -e s/512/8192/g /usr/lib/python2.7/asyncore.py
+fi
 endef
 
 define Package/ciao/postrm
