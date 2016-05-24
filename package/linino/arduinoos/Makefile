@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=arduinoos
 PKG_VERSION:=2.0.2
 PKG_REVISION:=36c0e0b
-PKG_RELEASE:=$(PKG_REVISION)
+PKG_RELEASE:=4
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_REVISION).tar.gz
 PKG_SOURCE_URL:=http://download.linino.org/sources

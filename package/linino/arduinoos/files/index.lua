@@ -822,8 +822,7 @@ function board_plain_socket()
   sock:setopt("socket", "rcvtimeo", 5)
   sock:setopt("tcp", "nodelay", 1)
 
-  sock:write(params)
-  sock:writeall("\r\n")
+  sock:write(params .. "\r\n")
 
   local response_text = sock:readall()
   sock:close()
