@@ -1,0 +1,12 @@
+--- a/usr/lib/lua/luci/controller/linino/index.lua	2016-05-23 19:18:53.000000000 +0200
++++ b/usr/lib/lua/luci/controller/linino/index.lua	2016-05-23 19:20:07.000000000 +0200
+@@ -822,8 +822,7 @@
+   sock:setopt("socket", "rcvtimeo", 5)
+   sock:setopt("tcp", "nodelay", 1)
+
+-  sock:write(params)
+-  sock:writeall("\r\n")
++  sock:write(params .. "\r\n")
+
+   local response_text = sock:readall()
+   sock:close()
