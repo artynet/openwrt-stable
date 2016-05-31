@@ -96,6 +96,22 @@ bootargs_start_complete () {
 
 }
 
+# check for 101
+
+check101 () {
+
+	VAR=`fw_printenv | grep ext 2> /dev/null | sed s/^.*=//g`
+	if [ "$VAR" != "101" ]
+	then
+		echo ""
+		echo "Your board is not supported"
+		echo ""
+
+		exit 0
+	fi
+
+}
+
 # New U-boot
 
 bootargs_stop_simple () {
@@ -308,6 +324,7 @@ then
 					FILE="LeiSerialTerminal.hex"
 				;;
 			'chiwawa')
+					check101
 					FILE="ChiwawaSerialTerminal.hex"
 				;;
 			'tian')
