@@ -1,0 +1,13 @@
+diff -r 4188cd5dc0c5 Lib/SocketServer.py
+--- a/Lib/SocketServer.py	Sun Oct 11 23:03:22 2015 -0700
++++ b/Lib/SocketServer.py	Tue Oct 13 14:47:06 2015 -0400
+@@ -695,7 +695,8 @@
+             except socket.error:
+                 # An final socket error may have occurred here, such as
+                 # the local error ECONNABORTED.
+-                pass
++                self.wfile._wbuf = []
++                self.wfile._wbuf_len = 0
+         self.wfile.close()
+         self.rfile.close()
+ 
