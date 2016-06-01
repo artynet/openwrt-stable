@@ -1,14 +1,18 @@
 #!/bin/sh
 
-mount | grep ^/dev/sda | grep 'on /overlay' &> /dev/null
+OPKG=/bin/opkg
 
-if [ $? -ne 0 ]
+$OPKG update
+
+checkup=`opkg list-upgradable | awk {'print $1'} | head -n 1`
+
+if [ -z $checkup ]
 then
-	echo "Error:"
-	echo "$0 is only available when using an external SD card. See http://arduino.cc/en/Tutorial/ExpandingYunDiskSpace"
-	echo
-	exit 1
+    echo ""
+    echo "No updates are available for your system ! ! !"
+    echo ""
+else
+    #
+    $OPKG update && $OPKG list-upgradable | awk {'print $1'} | sed /kmod/d | xargs $OPKG upgrade
+    #
 fi
-
-opkg upgrade `opkg list-upgradable | awk '{print $1}'`
-
