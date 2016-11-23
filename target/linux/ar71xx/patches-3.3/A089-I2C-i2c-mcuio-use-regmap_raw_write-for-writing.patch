@@ -1,0 +1,106 @@
+From 097a599fbc11838c065439688a674088ad4ad723 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 5 Sep 2014 12:29:55 +0200
+Subject: [PATCH 089/115] I2C, i2c-mcuio: use regmap_raw_write for writing
+
+---
+ drivers/i2c/busses/i2c-mcuio.c | 63 +++++++++++++++++-------------------------
+ 1 file changed, 25 insertions(+), 38 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index 6f202c9..598e6ba 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -90,36 +90,11 @@ static void __dump_ibuf(struct mcuio_i2c_dev *i2cd)
+ #define __dump_ibuf(a)
+ #endif
+ 
+-static int __send_data(struct mcuio_i2c_dev *i2cd, u32 *buf, int len,
+-		       int *head)
+-{
+-	int i, ret = 0;
+-
+-	if (len % sizeof(u32)) {
+-		WARN_ON(1);
+-		return -EINVAL;
+-	}
+-	dev_dbg(&i2cd->mdev->dev, "len = %d\n", len);
+-	/* TERRIBLE HACK: FIX THIS BY WRITING BYTE BY BYTE */
+-	for (i = 0; i < len/sizeof(u32) && ret >= 0; i++) {
+-		dev_dbg(&i2cd->mdev->dev, "writing 0x%08x to 0x%04x\n",
+-			cpu_to_le32(buf[i]), I2C_MCUIO_OBUF + *head);
+-		ret = regmap_write(i2cd->map_dw, I2C_MCUIO_OBUF + *head,
+-				   cpu_to_le32(buf[i]));
+-		if (ret < 0) {
+-			dev_err(&i2cd->mdev->dev, "error writing message\n");
+-			break;
+-		}
+-		*head = (*head + sizeof(u32)) & (i2cd->buf_size - 1);
+-	}
+-	return ret < 0 ? ret : len;
+-}
+-
+ static int __send_obuf(struct mcuio_i2c_dev *i2cd)
+ {
+ 	u32 h, t;
+-	int space;
+-	int stat, togo, l;
++	int space, space_to_end;
++	int stat, togo, l, l1, l2;
+ 
+ 	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_OBUF_HEAD, &h);
+ 	if (stat < 0) {
+@@ -131,27 +106,39 @@ static int __send_obuf(struct mcuio_i2c_dev *i2cd)
+ 		dev_err(&i2cd->mdev->dev, "error reading obuf tail\n");
+ 		return stat;
+ 	}
+-	space = ((CIRC_SPACE(h, t, i2cd->buf_size)) / sizeof(u32)) *
+-		sizeof(u32);
++	space = CIRC_SPACE(h, t, i2cd->buf_size);
++	space_to_end = CIRC_SPACE_TO_END(h, t, i2cd->buf_size);
+ 	dev_dbg(&i2cd->mdev->dev, "h = %u, t = %u, space = %d\n", h, t, space);
+ 	if (!space) {
+ 		dev_dbg(&i2cd->mdev->dev, "no space in output buffer\n");
+ 		return 0;
+ 	}
+-	togo = ((i2cd->olen - i2cd->sent)/sizeof(u32)) * sizeof(u32);
+-	if ((i2cd->olen - i2cd->sent) % sizeof(u32))
+-		togo += sizeof(u32);
++	togo = i2cd->olen - i2cd->sent;
+ 	l = min(space, togo);
+-	dev_dbg(&i2cd->mdev->dev, "togo = %d, %p\n", togo,
+-		&i2cd->buf.dw[i2cd->sent/sizeof(u32)]);
+-	stat = __send_data(i2cd, &i2cd->buf.dw[i2cd->sent/sizeof(u32)], l, &h);
+-
++	l1 = min(l, space_to_end);
++	l2 = l - space_to_end;
++	dev_dbg(&i2cd->mdev->dev, "togo = %d, l = %d\n", togo, l);
++	stat = regmap_raw_write(i2cd->map_b, I2C_MCUIO_OBUF + h,
++				&i2cd->buf.b[i2cd->sent], l1);
+ 	if (stat < 0) {
+-		dev_err(&i2cd->mdev->dev, "error sending data to target\n");
++		dev_err(&i2cd->mdev->dev, "error sending obuf\n");
+ 		return stat;
+ 	}
+-	i2cd->sent += stat;
++	h = (h + l1) & (i2cd->buf_size - 1);
++	i2cd->sent += l1;
++	if (l2 > 0) {
++		/* Wrap around */
++		stat = regmap_raw_write(i2cd->map_b, I2C_MCUIO_OBUF + h,
++					&i2cd->buf.b[i2cd->sent], l2);
++		if (stat < 0) {
++			dev_err(&i2cd->mdev->dev, "error sending obuf\n");
++			return stat;
++		}
++		h = (h + l2) & (i2cd->buf_size - 1);
++		i2cd->sent += l2;
++	}
+ 	dev_dbg(&i2cd->mdev->dev, "sent = %d\n", i2cd->sent);
++
+ 	stat = regmap_write(i2cd->map_dw, I2C_MCUIO_OBUF_HEAD, h);
+ 	if (stat < 0)
+ 		dev_err(&i2cd->mdev->dev, "error setting new obuf head\n");
+-- 
+1.9.1
+

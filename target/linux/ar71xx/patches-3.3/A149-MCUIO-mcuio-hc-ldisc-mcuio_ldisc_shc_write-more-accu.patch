@@ -1,0 +1,38 @@
+From 6c6bdfd977c9269155e680ffd0d21c1c82c09f3b Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 05:50:04 +0200
+Subject: [PATCH 149/188] MCUIO, mcuio-hc-ldisc, mcuio_ldisc_shc_write(): more
+ accurate implementation.
+
+Check return value of tty write method to avoid loosing chars.
+---
+ drivers/mcuio/mcuio-hc-ldisc.c |   12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-ldisc.c b/drivers/mcuio/mcuio-hc-ldisc.c
+index 15a53fe..1e08d81 100644
+--- a/drivers/mcuio/mcuio-hc-ldisc.c
++++ b/drivers/mcuio/mcuio-hc-ldisc.c
+@@ -36,11 +36,15 @@ struct ldisc_priv_data {
+ static int mcuio_ldisc_shc_write(struct mcuio_soft_hc *shc,
+ 				 const u8 *ptr, unsigned int len)
+ {
+-	int stat;
++	int stat, count;
+ 	struct tty_struct *tty = shc->priv;
+-	/* FIXME: CHECK FOR FREE SPACE IN BUFFER */
+-	stat = tty->ops->write(tty, (char *)ptr, len);
+-	return stat == len ? 0 : stat;
++
++	for (count = 0; count < len; count += stat) {
++		stat = tty->ops->write(tty, (char *)&ptr[count], len - count);
++		if (stat < 0)
++			break;
++	}
++	return stat < 0 ? stat : 0;
+ }
+ 
+ static const struct mcuio_soft_hc_ops ops = {
+-- 
+1.7.9.5
+

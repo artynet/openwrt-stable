@@ -1,0 +1,29 @@
+From cb508caf001be6f18e3e0cb6bdd21e706eee63ac Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 5 Sep 2014 16:36:53 +0200
+Subject: [PATCH 092/115] Revert "mcuio: temporary hack for __do_enum kernel
+ oops"
+
+This reverts commit ac3393ec9c1642c0622c60ad3fc0dcaf81207f7d: we
+really must fix this properly.
+---
+ drivers/mcuio/mcuio-hc-drv.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 9629663..823fdba 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -171,9 +171,6 @@ static struct mcuio_request *__make_request(struct mcuio_device *mdev,
+ 	out->status = -ETIMEDOUT;
+ 	out->cb = cb;
+ 	out->fill = fill;
+-	/* HACK: don't free mcuio_request, as mcuio_free is called too
+-	 * early and causes kernel oops in __do_enum */
+-	out->dont_free = 1;
+ 	return out;
+ }
+ 
+-- 
+1.9.1
+

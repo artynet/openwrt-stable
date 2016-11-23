@@ -1,0 +1,268 @@
+From 75e76bbcbd4d0f19bc71c7ed5be1a2c5856def39 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 7 May 2014 17:13:35 +0200
+Subject: [PATCH 940/973] MCUIO: first almost empty core and bus implementation
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/Kconfig        |   2 +
+ drivers/Makefile       |   1 +
+ drivers/mcuio/Kconfig  |   7 +++
+ drivers/mcuio/Makefile |   8 +++
+ drivers/mcuio/bus.c    | 146 +++++++++++++++++++++++++++++++++++++++++++++++++
+ drivers/mcuio/core.c   |  41 ++++++++++++++
+ 6 files changed, 205 insertions(+)
+ create mode 100644 drivers/mcuio/Kconfig
+ create mode 100644 drivers/mcuio/Makefile
+ create mode 100644 drivers/mcuio/bus.c
+ create mode 100644 drivers/mcuio/core.c
+
+diff --git a/drivers/Kconfig b/drivers/Kconfig
+index 5215770..6c8df3f 100644
+--- a/drivers/Kconfig
++++ b/drivers/Kconfig
+@@ -138,4 +138,6 @@ source "drivers/virt/Kconfig"
+ 
+ source "drivers/devfreq/Kconfig"
+ 
++source "drivers/mcuio/Kconfig"
++
+ endmenu
+diff --git a/drivers/Makefile b/drivers/Makefile
+index 3b32aad..fbfc1e3 100644
+--- a/drivers/Makefile
++++ b/drivers/Makefile
+@@ -133,3 +133,4 @@ obj-$(CONFIG_VIRT_DRIVERS)	+= virt/
+ obj-$(CONFIG_HYPERV)		+= hv/
+ 
+ obj-$(CONFIG_PM_DEVFREQ)	+= devfreq/
++obj-$(CONFIG_MCUIO)		+= mcuio/
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+new file mode 100644
+index 0000000..fc90faa
+--- /dev/null
++++ b/drivers/mcuio/Kconfig
+@@ -0,0 +1,7 @@
++menuconfig MCUIO
++	tristate "mcuio drivers"
++	help
++	  MCUIO is a protocol and a set of drivers which let a Linux MPU
++	  (MPU = MicroProcessor Unit) control an MCU's peripherals
++	  (MCU = Micro Controller Unit, some kind of tiny microcontroller
++	  running a tiny OS or no OS at all).
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+new file mode 100644
+index 0000000..2a82fc7
+--- /dev/null
++++ b/drivers/mcuio/Makefile
+@@ -0,0 +1,8 @@
++# This comes from the zio Makefile
++
++LINUX ?= /lib/modules/$(shell uname -r)/build
++
++mcuio-y := core.o bus.o
++
++obj-$(CONFIG_MCUIO) = mcuio.o
++
+diff --git a/drivers/mcuio/bus.c b/drivers/mcuio/bus.c
+new file mode 100644
+index 0000000..af0d240
+--- /dev/null
++++ b/drivers/mcuio/bus.c
+@@ -0,0 +1,146 @@
++/*
++ * Copyright 2011 Dog Hunter SA
++ * Author: Davide Ciminaghi <ciminaghi@gnudd.com>
++ *
++ * GNU GPLv2 or later
++ */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/types.h>
++
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++#include "mcuio-internal.h"
++
++static inline int mcuio_device_is_host_controller(struct mcuio_device *mdev)
++{
++	return mdev->id.class == MCUIO_CLASS_HOST_CONTROLLER ||
++	    mdev->id.class == MCUIO_CLASS_SOFT_HOST_CONTROLLER;
++}
++
++static struct bus_attribute def_bus_attrs[] = {
++	__ATTR_NULL,
++};
++
++/*
++ * mcuio_match_device
++ * @drv driver to match
++ * @dev device to match
++ *
++ */
++static int mcuio_match_device(struct device *dev, struct device_driver *drv)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	struct mcuio_driver *mdrv = to_mcuio_drv(drv);
++	const struct mcuio_device_id *id;
++	pr_debug("%s:%d\n", __func__, __LINE__);
++	for (id = mdrv->id_table;
++	     !(id->device == MCUIO_NO_DEVICE &&
++	       id->class == MCUIO_CLASS_UNDEFINED);
++	     id++) {
++		/* Device and vendor match first */
++		if (mdev->id.device == id->device &&
++		    mdev->id.vendor == id->vendor)
++			return 1;
++		/* Next try class match */
++		if (mdev->id.class == (id->class & id->class_mask))
++			return 1;
++	}
++	return 0;
++}
++
++struct bus_type mcuio_bus_type = {
++	.name = "mcuio",
++	.bus_attrs = def_bus_attrs,
++	.match = mcuio_match_device,
++};
++
++static int mcuio_drv_probe(struct device *_dev)
++{
++	struct mcuio_driver *drv = to_mcuio_drv(_dev->driver);
++	struct mcuio_device *dev = to_mcuio_dev(_dev);
++
++	if (!drv->probe)
++		return -ENODEV;
++	return drv->probe(dev);
++}
++
++static int mcuio_drv_remove(struct device *_dev)
++{
++	struct mcuio_driver *drv = to_mcuio_drv(_dev->driver);
++	struct mcuio_device *dev = to_mcuio_dev(_dev);
++
++	if (drv->remove)
++		return drv->remove(dev);
++	_dev->driver = NULL;
++	return 0;
++}
++
++int mcuio_driver_register(struct mcuio_driver *drv, struct module *owner)
++{
++	drv->driver.owner = owner;
++	drv->driver.bus = &mcuio_bus_type;
++	if (drv->probe)
++		drv->driver.probe = mcuio_drv_probe;
++	if (drv->remove)
++		drv->driver.remove = mcuio_drv_remove;
++	return driver_register(&drv->driver);
++}
++EXPORT_SYMBOL_GPL(mcuio_driver_register);
++
++void mcuio_driver_unregister(struct mcuio_driver *drv)
++{
++	driver_unregister(&drv->driver);
++}
++EXPORT_SYMBOL_GPL(mcuio_driver_unregister);
++
++struct device mcuio_bus = {
++	.init_name	= "mcuio",
++};
++EXPORT_SYMBOL_GPL(mcuio_bus);
++
++struct device_type mcuio_default_device_type = {
++	.name = "mcuiodev",
++};
++
++int mcuio_device_register(struct mcuio_device *mdev,
++			  struct device_type *type,
++			  struct device *parent)
++{
++	int ret;
++	if (!mdev)
++		return -EINVAL;
++	mdev->dev.parent = parent ? parent : &mcuio_bus;
++	mdev->dev.bus = &mcuio_bus_type;
++	mdev->dev.type = type ? type : &mcuio_default_device_type;
++	dev_set_name(&mdev->dev, "%d:%d.%d", mdev->bus, mdev->device, mdev->fn);
++	ret = device_register(&mdev->dev);
++	if (!ret)
++		return ret;
++	put_device(&mdev->dev);
++	return ret;
++}
++EXPORT_SYMBOL_GPL(mcuio_device_register);
++
++static int __mcuio_device_unregister(struct device *dev, void *dummy)
++{
++	device_unregister(dev);
++	return 0;
++}
++
++static void mcuio_unregister_children(struct mcuio_device *mdev)
++{
++	device_for_each_child(&mdev->dev, NULL, __mcuio_device_unregister);
++}
++
++void mcuio_device_unregister(struct mcuio_device *mdev)
++{
++	if (mcuio_device_is_host_controller(mdev))
++		mcuio_unregister_children(mdev);
++	__mcuio_device_unregister(&mdev->dev, NULL);
++}
++EXPORT_SYMBOL_GPL(mcuio_device_unregister);
+diff --git a/drivers/mcuio/core.c b/drivers/mcuio/core.c
+new file mode 100644
+index 0000000..82bb50b
+--- /dev/null
++++ b/drivers/mcuio/core.c
+@@ -0,0 +1,41 @@
++/*
++ * Copyright 2013 Dog Hunter SA
++ *
++ * Author Davide Ciminaghi
++ * GNU GPLv2
++ */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/types.h>
++#include <linux/string.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/mcuio.h>
++#include "mcuio-internal.h"
++
++static int __init mcuio_init(void)
++{
++	int ret;
++	ret = device_register(&mcuio_bus);
++	if (ret)
++		return ret;
++	/* Register mcuio bus */
++	return bus_register(&mcuio_bus_type);
++}
++
++static void __exit mcuio_exit(void)
++{
++	/* Remove mcuio bus */
++	device_unregister(&mcuio_bus);
++	bus_unregister(&mcuio_bus_type);
++	return;
++}
++
++postcore_initcall(mcuio_init);
++module_exit(mcuio_exit);
++
++MODULE_AUTHOR("Davide Ciminaghi");
++MODULE_DESCRIPTION("MCUIO subsys core module");
++MODULE_LICENSE("GPL v2");
+-- 
+1.8.5.2.233.g932f7e4
+

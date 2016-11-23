@@ -1,0 +1,50 @@
+From befcf03f650cdefe1e6068bbb31cb3dd8618f8af Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 3 Oct 2014 05:54:47 +0200
+Subject: [PATCH 147/188] MCUIO: struct mcuio_request: add incoming flag
+
+---
+ include/linux/mcuio.h |   14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/include/linux/mcuio.h b/include/linux/mcuio.h
+index 0cc5f42..c5477fb 100644
+--- a/include/linux/mcuio.h
++++ b/include/linux/mcuio.h
+@@ -74,9 +74,9 @@ typedef void (*request_cb)(struct mcuio_request *);
+  */
+ #define MCUIO_REQUEST_FILL BIT(0)
+ /*
+- * outgoing: if this is !0 the request is outgoing (incoming otherwise)
++ * incoming: if this is !0 the request is incoming (outgoing otherwise)
+  */
+-#define MCUIO_REQUEST_OUTGOING BIT(1)
++#define MCUIO_REQUEST_INCOMING BIT(1)
+ 
+ /*
+  * This represents an mcuio request
+@@ -127,16 +127,16 @@ static inline void mcuio_request_set_fill(struct mcuio_request *r, int f)
+ 		r->flags |= MCUIO_REQUEST_FILL;
+ }
+ 
+-static inline int mcuio_request_is_outgoing(struct mcuio_request *r)
++static inline int mcuio_request_is_incoming(struct mcuio_request *r)
+ {
+-	return r->flags & MCUIO_REQUEST_OUTGOING;
++	return r->flags & MCUIO_REQUEST_INCOMING;
+ }
+ 
+-static inline void mcuio_request_set_outgoing(struct mcuio_request *r, int f)
++static inline void mcuio_request_set_incoming(struct mcuio_request *r, int f)
+ {
+-	r->flags &= ~MCUIO_REQUEST_OUTGOING;
++	r->flags &= ~MCUIO_REQUEST_INCOMING;
+ 	if (f)
+-		r->flags |= MCUIO_REQUEST_OUTGOING;
++		r->flags |= MCUIO_REQUEST_INCOMING;
+ }
+ 
+ /*
+-- 
+1.7.9.5
+

@@ -1,0 +1,25 @@
+From 3ef48faf1d9365028d518939c61e0001e006e56d Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 24 Nov 2014 16:14:13 +0100
+Subject: [PATCH 178/188] MIPS, yun_linino_defconfig: build CRC8 in the kernel
+
+---
+ arch/mips/configs/yun_linino_defconfig |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index 0a092cb..5c483d7 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -3418,7 +3418,7 @@ CONFIG_CRC_ITU_T=m
+ CONFIG_CRC32=y
+ CONFIG_CRC7=m
+ CONFIG_LIBCRC32C=m
+-CONFIG_CRC8=m
++CONFIG_CRC8=y
+ CONFIG_ZLIB_INFLATE=y
+ CONFIG_ZLIB_DEFLATE=y
+ CONFIG_LZO_COMPRESS=y
+-- 
+1.7.9.5
+

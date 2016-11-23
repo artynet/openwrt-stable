@@ -1,0 +1,27 @@
+From 28a6b8b1d483f9d14ce7fa3efa584dcff3015e98 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 17 Nov 2014 14:56:47 +0100
+Subject: [PATCH 181/188] mcuio: trivial, add a FIXME comment in shld_register
+ function
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-shields-manprobe.c |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-shields-manprobe.c b/drivers/mcuio/mcuio-shields-manprobe.c
+index f446e8e..2d47e48 100644
+--- a/drivers/mcuio/mcuio-shields-manprobe.c
++++ b/drivers/mcuio/mcuio-shields-manprobe.c
+@@ -52,6 +52,8 @@ int shld_register(struct shld_probe_info *info)
+ 	struct mcuio_device *mdev;
+ 	struct mcuio_device *hc;
+ 
++	/* FIXME shld_register always acts on bus=0
++	 * (only one bus is supported at present) */
+ 	hc = mcuio_bus_find_hc(0);
+ 	if (IS_ERR(hc))
+ 		return -ENODEV;
+-- 
+1.7.9.5
+

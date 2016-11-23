@@ -1,0 +1,29 @@
+From 71d90988d3554a7473ae091f4e854ea64bd2902f Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 8 Jul 2014 05:40:45 +0200
+Subject: [PATCH 1005/1009] drivers/video/ssd1307fb.c: use
+ gpio_set_value_cansleep() for reset
+
+---
+ drivers/video/ssd1307fb.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/video/ssd1307fb.c b/drivers/video/ssd1307fb.c
+index 38d18a6..a6d9580 100644
+--- a/drivers/video/ssd1307fb.c
++++ b/drivers/video/ssd1307fb.c
+@@ -517,9 +517,9 @@ static int __devinit ssd1307fb_probe(struct i2c_client *client, const struct i2c
+ 	i2c_set_clientdata(client, info);
+ 
+ 	/* Reset the screen */
+-	gpio_set_value(par->reset, 0);
++	gpio_set_value_cansleep(par->reset, 0);
+ 	udelay(4);
+-	gpio_set_value(par->reset, 1);
++	gpio_set_value_cansleep(par->reset, 1);
+ 	udelay(4);
+ 
+ 	if (par->ops->init) {
+-- 
+1.7.9.5
+

@@ -1,0 +1,23 @@
+From 10119d36210e965376f8695d4f7a0ba859521dda Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 19 May 2014 15:47:48 +0200
+Subject: [PATCH 0994/1009] mcuio_ids: add device id for lucky shield
+
+---
+ include/linux/mcuio_ids.h |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/include/linux/mcuio_ids.h b/include/linux/mcuio_ids.h
+index 70ceb78..53d6d9f 100644
+--- a/include/linux/mcuio_ids.h
++++ b/include/linux/mcuio_ids.h
+@@ -33,5 +33,6 @@
+ 
+ /* Specific devices */
+ #define MCUIO_DEVICE_JOYSTICK_SHIELD 0x0001
++#define MCUIO_DEVICE_LUCKY_SHIELD    0x0002
+ 
+ #endif /* __MCUIO_IDS_H__ */
+-- 
+1.7.9.5
+

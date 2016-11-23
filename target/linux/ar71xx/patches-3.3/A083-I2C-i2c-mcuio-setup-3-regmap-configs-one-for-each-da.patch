@@ -1,0 +1,211 @@
+From cc818907acef93de843b1d503bca93014e34bb66 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 1 Sep 2014 13:26:03 +0200
+Subject: [PATCH 083/115] I2C, i2c-mcuio: setup 3 regmap configs (one for each
+ data type, byte, word, dword)
+
+---
+ drivers/i2c/busses/i2c-mcuio.c | 74 +++++++++++++++++++++++++++++-------------
+ 1 file changed, 51 insertions(+), 23 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index ab13763..24595df 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -54,7 +54,9 @@
+ struct mcuio_i2c_dev {
+ 	struct i2c_adapter adapter;
+ 	struct mcuio_device *mdev;
+-	struct regmap *map;
++	struct regmap *map_dw;
++	struct regmap *map_w;
++	struct regmap *map_b;
+ 	struct completion xfer_complete;
+ 	int xfer_status;
+ 	unsigned buf_size;
+@@ -84,7 +86,7 @@ static int __send_data(struct mcuio_i2c_dev *i2cd, u32 *buf, int len,
+ 	for (i = 0; i < len/sizeof(u32) && ret >= 0; i++) {
+ 		dev_dbg(&i2cd->mdev->dev, "writing 0x%08x to 0x%04x\n",
+ 			cpu_to_le32(buf[i]), I2C_MCUIO_OBUF + *head);
+-		ret = regmap_write(i2cd->map, I2C_MCUIO_OBUF + *head,
++		ret = regmap_write(i2cd->map_dw, I2C_MCUIO_OBUF + *head,
+ 				   cpu_to_le32(buf[i]));
+ 		if (ret < 0) {
+ 			dev_err(&i2cd->mdev->dev, "error writing message\n");
+@@ -106,7 +108,7 @@ static int __receive_data(struct mcuio_i2c_dev *i2cd, u32 *buf, int len,
+ 	     i < len && ret >= 0;
+ 	     i += actual, t += sizeof(u32), j++) {
+ 		u32 v;
+-		ret = regmap_read(i2cd->map, I2C_MCUIO_IBUF + t, &v);
++		ret = regmap_read(i2cd->map_dw, I2C_MCUIO_IBUF + t, &v);
+ 		if (ret < 0) {
+ 			dev_err(&i2cd->mdev->dev, "error reading message\n");
+ 			break;
+@@ -130,12 +132,12 @@ static int __send_obuf(struct mcuio_i2c_dev *i2cd)
+ 	int space;
+ 	int stat, togo, l;
+ 
+-	stat = regmap_read(i2cd->map, I2C_MCUIO_OBUF_HEAD, &h);
++	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_OBUF_HEAD, &h);
+ 	if (stat < 0) {
+ 		dev_err(&i2cd->mdev->dev, "error reading obuf head\n");
+ 		return stat;
+ 	}
+-	stat = regmap_read(i2cd->map, I2C_MCUIO_OBUF_TAIL, &t);
++	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_OBUF_TAIL, &t);
+ 	if (stat < 0) {
+ 		dev_err(&i2cd->mdev->dev, "error reading obuf tail\n");
+ 		return stat;
+@@ -161,7 +163,7 @@ static int __send_obuf(struct mcuio_i2c_dev *i2cd)
+ 	}
+ 	i2cd->sent += stat;
+ 	dev_dbg(&i2cd->mdev->dev, "sent = %d\n", i2cd->sent);
+-	stat = regmap_write(i2cd->map, I2C_MCUIO_OBUF_HEAD, h);
++	stat = regmap_write(i2cd->map_dw, I2C_MCUIO_OBUF_HEAD, h);
+ 	if (stat < 0)
+ 		dev_err(&i2cd->mdev->dev, "error setting new obuf head\n");
+ 	return stat;
+@@ -173,12 +175,12 @@ static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
+ 	int count;
+ 	int stat, togo, l;
+ 
+-	stat = regmap_read(i2cd->map, I2C_MCUIO_IBUF_TAIL, &t);
++	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_IBUF_TAIL, &t);
+ 	if (stat < 0) {
+ 		dev_err(&i2cd->mdev->dev, "error reading ibuf tail\n");
+ 		return stat;
+ 	}
+-	stat = regmap_read(i2cd->map, I2C_MCUIO_IBUF_HEAD, &h);
++	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_IBUF_HEAD, &h);
+ 	if (stat < 0) {
+ 		dev_err(&i2cd->mdev->dev,
+ 			"error reading input buffer head\n");
+@@ -202,7 +204,7 @@ static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
+ 	}
+ 	i2cd->received += stat;
+ 	dev_dbg(&i2cd->mdev->dev, "received = %d\n", i2cd->received);
+-	stat = regmap_write(i2cd->map, I2C_MCUIO_IBUF_TAIL, t);
++	stat = regmap_write(i2cd->map_dw, I2C_MCUIO_IBUF_TAIL, t);
+ 	if (stat < 0)
+ 		dev_err(&i2cd->mdev->dev, "error setting new ibuf tail\n");
+ 	return stat;
+@@ -215,8 +217,8 @@ static irqreturn_t mcuio_i2c_irq_handler(int irq, void *devid)
+ 	u32 v;
+ 	int stat;
+ 
+-	BUG_ON(!i2cd || !i2cd->map);
+-	stat = regmap_read(i2cd->map, I2C_MCUIO_STATUS, &v);
++	BUG_ON(!i2cd || !i2cd->map_dw);
++	stat = regmap_read(i2cd->map_dw, I2C_MCUIO_STATUS, &v);
+ 	dev_dbg(&i2cd->mdev->dev, "%s: status = 0x%08x\n", __func__, v);
+ 	if (v & LOW_OBUF_WATERMARK)
+ 		__send_obuf(i2cd);
+@@ -264,7 +266,7 @@ static int __do_xfer(struct i2c_adapter * a)
+ 	/* Set slave address + R/W */
+ 	v = i2cd->addr << 1;
+ 	dev_dbg(&i2cd->mdev->dev, "setting slave addr 0x%08x\n", v);
+-	ret = regmap_write(i2cd->map, I2C_MCUIO_SADDR, v);
++	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_SADDR, v);
+ 	if (ret < 0) {
+ 		dev_err(&i2cd->mdev->dev, "error setting slave address\n");
+ 		return ret;
+@@ -286,14 +288,14 @@ static int __do_xfer(struct i2c_adapter * a)
+ 	/* Write message length(s) */
+ 	v = i2cd->olen;
+ 	dev_dbg(&i2cd->mdev->dev, "writing msg olen = %u\n", v);
+-	ret = regmap_write(i2cd->map, I2C_MCUIO_OBUF_LEN, v);
++	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_OBUF_LEN, v);
+ 	if (ret < 0) {
+ 		dev_err(&i2cd->mdev->dev, "error writing message out length\n");
+ 		return ret;
+ 	}
+ 	v = i2cd->ilen;
+ 	dev_dbg(&i2cd->mdev->dev, "writing msg ilen = %u\n", v);
+-	ret = regmap_write(i2cd->map, I2C_MCUIO_IBUF_LEN, v);
++	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_IBUF_LEN, v);
+ 	if (ret < 0) {
+ 		dev_err(&i2cd->mdev->dev, "error writing message in length\n");
+ 		return ret;
+@@ -302,7 +304,7 @@ static int __do_xfer(struct i2c_adapter * a)
+ 	/* Enable interrupt */
+ 	v = TRANSACTION_OK | NAK_RECEIVED | LOW_OBUF_WATERMARK;
+ 	dev_dbg(&i2cd->mdev->dev, "enabling interrupt\n");
+-	ret = regmap_write(i2cd->map, I2C_MCUIO_INTEN, v);
++	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_INTEN, v);
+ 	if (ret < 0) {
+ 		dev_err(&i2cd->mdev->dev, "error enabling interrupt\n");
+ 		return ret;
+@@ -315,7 +317,7 @@ static int __do_xfer(struct i2c_adapter * a)
+ 	/* Issue xmit command */
+ 	v = START_TRANSACTION;
+ 	dev_dbg(&i2cd->mdev->dev, "starting transaction\n");
+-	ret = regmap_write(i2cd->map, I2C_MCUIO_CMD, v);
++	ret = regmap_write(i2cd->map_dw, I2C_MCUIO_CMD, v);
+ 	if (ret < 0) {
+ 		dev_err(&i2cd->mdev->dev, "error starting transaction\n");
+ 		return ret;
+@@ -534,13 +536,27 @@ static const struct i2c_algorithm mcuio_simple_i2c_algo = {
+ 	.functionality	= mcuio_simple_i2c_functionality
+ };
+ 
+-static const struct regmap_config mcuio_i2c_regmap_config = {
++static const struct regmap_config mcuio_i2c_regmap_config_dw = {
+ 	.reg_bits = 32,
+ 	.val_bits = 32,
+ 	.max_register = 0x240,
+ 	.cache_type = REGCACHE_NONE,
+ };
+ 
++static const struct regmap_config mcuio_i2c_regmap_config_w = {
++	.reg_bits = 32,
++	.val_bits = 16,
++	.max_register = 0x240,
++	.cache_type = REGCACHE_NONE,
++};
++
++static const struct regmap_config mcuio_i2c_regmap_config_b = {
++	.reg_bits = 32,
++	.val_bits = 8,
++	.max_register = 0x240,
++	.cache_type = REGCACHE_NONE,
++};
++
+ static int mcuio_simple_i2c_probe(struct mcuio_device *mdev)
+ {
+ 	int ret;
+@@ -552,14 +568,26 @@ static int mcuio_simple_i2c_probe(struct mcuio_device *mdev)
+ 	if (!i2cd)
+ 		return -ENOMEM;
+ 	i2cd->mdev = mdev;
+-	i2cd->map = devm_regmap_init_mcuio(mdev, &mcuio_i2c_regmap_config);
+-
+-	if (IS_ERR(i2cd->map)) {
+-		dev_err(&mdev->dev, "cannot setup regmap for device\n");
+-		return PTR_ERR(i2cd->map);
++	i2cd->map_dw = devm_regmap_init_mcuio(mdev,
++					      &mcuio_i2c_regmap_config_dw);
++	if (IS_ERR(i2cd->map_dw)) {
++		dev_err(&mdev->dev, "cannot setup regmap (dw) for device\n");
++		return PTR_ERR(i2cd->map_dw);
++	}
++	i2cd->map_w = devm_regmap_init_mcuio(mdev,
++					     &mcuio_i2c_regmap_config_w);
++	if (IS_ERR(i2cd->map_w)) {
++		dev_err(&mdev->dev, "cannot setup regmap (w) for device\n");
++		return PTR_ERR(i2cd->map_w);
++	}
++	i2cd->map_b = devm_regmap_init_mcuio(mdev,
++					     &mcuio_i2c_regmap_config_b);
++	if (IS_ERR(i2cd->map_b)) {
++		dev_err(&mdev->dev, "cannot setup regmap (b) for device\n");
++		return PTR_ERR(i2cd->map_b);
+ 	}
+ 
+-	ret = regmap_read(i2cd->map, I2C_MCUIO_BUF_SIZE, &v);
++	ret = regmap_read(i2cd->map_dw, I2C_MCUIO_BUF_SIZE, &v);
+ 	if (ret < 0) {
+ 		dev_err(&mdev->dev, "error reading mcu buffer size\n");
+ 		return ret;
+-- 
+1.9.1
+

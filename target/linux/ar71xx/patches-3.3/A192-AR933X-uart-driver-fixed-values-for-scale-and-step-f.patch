@@ -1,0 +1,241 @@
+From bfa06bc985f8ed8f91852798926c20319f67c771 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 6 Mar 2015 15:13:26 +0100
+Subject: [PATCH 192/198] AR933X uart driver: fixed values for scale and step,
+ for most common baudrates
+
+This patch gets rid of the #define UART_BAUDRATE_COMP_MEGA32U4, inside
+ar933x_uart.c driver, and implements a more flexible way to feed the driver
+with a set of predefined values for scale and step for the desired baudrates.
+This permits to use the same driver for different chips (e.g. AR934X).
+If baudrate is not in the list, the computation algorithm is performed.
+A new Kconfig option, called TWEAK_UART_BAUDRATES_FOR_ATMEGA32U4, is
+implemented for Atmega32u4 baudrates compatibility.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/ath79/Kconfig                            |    9 +++
+ arch/mips/ath79/dev-common.c                       |   65 ++++++++++++++++++++
+ .../include/asm/mach-ath79/ar933x_uart_platform.h  |    7 +++
+ drivers/tty/serial/ar933x_uart.c                   |   41 ++++++------
+ 4 files changed, 101 insertions(+), 21 deletions(-)
+
+diff --git a/arch/mips/ath79/Kconfig b/arch/mips/ath79/Kconfig
+index 7f9623f..bddf3ed 100644
+--- a/arch/mips/ath79/Kconfig
++++ b/arch/mips/ath79/Kconfig
+@@ -742,6 +742,15 @@ config SOC_AR934X
+ 	select PCI_AR724X if PCI
+ 	def_bool n
+ 
++config TWEAK_UART_BAUDRATES_FOR_ATMEGA32U4
++	bool "Tweak baudrates for Atmega32U4 compatibility"
++	depends on SOC_AR934X || SOC_AR933X
++	help
++	  Say 'Y' if you want baudrates 230400 and 460800 be mapped
++	  to actual values 250000 and 500000. This is required if the
++	  chip is connected to an AVR Atmega32U4 chip, as it does not
++	  support 230400 nor 460800.
++
+ config SOC_QCA955X
+ 	select USB_ARCH_HAS_EHCI
+ 	select HW_HAS_PCI
+diff --git a/arch/mips/ath79/dev-common.c b/arch/mips/ath79/dev-common.c
+index c29ad2c..8cd58fc 100644
+--- a/arch/mips/ath79/dev-common.c
++++ b/arch/mips/ath79/dev-common.c
+@@ -69,6 +69,38 @@ static struct resource ar933x_uart_resources[] = {
+ };
+ 
+ static struct ar933x_uart_platform_data ar93xx_uart_data;
++static struct ar933x_uart_clk_params ar933x_clk_params[] = {
++	{
++		.baudrate = 115200,
++		.scale = 0x000c,
++		.step = 0x2000
++	},
++	{
++		.baudrate = 230400,
++#ifdef CONFIG_TWEAK_UART_BAUDRATES_FOR_ATMEGA32U4
++		.scale = 0x0017,
++		.step = 0x7ae0
++#else
++		.scale = 0x0017,
++		.step = 0x713f
++#endif
++	},
++	{
++		.baudrate = 460800,
++#ifdef CONFIG_TWEAK_UART_BAUDRATES_FOR_ATMEGA32U4
++		.scale = 0x000b,
++		.step = 0x7ae0
++#else
++		.scale = 0x000b,
++		.step = 0x713f
++#endif
++	},
++
++	{
++		.baudrate = 0,
++	}
++};
++
+ static struct platform_device ar933x_uart_device = {
+ 	.name		= "ar933x-uart",
+ 	.id		= -1,
+@@ -92,6 +124,37 @@ static struct resource ar934x_uart_resources[] = {
+ 	},
+ };
+ 
++static struct ar933x_uart_clk_params ar934x_clk_params[] = {
++	{
++		.baudrate = 115200,
++		.scale = 0x0003,
++		.step = 0x05e6,
++	},
++	{
++		.baudrate = 230400,
++#ifdef CONFIG_TWEAK_UART_BAUDRATES_FOR_ATMEGA32U4
++		.scale = 0x0017,
++		.step = 0x4ccd,
++#else
++		.scale = 23,
++		.step = 0x46c7,
++#endif
++	},
++	{
++		.baudrate = 460800,
++#ifdef CONFIG_TWEAK_UART_BAUDRATES_FOR_ATMEGA32U4
++		.scale = 0x000b,
++		.step = 0x4ccd,
++#else
++		.scale = 0x000b,
++		.step = 0x46c7,
++#endif
++	},
++	{
++		.baudrate = 0,
++	}
++};
++
+ static struct platform_device ar934x_uart_device = {
+ 	.name		= "ar933x-uart",
+ 	.id		= -1,
+@@ -127,11 +190,13 @@ void __init ath79_register_uart(void)
+ 		platform_device_register(&ath79_uart_device);
+ 	} else if (soc_is_ar933x()) {
+ 		ar93xx_uart_data.uartclk = clk_get_rate(clk);
++		ar93xx_uart_data.params = ar933x_clk_params;
+ 		platform_device_register(&ar933x_uart_device);
+ 	} else if (soc_is_ar934x()) {
+ 		ath79_uart_data[0].uartclk = clk_get_rate(clk);
+ 		platform_device_register(&ath79_uart_device);
+ 		ar93xx_uart_data.uartclk = clk_get_rate(clk);
++		ar93xx_uart_data.params = ar934x_clk_params;
+ 		platform_device_register(&ar934x_uart_device);
+ 	}
+ 	else {
+diff --git a/arch/mips/include/asm/mach-ath79/ar933x_uart_platform.h b/arch/mips/include/asm/mach-ath79/ar933x_uart_platform.h
+index 6cb30f2..a724981 100644
+--- a/arch/mips/include/asm/mach-ath79/ar933x_uart_platform.h
++++ b/arch/mips/include/asm/mach-ath79/ar933x_uart_platform.h
+@@ -11,8 +11,15 @@
+ #ifndef _AR933X_UART_PLATFORM_H
+ #define _AR933X_UART_PLATFORM_H
+ 
++struct ar933x_uart_clk_params {
++	unsigned baudrate;
++	unsigned scale;
++	unsigned step;
++};
++
+ struct ar933x_uart_platform_data {
+ 	unsigned	uartclk;
++	struct ar933x_uart_clk_params *params;
+ };
+ 
+ #endif /* _AR933X_UART_PLATFORM_H */
+diff --git a/drivers/tty/serial/ar933x_uart.c b/drivers/tty/serial/ar933x_uart.c
+index 6ef452f..c2e5fd1 100644
+--- a/drivers/tty/serial/ar933x_uart.c
++++ b/drivers/tty/serial/ar933x_uart.c
+@@ -47,6 +47,7 @@ struct ar933x_uart_port {
+ 	unsigned int		ier;	/* shadow Interrupt Enable Register */
+ 	unsigned int		min_baud;
+ 	unsigned int		max_baud;
++	struct ar933x_uart_clk_params *clkparams;
+ };
+ 
+ static inline unsigned int ar933x_uart_read(struct ar933x_uart_port *up,
+@@ -191,34 +192,30 @@ static unsigned long ar933x_uart_get_baud(unsigned int clk,
+ 	return t;
+ }
+ 
+-#define UART_BAUDRATE_COMP_MEGA32U4
+-
+-static void ar933x_uart_get_scale_step(unsigned int clk,
++static void ar933x_uart_get_scale_step(struct ar933x_uart_port *up,
+ 				       unsigned int baud,
+ 				       unsigned int *scale,
+ 				       unsigned int *step)
+ {
+ 	unsigned int tscale;
+ 	long min_diff;
++	unsigned int clk = up->port.uartclk;
+ 
+-#ifdef UART_BAUDRATE_COMP_MEGA32U4
+-	/* Fix timing issues on Atmega32U4 w/16Mhz oscillator */
+-	if (baud == 115200) {
+-		*scale = 0x000C;
+-		*step  = 0x2000;
+-		return;
+-	}
+-	if (baud == 250000 || baud == 230400) {
+-		*scale = 0x0017;
+-		*step  = 0x7AE0;
+-		return;
+-	}
+-	if (baud == 500000) {
+-		*scale = 0x000B;
+-		*step  = 0x7AE0;
+-		return;
++	struct ar933x_uart_clk_params *clkparams = up->clkparams;
++
++	/* If fixed values for scale and step are defined for this baudrate,
++	 * use them */
++	while (clkparams && clkparams->baudrate) {
++		if (baud == clkparams->baudrate) {
++			*scale = clkparams->scale;
++			*step = clkparams->step;
++			return;
++		}
++		clkparams++;
+ 	}
+-#endif
++
++	/* If baudrate was not found by the previous loop, compute scale
++	 * and step */
+ 
+ 	*scale = 0;
+ 	*step = 0;
+@@ -274,7 +271,7 @@ static void ar933x_uart_set_termios(struct uart_port *port,
+ 	new->c_cflag &= ~CMSPAR;
+ 
+ 	baud = uart_get_baud_rate(port, new, old, up->min_baud, up->max_baud);
+-	ar933x_uart_get_scale_step(port->uartclk, baud, &scale, &step);
++	ar933x_uart_get_scale_step(up, baud, &scale, &step);
+ 
+ 	/*
+ 	 * Ok, we're now changing the port state. Do it with
+@@ -712,6 +709,8 @@ static int __devinit ar933x_uart_probe(struct platform_device *pdev)
+ 	baud = ar933x_uart_get_baud(port->uartclk, 0, AR933X_UART_MAX_STEP);
+ 	up->max_baud = min_t(unsigned int, baud, AR933X_UART_MAX_BAUD);
+ 
++	up->clkparams = pdata->params;
++
+ 	ar933x_uart_add_console_port(up);
+ 
+ 	ret = uart_add_one_port(&ar933x_uart_driver, &up->port);
+-- 
+1.7.9.5
+

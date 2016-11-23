@@ -1,0 +1,57 @@
+From 3289977306cf5e4b717b236c3e3882e3a0298497 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 06:14:13 +0200
+Subject: [PATCH 155/188] MCUIO, mcuio-internal.h: add function for dumping
+ mcuio packets
+
+---
+ drivers/mcuio/mcuio-internal.h |   28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-internal.h b/drivers/mcuio/mcuio-internal.h
+index 1da95c3..3e402ab 100644
+--- a/drivers/mcuio/mcuio-internal.h
++++ b/drivers/mcuio/mcuio-internal.h
+@@ -2,6 +2,7 @@
+ #define __MCUIO_INTERNAL_H__
+ 
+ #include <linux/version.h>
++#include <linux/mcuio-proto.h>
+ 
+ extern struct bus_type mcuio_bus_type;
+ extern struct device mcuio_bus;
+@@ -14,4 +15,31 @@ struct i2c_adapter *mcuio_get_i2c_adapter(struct mcuio_device *mdev);
+ 
+ struct mcuio_device *mcuio_bus_find_hc(int bus);
+ 
++#ifdef DEBUG
++static inline void dump_packet(struct mcuio_packet *p)
++{
++	int i;
++	uint8_t *ptr;
++	pr_debug("Packet dump:\n");
++	pr_debug("\t%s,%s,%s,%u:%u.%u,%s,@0x%04x",
++		 mcuio_packet_is_error(p) ? "ERR" : "NOERR" ,
++		 mcuio_packet_is_reply(p) ? "REP" : "req",
++		 mcuio_packet_is_fill_data(p) ? "[FILL]" : "[NOFILL]",
++		 mcuio_packet_bus(p), mcuio_packet_dev(p),
++		 mcuio_packet_func(p),
++		 mcuio_packet_type_to_str(mcuio_packet_type(p)),
++		 mcuio_packet_offset(p));
++	printk(KERN_DEBUG "\tpacket: ");
++	for (i = 0, ptr = (uint8_t *)p; i < 2*sizeof(uint64_t); i++)
++		printk("0x%02x ", ptr[i]);
++	printk("\n");
++}
++#else
++static inline void dump_packet(const struct mcuio_packet *packet)
++{
++
++}
++#endif
++
++
+ #endif /* __MCUIO_INTERNAL_H__ */
+-- 
+1.7.9.5
+

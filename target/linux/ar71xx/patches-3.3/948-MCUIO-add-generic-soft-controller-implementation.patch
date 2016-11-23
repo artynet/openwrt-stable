@@ -1,0 +1,352 @@
+From 93b793270cda6f1794a7908f179aa29f4f6a2a58 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 8 May 2014 18:06:51 +0200
+Subject: [PATCH 948/973] MCUIO: add generic soft controller implementation
+
+This commit should contain common code needed by any mcuio soft controller
+(i.e. a controller not implemented in hw, for instance a line discipline
+based controller, or an spi or i2c based controller).
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/mcuio/Makefile        |   2 +-
+ drivers/mcuio/mcuio-soft-hc.c | 236 ++++++++++++++++++++++++++++++++++++++++++
+ include/linux/mcuio-soft-hc.h |  72 +++++++++++++
+ 3 files changed, 309 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/mcuio/mcuio-soft-hc.c
+ create mode 100644 include/linux/mcuio-soft-hc.h
+
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index 5d663e8..5b785de 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -4,5 +4,5 @@ LINUX ?= /lib/modules/$(shell uname -r)/build
+ 
+ mcuio-y := core.o bus.o
+ 
+-obj-$(CONFIG_MCUIO) = mcuio.o mcuio-hc-drv.o mcuio-hc-dev.o
++obj-$(CONFIG_MCUIO) = mcuio.o mcuio-hc-drv.o mcuio-hc-dev.o mcuio-soft-hc.o
+ 
+diff --git a/drivers/mcuio/mcuio-soft-hc.c b/drivers/mcuio/mcuio-soft-hc.c
+new file mode 100644
+index 0000000..08ab5e7
+--- /dev/null
++++ b/drivers/mcuio/mcuio-soft-hc.c
+@@ -0,0 +1,236 @@
++/*
++ * Copyright 2011 Dog Hunter SA
++ * Author: Davide Ciminaghi <ciminaghi@gnudd.com>
++ *
++ * GNU GPLv2 or later
++ */
++
++/* mcuio generic soft host controller functions */
++
++#include <linux/mcuio.h>
++#include <linux/circ_buf.h>
++#include <linux/slab.h>
++#include <linux/sched.h>
++#include <linux/regmap.h>
++#include <linux/err.h>
++#include <linux/workqueue.h>
++#include <linux/interrupt.h>
++#include <linux/irq.h>
++#include <linux/circ_buf.h>
++#include <linux/mcuio_ids.h>
++
++#include <linux/mcuio.h>
++#include <linux/mcuio-proto.h>
++#include <linux/mcuio-hc.h>
++#include <linux/mcuio-soft-hc.h>
++#include "mcuio-internal.h"
++
++static bool mcuio_soft_hc_readable(struct device *dev, unsigned int reg)
++{
++	return true;
++}
++
++static bool mcuio_soft_hc_writeable(struct device *dev, unsigned int reg)
++{
++	return (reg >= MCUIO_HC_OUTBUF && reg < MCUIO_HC_INBUF) ||
++		reg == MCUIO_IRQ_CLR;
++	return true;
++}
++
++/*
++ * regmap config for line discipline based mcuio host controller
++ */
++static struct regmap_config proto = {
++	.name = "mcuio-ldisc",
++	.reg_bits = 8,
++	.val_bits = 32,
++	.max_register = MCUIO_HC_MAX_REGISTER,
++	.readable_reg = mcuio_soft_hc_readable,
++	.writeable_reg = mcuio_soft_hc_writeable,
++	.cache_type = REGCACHE_NONE,
++};
++
++static int mcuio_soft_hc_read_inbuf(struct mcuio_soft_hc *shc,
++			       unsigned int reg,
++			       unsigned int *val)
++{
++	int i, s = sizeof(shc->rx_buf);
++	u8 *out = (u8 *)val;
++	struct circ_buf *buf = &shc->rx_circ_buf;
++
++	if (CIRC_CNT(buf->head, buf->tail, s) < sizeof(u32))
++		return -EAGAIN;
++	for (i = 0; i < sizeof(u32); i++) {
++		out[i] = buf->buf[buf->tail++];
++		buf->tail &= (s - 1);
++	}
++	return sizeof(unsigned int);
++}
++
++static int mcuio_soft_hc_reg_read(void *context, unsigned int reg,
++				  unsigned int *val)
++{
++	struct mcuio_soft_hc *shc = context;
++	if (!shc)
++		return -EINVAL;
++	if (reg >= MCUIO_HC_INBUF && reg < MCUIO_RX_CNT)
++		return mcuio_soft_hc_read_inbuf(shc, reg, val);
++	switch(reg) {
++	case MCUIO_RX_CNT:
++	{
++		struct circ_buf *buf = &shc->rx_circ_buf;
++		*val = CIRC_CNT(buf->head, buf->tail, sizeof(shc->rx_buf));
++		return sizeof(*val);
++	}
++	case MCUIO_IRQ:
++		*val = shc->irqno;
++		return sizeof(*val);
++	case MCUIO_IRQ_STAT:
++		*val = shc->irqstat;
++		return sizeof(*val);
++	default:
++		return -EPERM;
++	}
++	/* NEVER REACHED */
++	return -EPERM;
++}
++
++static int mcuio_soft_hc_reg_write(void *context,
++				   unsigned int reg, unsigned int val)
++{
++	struct mcuio_soft_hc *shc = context;
++	u8 *out = (u8 *)&val;
++	if (!shc)
++		return -EINVAL;
++	if (reg >= MCUIO_HC_OUTBUF && reg < MCUIO_HC_INBUF)
++		return shc->ops->write(shc, out, sizeof(val));
++	if (reg == MCUIO_IRQ_CLR) {
++		shc->irqstat &= ~val;
++		return 0;
++	}
++	return -EPERM;
++}
++
++int mcuio_soft_hc_push_chars(struct mcuio_soft_hc *shc, const u8 *in, int len)
++{
++	int s = sizeof(shc->rx_buf), available, actual;
++	struct circ_buf *buf = &shc->rx_circ_buf;
++	available = CIRC_SPACE_TO_END(buf->head, buf->tail, s);
++	if (available < sizeof(u32)) {
++		pr_debug("%s %d\n", __func__, __LINE__);
++		return -EAGAIN;
++	}
++	actual = min(len, available);
++	memcpy(&buf->buf[buf->head], in, actual);
++	buf->head = (buf->head + actual) & (s - 1);
++	/* set irq status register RX_RDY bit */
++	shc->irqstat |= RX_RDY;
++	if (shc->irq_enabled)
++		handle_nested_irq(shc->irqno);
++	return actual;
++}
++EXPORT_SYMBOL(mcuio_soft_hc_push_chars);
++
++static struct regmap_config *mcuio_soft_hc_setup_regmap_config(void)
++{
++	struct regmap_config *out = kzalloc(sizeof(*out), GFP_KERNEL);
++	if (!out)
++		return out;
++	*out = proto;
++	out->reg_read = mcuio_soft_hc_reg_read;
++	out->reg_write = mcuio_soft_hc_reg_write;
++	return out;
++}
++
++static struct regmap *
++mcuio_soft_hc_setup_regmap(struct device *dev,
++			   void *__plat)
++{
++	struct mcuio_hc_platform_data *plat = __plat;
++	struct regmap_config *map_cfg = mcuio_soft_hc_setup_regmap_config();
++	struct mcuio_soft_hc *shc;
++	struct regmap *out = ERR_PTR(-ENOMEM);
++	if (!map_cfg) {
++		dev_err(dev, "%s: cannot setup regmap config\n", __func__);
++		return ERR_PTR(-ENOMEM);
++	}
++	shc = plat->data;
++	if (!shc) {
++		dev_err(dev, "%s: no platform data\n", __func__);
++		return out;
++	}
++	/*
++	  no_bus regmap with reg_read and reg_write, use soft controller
++	  structure as regmap context
++	*/
++	return regmap_init(dev, NULL, shc, map_cfg);
++}
++
++static void mcuio_soft_hc_irq_mask(struct irq_data *d)
++{
++	struct irq_chip *chip = irq_data_get_irq_chip(d);
++	struct mcuio_soft_hc *shc =
++		container_of(chip, struct mcuio_soft_hc, chip);
++
++	shc->irq_enabled = 0;
++}
++
++static void mcuio_soft_hc_irq_unmask(struct irq_data *d)
++{
++	struct irq_chip *chip = irq_data_get_irq_chip(d);
++	struct mcuio_soft_hc *shc =
++		container_of(chip, struct mcuio_soft_hc, chip);
++
++	shc->irq_enabled = 1;
++}
++
++static struct mcuio_soft_hc *__setup_shc(const struct mcuio_soft_hc_ops *ops,
++					 void *priv)
++{
++	struct mcuio_soft_hc *shc = kzalloc(sizeof(*shc), GFP_KERNEL);
++	if (!shc)
++		return ERR_PTR(-ENOMEM);
++	shc->ops = ops;
++	shc->priv = priv;
++	shc->rx_circ_buf.head = shc->rx_circ_buf.tail = 0;
++	shc->rx_circ_buf.buf = shc->rx_buf;
++	shc->chip.name = "MCUIO-SHC";
++	shc->chip.irq_mask = mcuio_soft_hc_irq_mask;
++	shc->chip.irq_unmask = mcuio_soft_hc_irq_unmask;
++	shc->irqno = irq_alloc_desc(0);
++	irq_set_chip(shc->irqno, &shc->chip);
++	irq_set_handler(shc->irqno, &handle_simple_irq);
++	irq_modify_status(shc->irqno,
++			  IRQ_NOREQUEST | IRQ_NOAUTOEN,
++			  IRQ_NOPROBE);
++	return shc;
++}
++
++static struct mcuio_device_id default_soft_hc_id = {
++	.device = 0,
++	.vendor = 0,
++	.class = MCUIO_CLASS_SOFT_HOST_CONTROLLER,
++};
++
++struct device *mcuio_add_soft_hc(struct mcuio_device_id *id,
++				 const struct mcuio_soft_hc_ops *ops,
++				 void *priv)
++{
++	struct mcuio_hc_platform_data *plat;
++	struct mcuio_soft_hc *shc = __setup_shc(ops, priv);
++	if (!shc)
++		return ERR_PTR(-ENOMEM);
++	plat = kzalloc(sizeof(*plat), GFP_KERNEL);
++	if (!plat) {
++		kfree(shc);
++		return ERR_PTR(-ENOMEM);
++	}
++	plat->setup_regmap = mcuio_soft_hc_setup_regmap;
++	plat->data = shc;
++	return mcuio_add_hc_device(id ? id : &default_soft_hc_id, plat);
++}
++EXPORT_SYMBOL(mcuio_add_soft_hc);
++
++MODULE_AUTHOR("Davide Ciminaghi");
++MODULE_DESCRIPTION("MCUIO soft host controller code");
++MODULE_LICENSE("GPL v2");
+diff --git a/include/linux/mcuio-soft-hc.h b/include/linux/mcuio-soft-hc.h
+new file mode 100644
+index 0000000..64ba7d5
+--- /dev/null
++++ b/include/linux/mcuio-soft-hc.h
+@@ -0,0 +1,72 @@
++/*
++ * Copyright 2011 Dog Hunter SA
++ * Author: Davide Ciminaghi <ciminaghi@gnudd.com>
++ *
++ * GNU GPLv2 or later
++ */
++
++/* mcuio generic soft host controller functions and data structs, header file */
++
++#ifndef __MCUIO_SOFT_HOST_CONTROLLER_H__
++#define __MCUIO_SOFT_HOST_CONTROLLER_H__
++
++#include <linux/circ_buf.h>
++#include <linux/irq.h>
++
++struct mcuio_soft_hc;
++
++struct mcuio_soft_hc_ops {
++	int (*write)(struct mcuio_soft_hc *, const u8 *ptr, unsigned int len);
++};
++
++/*
++ * A soft mcuio host controller
++ *
++ * @id: pointer to corresponding mcuio device's id.
++ * @irqstat: current irq status register
++ * @irqno: number of [virtual] irq
++ * @irq_enabled: irq enabled when !0
++ * @rx_circ_buf: circular buffer structure for rx data management
++ * @rx_buf: actual rx data buffer
++ * @ops: pointer to hc operations
++ * @chip: related irqchip
++ * @priv: client driver private data
++ */
++struct mcuio_soft_hc {
++	struct mcuio_device_id *id;
++	u32 irqstat;
++	int irqno;
++	int irq_enabled;
++	struct circ_buf rx_circ_buf;
++	char rx_buf[256];
++	const struct mcuio_soft_hc_ops *ops;
++	struct irq_chip chip;
++	void *priv;
++};
++
++/* Instantiate a soft host controller */
++/*
++ * mcuio_add_soft_hc
++ *
++ * @id: pointer to corresponding mcuio device's id.
++ * @ops: pointer to operations structure
++ * @priv: pointer to private data
++ *
++ * Returns pointer to corresponding device
++ */
++struct device *mcuio_add_soft_hc(struct mcuio_device_id *id,
++				 const struct mcuio_soft_hc_ops *ops,
++				 void *priv);
++
++/* Push chars from soft host controller client driver */
++/*
++ * mcuio_soft_hc_push_chars()
++ *
++ * @shc: pointer to soft host controller data structure
++ * @buf: pointer to input buffer
++ * @len: length of buffer
++ */
++int mcuio_soft_hc_push_chars(struct mcuio_soft_hc *shc, const u8 *buf, int len);
++
++
++#endif /* __MCUIO_SOFT_HOST_CONTROLLER_H__ */
+-- 
+1.8.5.2.233.g932f7e4
+

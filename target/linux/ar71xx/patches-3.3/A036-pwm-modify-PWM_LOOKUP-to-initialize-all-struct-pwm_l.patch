@@ -1,0 +1,53 @@
+From 8f28583f8c5f08ef4eef436aef6f11a4e94b07f2 Mon Sep 17 00:00:00 2001
+From: Alexandre Belloni <alexandre.belloni@free-electrons.com>
+Date: Mon, 19 May 2014 22:42:37 +0200
+Subject: [PATCH 36/47] pwm: modify PWM_LOOKUP to initialize all struct
+ pwm_lookup members
+
+Now that PWM_LOOKUP is not used anymore, modify it to initialize all the
+members of struct pwm_lookup.
+
+Signed-off-by: Alexandre Belloni <alexandre.belloni@free-electrons.com>
+Signed-off-by: Thierry Reding <thierry.reding@gmail.com>
+---
+ Documentation/pwm.txt |    3 ++-
+ include/linux/pwm.h   |    4 +++-
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/pwm.txt b/Documentation/pwm.txt
+index 0527f61..ca895fd 100644
+--- a/Documentation/pwm.txt
++++ b/Documentation/pwm.txt
+@@ -19,7 +19,8 @@ should instead register a static mapping that can be used to match PWM
+ consumers to providers, as given in the following example:
+ 
+ 	static struct pwm_lookup board_pwm_lookup[] = {
+-		PWM_LOOKUP("tegra-pwm", 0, "pwm-backlight", NULL),
++		PWM_LOOKUP("tegra-pwm", 0, "pwm-backlight", NULL,
++			   50000, PWM_POLARITY_NORMAL),
+ 	};
+ 
+ 	static void __init board_init(void)
+diff --git a/include/linux/pwm.h b/include/linux/pwm.h
+index f838466..6252f7b 100644
+--- a/include/linux/pwm.h
++++ b/include/linux/pwm.h
+@@ -242,12 +242,14 @@ struct pwm_lookup {
+ 	enum pwm_polarity polarity;
+ };
+ 
+-#define PWM_LOOKUP(_provider, _index, _dev_id, _con_id)	\
++#define PWM_LOOKUP(_provider, _index, _dev_id, _con_id, _period, _polarity) \
+ 	{						\
+ 		.provider = _provider,			\
+ 		.index = _index,			\
+ 		.dev_id = _dev_id,			\
+ 		.con_id = _con_id,			\
++		.period = _period,			\
++		.polarity = _polarity			\
+ 	}
+ 
+ #if IS_ENABLED(CONFIG_PWM)
+-- 
+1.7.9.5
+

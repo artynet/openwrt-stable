@@ -1,0 +1,28 @@
+From c29a20719c55dd77dd3a1290e0ce7474593d9f0f Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Wed, 1 Oct 2014 17:26:46 +0200
+Subject: [PATCH 132/134] gpio-mcuio: trivial, more verbose msg for each
+ discovered gpio
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/gpio/gpio-mcuio.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpio/gpio-mcuio.c b/drivers/gpio/gpio-mcuio.c
+index ec21d2e..3efccdd 100644
+--- a/drivers/gpio/gpio-mcuio.c
++++ b/drivers/gpio/gpio-mcuio.c
+@@ -301,7 +301,8 @@ static int mcuio_gpio_probe(struct mcuio_device *mdev)
+ 	}
+ 	for (i = 0; i < g->chip.ngpio; i++) {
+ 		regmap_read(map, 0x10 + i*4, (u32 *)&names[i*8]);
+-		dev_dbg(&mdev->dev, "found gpio %s\n", &names[i*8]);
++		dev_dbg(&mdev->dev, "found gpio %u: %s\n",
++			 g->chip.base + i, &names[i*8]);
+ 		names_ptr[i] = &names[i*8];
+ 	}
+ 	g->chip.names = (const char *const *)names_ptr;
+-- 
+1.7.9.5
+

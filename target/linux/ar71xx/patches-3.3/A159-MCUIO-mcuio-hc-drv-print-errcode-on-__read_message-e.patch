@@ -1,0 +1,29 @@
+From 922ccc3cb0eeecb7c749b65ec52611458b75a3e7 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 17:26:17 +0200
+Subject: [PATCH 159/188] MCUIO, mcuio-hc-drv: print errcode on __read_message
+ errors
+
+---
+ drivers/mcuio/mcuio-hc-drv.c |    4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 593f4ac..3e6dc67 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -318,8 +318,10 @@ static int __read_message(struct mcuio_hc_data *data,
+ 	}
+ 	for (i = 0; i < count; i++, ptr++) {
+ 		stat = regmap_read(map, MCUIO_HC_INBUF + i * sizeof(u32), ptr);
+-		if (stat < 0)
++		if (stat < 0) {
++			pr_err("%s error %d reading from hc\n", __func__, stat);
+ 			return stat;
++		}
+ 	}
+ 	return 0;
+ }
+-- 
+1.7.9.5
+

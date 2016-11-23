@@ -1,0 +1,90 @@
+From 19fbbb23cc2a2a2d59fefb7494ca3daa7ccaae7e Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 28 Jul 2014 17:05:05 +0200
+Subject: [PATCH 41/47] mcuio pwm: config and polarity
+
+Actually, polarity is not implemented yet, since it is not available on MCU
+side.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/pwm-mcuio.c |   40 +++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 35 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/pwm/pwm-mcuio.c b/drivers/pwm/pwm-mcuio.c
+index 415127c..eaa69e2 100644
+--- a/drivers/pwm/pwm-mcuio.c
++++ b/drivers/pwm/pwm-mcuio.c
+@@ -34,7 +34,8 @@ static const struct regmap_config mcuio_pwm_regmap_config = {
+ struct mcuio_pwm_data {
+ 	struct pwm_chip chip;
+ 	struct regmap *map;
+-	/* FIXME TODO Add mcuio data */
++	u32 *ticks_ns;
++	u32 *max_ticks;
+ };
+ 
+ static inline struct mcuio_pwm_data *to_mcuio_pwm_data(struct pwm_chip *chip)
+@@ -50,15 +51,24 @@ static inline int pwm_idx(struct pwm_device *pwm)
+ static int mcuio_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 			    int duty_ns, int period_ns)
+ {
+-	/* FIXME TODO */
+-	return -1;
++	struct mcuio_pwm_data *data = to_mcuio_pwm_data(chip);
++	int idx = pwm_idx(pwm);
++
++	if (regmap_write(data->map, 0x040 * (idx + 1) + 0x10,
++		period_ns / data->ticks_ns[idx]))
++		return -EIO;
++
++	if (regmap_write(data->map, 0x040 * (idx + 1) + 0x14,
++		duty_ns / data->ticks_ns[idx]))
++		return -EIO;
++
++	return 0;
+ }
+ 
+ static int mcuio_pwm_set_polarity(struct pwm_chip *chip, struct pwm_device *pwm,
+ 				  enum pwm_polarity polarity)
+ {
+-	/* FIXME TODO */
+-	return -1;
++	return -EINVAL;
+ }
+ 
+ static int mcuio_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
+@@ -161,10 +171,30 @@ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ 		goto fail1;
+ 	}
+ 
++	data->ticks_ns = devm_kzalloc(&mdev->dev, data->chip.npwm * sizeof(u32),
++				      GFP_KERNEL);
++
++	data->max_ticks = devm_kzalloc(&mdev->dev,
++				      data->chip.npwm * sizeof(u32),
++				      GFP_KERNEL);
++
++	if (!data->max_ticks || !data->ticks_ns) {
++		ret = -ENOMEM;
++		goto fail1;
++	}
++
+ 	for (i = 0; i < data->chip.npwm; i++) {
++
+ 		regmap_read(data->map, 0x040 * (i + 1), (u32*)&names[i * 8]);
+ 		dev_dbg(&mdev->dev, "found pwm %d: %s\n", i, &names[i * 8]);
++
+ 		data->chip.pwms[i].label = &names[i * 8];
++
++		regmap_read(data->map, 0x040 * (i + 1) + 0x04,
++			    &data->ticks_ns[i]);
++
++		regmap_read(data->map, 0x040 * (i + 1) + 0x08,
++			    &data->max_ticks[i]);
+ 	}
+ 	return ret;
+ 
+-- 
+1.7.9.5
+

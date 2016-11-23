@@ -1,0 +1,27 @@
+From cc7192c044afa09914f7384b510305045e2ee64c Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 25 Sep 2014 15:24:51 +0200
+Subject: [PATCH 2/3] mcuio lucky shield: mma8491 rst pin set to 200 (first
+ pin of gpio expansion)
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-lucky-shield.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 735c9e0..c8d7c63 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -42,7 +42,7 @@ static unsigned short mag3110_addr = 0x0e;
+ static unsigned short sht21_addr = 0x40;
+ static unsigned short ssd1307_addr = 0x3c;
+ static unsigned short mma8491_addr = 0x55;
+-static unsigned int mma8491_rst = 120;
++static unsigned int mma8491_rst = 200;
+ module_param(pca9555_base, uint, 0644);
+ module_param(pca9555_addr, ushort, 0644);
+ module_param(mpl3115_addr, ushort, 0644);
+-- 
+1.7.9.5
+

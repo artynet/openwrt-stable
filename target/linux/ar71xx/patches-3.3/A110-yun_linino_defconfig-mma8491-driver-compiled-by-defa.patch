@@ -1,0 +1,26 @@
+From b56af3816014da5a0da700d4e2aba70513b7b542 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 15 Sep 2014 16:01:42 +0200
+Subject: [PATCH 110/115] yun_linino_defconfig: mma8491 driver compiled by
+ default
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index 6b1f5d4..b5e545a 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -2845,6 +2845,7 @@ CONFIG_IIO_CONSUMERS_PER_TRIGGER=2
+ # CONFIG_IIO_ST_ACCEL_3AXIS is not set
+ # CONFIG_KXSD9 is not set
+ CONFIG_MMA8452=y
++CONFIG_MMA8491=y
+ 
+ #
+ # Analog to digital converters
+-- 
+1.9.1
+

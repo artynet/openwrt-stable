@@ -1,0 +1,102 @@
+From f580db8aead1cc74dc199642549529bfeaab2571 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Tue, 29 Jul 2014 07:49:14 +0200
+Subject: [PATCH 45/47] drivers/pwm/pwm-mcuio.c: max and resolution moved
+ inside pwm framework
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/pwm-mcuio.c |   30 ++++++++++--------------------
+ 1 file changed, 10 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/pwm/pwm-mcuio.c b/drivers/pwm/pwm-mcuio.c
+index 74884e5..b9f83ee 100644
+--- a/drivers/pwm/pwm-mcuio.c
++++ b/drivers/pwm/pwm-mcuio.c
+@@ -34,8 +34,6 @@ static const struct regmap_config mcuio_pwm_regmap_config = {
+ struct mcuio_pwm_data {
+ 	struct pwm_chip chip;
+ 	struct regmap *map;
+-	u32 *ticks_ns;
+-	u32 *max_ticks;
+ };
+ 
+ static inline struct mcuio_pwm_data *to_mcuio_pwm_data(struct pwm_chip *chip)
+@@ -55,11 +53,11 @@ static int mcuio_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 	int idx = pwm_idx(pwm);
+ 
+ 	if (regmap_write(data->map, 0x040 * (idx + 1) + 0x10,
+-		period_ns / data->ticks_ns[idx]))
++		period_ns / pwm->resolution))
+ 		return -EIO;
+ 
+ 	if (regmap_write(data->map, 0x040 * (idx + 1) + 0x14,
+-		duty_ns / data->ticks_ns[idx]))
++		duty_ns / pwm->resolution))
+ 		return -EIO;
+ 
+ 	return 0;
+@@ -116,7 +114,7 @@ static int mcuio_pwm_update_period(struct pwm_chip *chip,
+ 	if (regmap_read(data->map, 0x040 * (idx + 1) + 0x10, &val))
+ 		return -EIO;
+ 
+-	pwm->period = val * data->ticks_ns[idx];
++	pwm->period = val * pwm->resolution;
+ 	return 0;
+ }
+ 
+@@ -129,7 +127,7 @@ static int mcuio_pwm_update_duty(struct pwm_chip *chip,
+ 	if (regmap_read(data->map, 0x040 * (idx + 1) + 0x14, &val))
+ 		return -EIO;
+ 
+-	pwm->duty_cycle = val * data->ticks_ns[idx];
++	pwm->duty_cycle = val * pwm->resolution;
+ 	return 0;
+ }
+ 
+@@ -151,6 +149,7 @@ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ 	struct mcuio_device *hc = to_mcuio_dev(mdev->dev.parent);
+ 	char *names;
+ 	int i;
++	u32 max_ticks;
+ 
+ 	if (!hc) {
+ 		dev_err(&mdev->dev, "no parent for device\n");
+@@ -199,18 +198,6 @@ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ 		goto fail1;
+ 	}
+ 
+-	data->ticks_ns = devm_kzalloc(&mdev->dev, data->chip.npwm * sizeof(u32),
+-				      GFP_KERNEL);
+-
+-	data->max_ticks = devm_kzalloc(&mdev->dev,
+-				      data->chip.npwm * sizeof(u32),
+-				      GFP_KERNEL);
+-
+-	if (!data->max_ticks || !data->ticks_ns) {
+-		ret = -ENOMEM;
+-		goto fail1;
+-	}
+-
+ 	for (i = 0; i < data->chip.npwm; i++) {
+ 
+ 		regmap_read(data->map, 0x040 * (i + 1), (u32*)&names[i * 8]);
+@@ -219,10 +206,13 @@ static int mcuio_pwm_probe(struct mcuio_device *mdev)
+ 		data->chip.pwms[i].label = &names[i * 8];
+ 
+ 		regmap_read(data->map, 0x040 * (i + 1) + 0x04,
+-			    &data->ticks_ns[i]);
++			    &data->chip.pwms[i].resolution);
+ 
+ 		regmap_read(data->map, 0x040 * (i + 1) + 0x08,
+-			    &data->max_ticks[i]);
++			    &max_ticks);
++
++		data->chip.pwms[i].max = max_ticks *
++			data->chip.pwms[i].resolution;
+ 	}
+ 	return ret;
+ 
+-- 
+1.7.9.5
+

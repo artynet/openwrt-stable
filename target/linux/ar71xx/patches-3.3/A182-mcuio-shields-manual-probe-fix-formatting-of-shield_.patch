@@ -1,0 +1,38 @@
+From df09b4bc60f14918ec3752451d744b61f099014d Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 17 Nov 2014 10:58:20 +0100
+Subject: [PATCH 182/188] mcuio: shields manual probe, fix formatting of
+ shield_list attribute
+
+Usage of newlines in sysfs attributes is deprecated, so put all the
+values on the same line. Also, removed the '*' which used to indicate
+registered shield, for the same reason.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-shields-manprobe.c |    7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-shields-manprobe.c b/drivers/mcuio/mcuio-shields-manprobe.c
+index 2d47e48..6bc16a8 100644
+--- a/drivers/mcuio/mcuio-shields-manprobe.c
++++ b/drivers/mcuio/mcuio-shields-manprobe.c
+@@ -120,13 +120,10 @@ static ssize_t show_shld_list(struct device *dev, struct device_attribute *attr,
+ 	struct shld_probe_info *i;
+ 	buf[0] = '\0';
+ 	for (i = shld_list; i->name; i++) {
+-		if (i->probed)
+-			strcat(buf, "* ");
+-		else
+-			strcat(buf, "  ");
+ 		strcat(buf, i->name);
+-		strcat(buf, "\n");
++		strcat(buf, "\t");
+ 	}
++	strcat(buf, "\n");
+ 	return strlen(buf);
+ }
+ 
+-- 
+1.7.9.5
+

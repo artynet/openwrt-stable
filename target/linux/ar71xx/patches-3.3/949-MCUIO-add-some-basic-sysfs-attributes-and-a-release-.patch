@@ -1,0 +1,204 @@
+From e0a23eb83de1d6d15bfd8437c16837f5db4797c0 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 8 May 2014 18:14:53 +0200
+Subject: [PATCH 949/973] MCUIO: add some basic sysfs attributes and a release
+ function.
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/mcuio/Makefile         |  2 +-
+ drivers/mcuio/bus.c            | 13 +++++++
+ drivers/mcuio/mcuio-hc-dev.c   | 20 +++++++++-
+ drivers/mcuio/mcuio-internal.h |  1 +
+ drivers/mcuio/sysfs.c          | 83 ++++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 117 insertions(+), 2 deletions(-)
+ create mode 100644 drivers/mcuio/sysfs.c
+
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index 5b785de..f356c8d 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -2,7 +2,7 @@
+ 
+ LINUX ?= /lib/modules/$(shell uname -r)/build
+ 
+-mcuio-y := core.o bus.o
++mcuio-y := core.o bus.o sysfs.o
+ 
+ obj-$(CONFIG_MCUIO) = mcuio.o mcuio-hc-drv.o mcuio-hc-dev.o mcuio-soft-hc.o
+ 
+diff --git a/drivers/mcuio/bus.c b/drivers/mcuio/bus.c
+index af0d240..3356f1b 100644
+--- a/drivers/mcuio/bus.c
++++ b/drivers/mcuio/bus.c
+@@ -26,6 +26,12 @@ static struct bus_attribute def_bus_attrs[] = {
+ 	__ATTR_NULL,
+ };
+ 
++static void mcuio_dev_default_release(struct device *dev)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	kfree(mdev);
++}
++
+ /*
+  * mcuio_match_device
+  * @drv driver to match
+@@ -103,8 +109,15 @@ struct device mcuio_bus = {
+ };
+ EXPORT_SYMBOL_GPL(mcuio_bus);
+ 
++static const struct attribute_group *default_dev_attr_groups[] = {
++	&mcuio_default_dev_attr_group,
++	NULL,
++};
++
+ struct device_type mcuio_default_device_type = {
+ 	.name = "mcuiodev",
++	.groups = default_dev_attr_groups,
++	.release = mcuio_dev_default_release,
+ };
+ 
+ int mcuio_device_register(struct mcuio_device *mdev,
+diff --git a/drivers/mcuio/mcuio-hc-dev.c b/drivers/mcuio/mcuio-hc-dev.c
+index 3bb7b73..9734829 100644
+--- a/drivers/mcuio/mcuio-hc-dev.c
++++ b/drivers/mcuio/mcuio-hc-dev.c
+@@ -25,6 +25,24 @@ static struct mcuio_device_id default_hc_id = {
+ 	.class = MCUIO_CLASS_HOST_CONTROLLER,
+ };
+ 
++static void mcuio_hc_dev_release(struct device *dev)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	mcuio_put_bus(mdev->bus);
++	kfree(mdev);
++}
++
++static const struct attribute_group *hc_dev_attr_groups[] = {
++	&mcuio_default_dev_attr_group,
++	NULL,
++};
++
++static struct device_type hc_device_type = {
++	.name = "mcuio-host-controller",
++	.release = mcuio_hc_dev_release,
++	.groups = hc_dev_attr_groups,
++};
++
+ struct device *mcuio_add_hc_device(struct mcuio_device_id *id,
+ 				   struct mcuio_hc_platform_data *plat)
+ {
+@@ -42,7 +60,7 @@ struct device *mcuio_add_hc_device(struct mcuio_device_id *id,
+ 	d->fn = 0;
+ 	d->id = id ? *id : default_hc_id;
+ 	d->dev.platform_data = plat;
+-	ret = mcuio_device_register(d, NULL, NULL);
++	ret = mcuio_device_register(d, &hc_device_type, NULL);
+ 	if (ret < 0)
+ 		goto err1;
+ 	return &d->dev;
+diff --git a/drivers/mcuio/mcuio-internal.h b/drivers/mcuio/mcuio-internal.h
+index 3d899d4..223e2ec 100644
+--- a/drivers/mcuio/mcuio-internal.h
++++ b/drivers/mcuio/mcuio-internal.h
+@@ -5,6 +5,7 @@
+ 
+ extern struct bus_type mcuio_bus_type;
+ extern struct device mcuio_bus;
++extern struct attribute_group mcuio_default_dev_attr_group;
+ 
+ int mcuio_get_bus(void);
+ void mcuio_put_bus(unsigned bus);
+diff --git a/drivers/mcuio/sysfs.c b/drivers/mcuio/sysfs.c
+new file mode 100644
+index 0000000..e074b85
+--- /dev/null
++++ b/drivers/mcuio/sysfs.c
+@@ -0,0 +1,83 @@
++/*
++ * Copyright 2011 Dog Hunter SA
++ * Author: Davide Ciminaghi <ciminaghi@gnudd.com>
++ *
++ * GNU GPLv2 or later
++ */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/types.h>
++#include <linux/sysfs.h>
++
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++#include "mcuio-internal.h"
++
++
++static ssize_t show_device(struct device *dev, struct device_attribute *attr,
++			   char *buf)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	return sprintf(buf, "0x%04x", mdev->id.device);
++}
++
++static ssize_t show_vendor(struct device *dev, struct device_attribute *attr,
++			   char *buf)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	return sprintf(buf, "0x%04x", mdev->id.vendor);
++}
++
++static ssize_t show_class(struct device *dev, struct device_attribute *attr,
++			  char *buf)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	return sprintf(buf, "0x%08x", mdev->id.class);
++}
++
++static ssize_t show_bus(struct device *dev, struct device_attribute *attr,
++			char *buf)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	return sprintf(buf, "%u", mdev->bus);
++}
++
++static ssize_t show_dev(struct device *dev, struct device_attribute *attr,
++			char *buf)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	return sprintf(buf, "%u", mdev->device);
++}
++
++static ssize_t show_func(struct device *dev, struct device_attribute *attr,
++			char *buf)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	return sprintf(buf, "%u", mdev->fn);
++}
++
++static DEVICE_ATTR(device, 0444, show_device, NULL);
++static DEVICE_ATTR(vendor, 0444, show_vendor, NULL);
++static DEVICE_ATTR(class, 0444, show_class, NULL);
++static DEVICE_ATTR(bus, 0444, show_bus, NULL);
++static DEVICE_ATTR(dev, 0444, show_dev, NULL);
++static DEVICE_ATTR(func, 0444, show_func, NULL);
++
++static struct attribute *dev_attrs[] = {
++	&dev_attr_device.attr,
++	&dev_attr_vendor.attr,
++	&dev_attr_class.attr,
++	&dev_attr_bus.attr,
++	&dev_attr_dev.attr,
++	&dev_attr_func.attr,
++	NULL,
++};
++
++struct attribute_group mcuio_default_dev_attr_group = {
++	.attrs = dev_attrs,
++};
++EXPORT_SYMBOL(mcuio_default_dev_attr_group);
+-- 
+1.8.5.2.233.g932f7e4
+

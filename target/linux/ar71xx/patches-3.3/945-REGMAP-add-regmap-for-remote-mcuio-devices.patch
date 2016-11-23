@@ -1,0 +1,369 @@
+From 801bdf18301a3e739faf36411c1517af55db0e32 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 8 May 2014 16:18:17 +0200
+Subject: [PATCH 945/973] REGMAP: add regmap for remote mcuio devices
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ drivers/base/regmap/Kconfig               |   5 +-
+ drivers/base/regmap/Makefile              |   1 +
+ drivers/base/regmap/regmap-mcuio-remote.c | 275 ++++++++++++++++++++++++++++++
+ drivers/mcuio/Kconfig                     |   1 +
+ include/linux/regmap.h                    |   5 +
+ 5 files changed, 286 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/base/regmap/regmap-mcuio-remote.c
+
+diff --git a/drivers/base/regmap/Kconfig b/drivers/base/regmap/Kconfig
+index 0f6c7fb..fcd7a08 100644
+--- a/drivers/base/regmap/Kconfig
++++ b/drivers/base/regmap/Kconfig
+@@ -3,7 +3,7 @@
+ # subsystems should select the appropriate symbols.
+ 
+ config REGMAP
+-	default y if (REGMAP_I2C || REGMAP_SPI)
++	default y if (REGMAP_I2C || REGMAP_SPI || REGMAP_MCUIO)
+ 	select LZO_COMPRESS
+ 	select LZO_DECOMPRESS
+ 	bool
+@@ -16,3 +16,6 @@ config REGMAP_SPI
+ 
+ config REGMAP_IRQ
+ 	bool
++
++config REGMAP_MCUIO
++        tristate
+diff --git a/drivers/base/regmap/Makefile b/drivers/base/regmap/Makefile
+index defd579..e4c9aa6 100644
+--- a/drivers/base/regmap/Makefile
++++ b/drivers/base/regmap/Makefile
+@@ -4,3 +4,4 @@ obj-$(CONFIG_DEBUG_FS) += regmap-debugfs.o
+ obj-$(CONFIG_REGMAP_I2C) += regmap-i2c.o
+ obj-$(CONFIG_REGMAP_SPI) += regmap-spi.o
+ obj-$(CONFIG_REGMAP_IRQ) += regmap-irq.o
++obj-$(CONFIG_REGMAP_MCUIO) += regmap-mcuio-remote.o
+diff --git a/drivers/base/regmap/regmap-mcuio-remote.c b/drivers/base/regmap/regmap-mcuio-remote.c
+new file mode 100644
+index 0000000..7599e24
+--- /dev/null
++++ b/drivers/base/regmap/regmap-mcuio-remote.c
+@@ -0,0 +1,275 @@
++/*
++ * Regmap for remote mcuio devices (not living on this machine)
++ * Presently, all mcuio devices are remote devices except for the ho
++ * controller. Code comes from regmap-mmio
++ */
++
++#include <linux/err.h>
++#include <linux/init.h>
++#include <linux/io.h>
++#include <linux/module.h>
++#include <linux/slab.h>
++#include <linux/regmap.h>
++
++#include <linux/mcuio.h>
++#include <linux/mcuio-proto.h>
++
++/**
++ * mcuio bus context
++ * @hc: pointer to host controller
++ * @dev: device number of mcuio device
++ * @func: function number of mcuio device
++ */
++struct regmap_mcuio_context {
++	struct mcuio_device *hc;
++	unsigned dev;
++	unsigned func;
++	unsigned val_bytes;
++};
++
++typedef void (*copyf)(void *, const void *);
++
++static void copyb(void *dst, const void *src)
++{
++	*(u8 *)dst = *(u8 *)src;
++}
++
++static void copyw(void *dst, const void *src)
++{
++	*(u16 *)dst = *(u16 *)src;
++}
++
++static void copydw(void *dst, const void *src)
++{
++	*(u32 *)dst = *(u32 *)src;
++}
++
++static void copyq(void *dst, const void *src)
++{
++	*(u64 *)dst = *(u64 *)src;
++}
++
++static int regmap_mcuio_gather_write(void *context,
++				     const void *reg, size_t reg_size,
++				     const void *val, size_t val_size)
++{
++	struct regmap_mcuio_context *ctx = context;
++	struct mcuio_request r;
++	u32 offset;
++	unsigned t;
++	int ret;
++	copyf f;
++
++	BUG_ON(reg_size != 4);
++
++	offset = *(u32 *)reg;
++
++	r.hc = ctx->hc;
++	r.dev = ctx->dev;
++	r.func = ctx->func;
++	r.offset = offset;
++
++	switch (ctx->val_bytes) {
++	case 1:
++		t = mcuio_type_wrb;
++		f = copyb;
++		break;
++	case 2:
++		t = mcuio_type_wrw;
++		f = copyw;
++		break;
++	case 4:
++		t = mcuio_type_wrdw;
++		f = copydw;
++		break;
++	case 8:
++		t = mcuio_type_wrq;
++		f = copyq;
++		break;
++	default:
++		BUG();
++	}
++
++	while (val_size) {
++		r.type = t;
++		r.hc = ctx->hc;
++		r.dev = ctx->dev;
++		r.func = ctx->func;
++		r.offset = offset;
++		r.dont_free = 1;
++		f(r.data, val);
++		ret = mcuio_submit_request(&r);
++		if (ret)
++			break;
++		val_size -= ctx->val_bytes;
++		val += ctx->val_bytes;
++		offset += ctx->val_bytes;
++	}
++
++	return ret;
++}
++
++static int regmap_mcuio_write(void *context, const void *data, size_t count)
++{
++	BUG_ON(count < 4);
++
++	return regmap_mcuio_gather_write(context, data, 4, data + 4, count - 4);
++}
++
++static int regmap_mcuio_read(void *context,
++			     const void *reg, size_t reg_size,
++			     void *val, size_t val_size)
++{
++	struct regmap_mcuio_context *ctx = context;
++	struct mcuio_request r;
++	u32 offset = *(u32 *)reg;
++	int ret;
++	copyf f;
++	unsigned t;
++
++	BUG_ON(reg_size != 4);
++	
++	switch (ctx->val_bytes) {
++	case 1:
++		t = mcuio_type_rdb;
++		f = copyb;
++		break;
++	case 2:
++		t = mcuio_type_rdw;
++		f = copyw;
++		break;
++	case 4:
++		t = mcuio_type_rddw;
++		f = copydw;
++		break;
++	case 8:
++		t = mcuio_type_rdq;
++		f = copyq;
++		break;
++	default:
++		return -EINVAL;
++	}
++	while (val_size) {
++		r.type = t;
++		r.hc = ctx->hc;
++		r.dev = ctx->dev;
++		r.func = ctx->func;
++		r.offset = offset;
++		r.status = -ETIMEDOUT;
++		r.dont_free = 1;
++		ret = mcuio_submit_request(&r);
++		if (ret)
++			break;
++		f(val, r.data);
++		val_size -= ctx->val_bytes;
++		val += ctx->val_bytes;
++		offset += ctx->val_bytes;
++	}
++	return ret;
++}
++
++
++static void regmap_mcuio_free_context(void *context)
++{
++	struct regmap_mcuio_context *ctx = context;
++	kfree(ctx);
++}
++
++static struct regmap_bus regmap_mcuio = {
++	.write = regmap_mcuio_write,
++	.read = regmap_mcuio_read,
++	.free_context = regmap_mcuio_free_context,
++};
++
++static struct regmap_mcuio_context *
++regmap_mcuio_setup_context(struct mcuio_device *mdev,
++			   const struct regmap_config *config)
++{
++	struct mcuio_device *hc = to_mcuio_dev(mdev->dev.parent);
++	struct regmap_mcuio_context *ctx;
++	int min_stride;
++
++	if (config->reg_bits != 32)
++		return ERR_PTR(-EINVAL);
++
++	switch (config->val_bits) {
++	case 8:
++		/* The core treats 0 as 1 */
++		min_stride = 0;
++		break;
++	case 16:
++		min_stride = 2;
++		break;
++	case 32:
++		min_stride = 4;
++		break;
++#ifdef CONFIG_64BIT
++	case 64:
++		min_stride = 8;
++		break;
++#endif
++		break;
++	default:
++		return ERR_PTR(-EINVAL);
++	}
++
++	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
++	if (!ctx)
++		return ERR_PTR(-ENOMEM);
++
++	ctx->hc = hc;
++	ctx->dev = mdev->device;
++	ctx->func = mdev->fn;
++	ctx->val_bytes = config->val_bits / 8;
++	return ctx;
++}
++
++
++/**
++ * regmap_init_mcuio(): Initialise mcuio register map
++ *
++ * @dev: Device that will be interacted with
++ * @hc: mcuio system controller
++ * @config: Configuration for register map
++ *
++ * The return value will be an ERR_PTR() on error or a valid pointer to
++ * a struct regmap.
++ */
++struct regmap *regmap_init_mcuio(struct mcuio_device *mdev,
++				 const struct regmap_config *config)
++{
++	struct regmap_mcuio_context *ctx;
++	ctx = regmap_mcuio_setup_context(mdev, config);
++	if (IS_ERR(ctx))
++		return ERR_CAST(ctx);
++
++	return regmap_init(&mdev->dev, &regmap_mcuio, ctx, config);
++}
++EXPORT_SYMBOL_GPL(regmap_init_mcuio);
++
++/**
++ * devm_regmap_init_mcuio(): Initialise mcuio register map, device manage
++ * version
++ *
++ * @dev: Device that will be interacted with
++ * @hc: mcuio system controller
++ * @config: Configuration for register map
++ *
++ * The return value will be an ERR_PTR() on error or a valid pointer to
++ * a struct regmap.
++ */
++struct regmap *devm_regmap_init_mcuio(struct mcuio_device *mdev,
++				      const struct regmap_config *config)
++{
++	struct regmap_mcuio_context *ctx;
++	ctx = regmap_mcuio_setup_context(mdev, config);
++	if (IS_ERR(ctx))
++		return ERR_CAST(ctx);
++
++	return devm_regmap_init(&mdev->dev, &regmap_mcuio, ctx, config);
++}
++EXPORT_SYMBOL_GPL(devm_regmap_init_mcuio);
++
++MODULE_AUTHOR("Davide Ciminaghi");
++MODULE_DESCRIPTION("MCUIO bus regmap implementation");
++MODULE_LICENSE("GPL v2");
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index fc90faa..95f209a 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -1,5 +1,6 @@
+ menuconfig MCUIO
+ 	tristate "mcuio drivers"
++	select REGMAP_MCUIO
+ 	help
+ 	  MCUIO is a protocol and a set of drivers which let a Linux MPU
+ 	  (MPU = MicroProcessor Unit) control an MCU's peripherals
+diff --git a/include/linux/regmap.h b/include/linux/regmap.h
+index 7f4982b..d126702 100644
+--- a/include/linux/regmap.h
++++ b/include/linux/regmap.h
+@@ -19,6 +19,7 @@
+ struct module;
+ struct i2c_client;
+ struct spi_device;
++struct mcuio_device;
+ 
+ /* An enum of all the supported cache types */
+ enum regcache_type {
+@@ -143,6 +144,8 @@ struct regmap *regmap_init_i2c(struct i2c_client *i2c,
+ 			       const struct regmap_config *config);
+ struct regmap *regmap_init_spi(struct spi_device *dev,
+ 			       const struct regmap_config *config);
++struct regmap *regmap_init_mcuio(struct mcuio_device *mdev,
++				 const struct regmap_config *config);
+ 
+ struct regmap *devm_regmap_init(struct device *dev,
+ 				const struct regmap_bus *bus,
+@@ -152,6 +155,8 @@ struct regmap *devm_regmap_init_i2c(struct i2c_client *i2c,
+ 				    const struct regmap_config *config);
+ struct regmap *devm_regmap_init_spi(struct spi_device *dev,
+ 				    const struct regmap_config *config);
++struct regmap *devm_regmap_init_mcuio(struct mcuio_device *mdev,
++				      const struct regmap_config *config);
+ 
+ void regmap_exit(struct regmap *map);
+ int regmap_reinit_cache(struct regmap *map,
+-- 
+1.8.5.2.233.g932f7e4
+

@@ -1,0 +1,25 @@
+From 0c680157e4b7bbb9c262065242e1fba46eaff588 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 30 Nov 2015 10:39:28 +0100
+Subject: [PATCH 35/50] MCUIO: trivial, lucky shield driver, remove unused var
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-lucky-shield.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 7e4d646..53b86b6 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -171,7 +171,6 @@ static int i2cdev_notifier_call(struct notifier_block *nb, unsigned long action,
+ 			 void *data)
+ {
+ 	struct mcuio_shld_i2c_info *i;
+-	struct i2c_client *c = to_i2c_client(data);
+ 	int cnt;
+ 
+ 	if (action == BUS_NOTIFY_DEL_DEVICE) {
+-- 
+2.8.2
+

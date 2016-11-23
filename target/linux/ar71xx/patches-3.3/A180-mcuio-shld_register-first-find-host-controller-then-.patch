@@ -1,0 +1,43 @@
+From f93a8cbf36e5a0663ee375ea365ba5c6e298ee8e Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 17 Nov 2014 10:56:19 +0100
+Subject: [PATCH 180/188] mcuio: shld_register, first find host controller,
+ then alloc mdev
+
+If hc is not found, do not call kzalloc for mdev. Without this patch,
+mdev was not freed in case of mcuio_bus_find_hc failure.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-shields-manprobe.c |    8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-shields-manprobe.c b/drivers/mcuio/mcuio-shields-manprobe.c
+index 5b03244..f446e8e 100644
+--- a/drivers/mcuio/mcuio-shields-manprobe.c
++++ b/drivers/mcuio/mcuio-shields-manprobe.c
+@@ -52,6 +52,10 @@ int shld_register(struct shld_probe_info *info)
+ 	struct mcuio_device *mdev;
+ 	struct mcuio_device *hc;
+ 
++	hc = mcuio_bus_find_hc(0);
++	if (IS_ERR(hc))
++		return -ENODEV;
++
+ 	mdev = kzalloc(sizeof(*mdev), GFP_KERNEL);
+ 	if (!mdev)
+ 		return -ENOMEM;
+@@ -59,10 +63,6 @@ int shld_register(struct shld_probe_info *info)
+ 	mdev->id = info->mdev_id;
+ 	mdev->device = info->dev_nr;
+ 
+-	hc = mcuio_bus_find_hc(mdev->bus);
+-	if (IS_ERR(hc))
+-		return -ENODEV;
+-
+ 	pr_debug("mcuio shield: device = 0x%04x, vendor = 0x%04x, "
+ 		 "class = 0x%04x\n", mdev->id.device,
+ 		 mdev->id.vendor, mdev->id.class);
+-- 
+1.7.9.5
+

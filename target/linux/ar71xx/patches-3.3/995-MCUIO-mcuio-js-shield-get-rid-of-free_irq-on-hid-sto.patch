@@ -1,0 +1,45 @@
+From 5857cece35e4aa2bcce907895f381a14bcf67002 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 21 May 2014 16:25:51 +0200
+Subject: [PATCH 0996/1009] MCUIO, mcuio-js-shield: get rid of free_irq on hid
+ stop
+
+irqs are freed autoomatically, since we use the devm_ version.
+---
+ drivers/mcuio/mcuio-js-shield.c |   20 --------------------
+ 1 file changed, 20 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-js-shield.c b/drivers/mcuio/mcuio-js-shield.c
+index 10c044a..11d897e 100644
+--- a/drivers/mcuio/mcuio-js-shield.c
++++ b/drivers/mcuio/mcuio-js-shield.c
+@@ -242,26 +242,6 @@ static int mcuio_js_hid_start(struct hid_device *hid)
+ 
+ static void mcuio_js_hid_stop(struct hid_device *hid)
+ {
+-	struct mcuio_device *mdev = hid->driver_data;
+-	struct mcuio_js_data *js_data;
+-	int i;
+-
+-	hid_dbg(hid, "%s invoked\n", __func__);
+-	if (!mdev) {
+-		hid_err(hid, "%s: mdev is NULL\n", __func__);
+-		return;
+-	}
+-	js_data = dev_get_drvdata(&mdev->dev);
+-	if (!js_data) {
+-		hid_err(hid, "%s: js_data is NULL\n", __func__);
+-		return;
+-	}
+-	for (i = 0; i < ARRAY_SIZE(js_data->gpios); i++) {
+-		struct mcuio_js_gpio *data = &js_data->gpios[i];
+-		free_irq(data->irq, data);
+-	}
+-	hid_dbg(hid, "hw start ok\n");
+-	return;
+ }
+ 
+ static int mcuio_js_hid_open(struct hid_device *hid)
+-- 
+1.7.9.5
+

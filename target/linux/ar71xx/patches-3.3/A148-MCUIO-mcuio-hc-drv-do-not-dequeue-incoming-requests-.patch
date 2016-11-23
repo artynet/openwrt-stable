@@ -1,0 +1,45 @@
+From 282f0143c61b10fda74a9210c5ccd3e14b94474e Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 3 Oct 2014 06:12:15 +0200
+Subject: [PATCH 148/188] MCUIO: mcuio-hc-drv: do not dequeue incoming
+ requests after request callback
+
+---
+ drivers/mcuio/mcuio-hc-drv.c |    7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 9bc16cd..74743b1 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -208,7 +208,8 @@ static void __request_timeout(struct work_struct *work)
+ 		container_of(work, struct mcuio_request, to_work.work);
+ 	if (r->cb)
+ 		r->cb(r);
+-	__dequeue_request(r);
++	if (!mcuio_request_is_incoming(r))
++		__dequeue_request(r);
+ }
+ 
+ static int __write_message(struct regmap *map, const u32 *ptr, int count)
+@@ -390,7 +391,8 @@ static int __receive_messages(void *__data)
+ 		}
+ 		if (r->cb)
+ 			r->cb(r);
+-		__dequeue_request(r);
++		if (!mcuio_request_is_incoming(r))
++			__dequeue_request(r);
+ 	}
+ 	return 0;
+ }
+@@ -407,6 +409,7 @@ static void __enqueue_request(struct mcuio_device *mdev,
+ 			      struct mcuio_request *r,
+ 			      int outgoing)
+ {
++	mcuio_request_set_incoming(r, !outgoing);
+ 	mutex_lock(&data->lock);
+ 	list_add_tail(&r->list, outgoing ? &data->request_queue :
+ 		      &data->pending_requests);
+-- 
+1.7.9.5
+

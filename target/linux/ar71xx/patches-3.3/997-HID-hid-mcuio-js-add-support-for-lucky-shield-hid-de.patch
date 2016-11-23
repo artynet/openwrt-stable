@@ -1,0 +1,26 @@
+From 8597a24f6b5affbf83387c3c4819f02df8797ea8 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 21 May 2014 16:30:09 +0200
+Subject: [PATCH 0998/1009] HID, hid-mcuio-js: add support for lucky shield
+ hid device
+
+---
+ drivers/hid/hid-mcuio-js.c |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/hid/hid-mcuio-js.c b/drivers/hid/hid-mcuio-js.c
+index cfac044..67a70e7 100644
+--- a/drivers/hid/hid-mcuio-js.c
++++ b/drivers/hid/hid-mcuio-js.c
+@@ -40,6 +40,8 @@ static void mcuio_js_hid_remove(struct hid_device *hdev)
+ static const struct hid_device_id mcuio_js_hid[] = {
+ 	{ HID_DEVICE(BUS_VIRTUAL, MCUIO_VENDOR_DOGHUNTER,
+ 		     MCUIO_DEVICE_JOYSTICK_SHIELD), .driver_data = 0, },
++	{ HID_DEVICE(BUS_VIRTUAL, MCUIO_VENDOR_DOGHUNTER,
++		     MCUIO_DEVICE_LUCKY_SHIELD), .driver_data = 0, },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(hid, mcuio_js_hid);
+-- 
+1.7.9.5
+

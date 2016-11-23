@@ -1,0 +1,24 @@
+From ace658d88a87373232cdcf978b2b7974b03af66f Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 1 Aug 2014 20:19:57 +0200
+Subject: [PATCH 57/61] drivers/Kconfig: source iio
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/Kconfig | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/Kconfig b/drivers/Kconfig
+index f1f6f5e..47a7b7e 100644
+--- a/drivers/Kconfig
++++ b/drivers/Kconfig
+@@ -140,4 +140,6 @@ source "drivers/mcuio/Kconfig"
+ 
+ source "drivers/pwm/Kconfig"
+ 
++source "drivers/iio/Kconfig"
++
+ endmenu
+-- 
+1.9.1
+

@@ -1,0 +1,24 @@
+From 46b75a9c604b6684aff26293215847933d6028bf Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 16 Apr 2014 17:33:25 +0200
+Subject: [PATCH 920/973] mips, ath79: select generic irqchip
+
+---
+ arch/mips/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/mips/Kconfig b/arch/mips/Kconfig
+index 1ae3d3d..5afca02 100644
+--- a/arch/mips/Kconfig
++++ b/arch/mips/Kconfig
+@@ -87,6 +87,7 @@ config ATH79
+ 	select SYS_HAS_EARLY_PRINTK
+ 	select SYS_SUPPORTS_32BIT_KERNEL
+ 	select SYS_SUPPORTS_BIG_ENDIAN
++	select GENERIC_IRQ_CHIP
+ 	help
+ 	  Support for the Atheros AR71XX/AR724X/AR913X SoCs.
+ 
+-- 
+1.8.5.2.233.g932f7e4
+

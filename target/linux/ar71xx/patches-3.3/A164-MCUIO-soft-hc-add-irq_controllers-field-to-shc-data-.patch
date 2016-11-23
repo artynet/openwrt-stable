@@ -1,0 +1,43 @@
+From 49445add0a21c94681d126e992c1d6dbf12643f6 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 22 Oct 2014 05:52:40 +0200
+Subject: [PATCH 164/188] MCUIO, soft hc: add irq_controllers field to shc
+ data struct
+
+This array contains pointers to local soft irq controllers (one per
+mcuio device on the bus).
+---
+ include/linux/mcuio-soft-hc.h |    3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/include/linux/mcuio-soft-hc.h b/include/linux/mcuio-soft-hc.h
+index e69771b..875c38d 100644
+--- a/include/linux/mcuio-soft-hc.h
++++ b/include/linux/mcuio-soft-hc.h
+@@ -14,6 +14,7 @@
+ #include <linux/workqueue.h>
+ #include <linux/kthread.h>
+ #include <linux/irq.h>
++#include <linux/mcuio-proto.h>
+ 
+ struct mcuio_soft_hc;
+ 
+@@ -36,6 +37,7 @@ struct mcuio_soft_hc_ops {
+  * @irq_kworker_task:
+  * @do_irq:
+  * @hc: pointer to host controller (mcuio device)
++ * @irq_controllers: array of pointers to soft irq controllers
+  * @priv: client driver private data
+  */
+ struct mcuio_soft_hc {
+@@ -51,6 +53,7 @@ struct mcuio_soft_hc {
+ 	struct task_struct *irq_kworker_task;
+ 	struct kthread_work do_irq;
+ 	struct mcuio_device *hc;
++	struct mcuio_device *irq_controllers[MCUIO_DEVS_PER_BUS];
+ 	void *priv;
+ };
+ 
+-- 
+1.7.9.5
+

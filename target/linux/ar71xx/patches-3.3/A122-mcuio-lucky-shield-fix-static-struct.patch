@@ -1,0 +1,26 @@
+From edb3fd97e85dc437245838d8d096893e74873285 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 26 Sep 2014 16:28:03 +0200
+Subject: [PATCH 122/124] mcuio lucky-shield: fix static struct
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-lucky-shield.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index c8d7c63..1925c29 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -52,7 +52,7 @@ module_param(ssd1307_addr, ushort, 0644);
+ module_param(mma8491_addr, ushort, 0644);
+ module_param(mma8491_rst, uint, 0644);
+ 
+-struct ssd1307_platform_data ssd1307_plat = {
++static struct ssd1307_platform_data ssd1307_plat = {
+ 	.type = SSD1307_TYPE_1306,
+ 	.width = 128,
+ 	.height = 64,
+-- 
+1.7.9.5
+

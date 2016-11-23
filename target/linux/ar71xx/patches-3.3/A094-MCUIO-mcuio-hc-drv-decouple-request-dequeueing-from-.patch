@@ -1,0 +1,60 @@
+From aeb5b24541106ae1e38a34f18238404d1cd23e8f Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 5 Sep 2014 17:33:18 +0200
+Subject: [PATCH 094/115] MCUIO: mcuio-hc-drv: decouple request dequeueing from
+ freeing of request struct
+
+---
+ drivers/mcuio/mcuio-hc-drv.c | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 64c5634..497cbff 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -127,14 +127,13 @@ static struct mcuio_request *mcuio_alloc_request(struct mcuio_device *mdev)
+ }
+ 
+ 
+-static void mcuio_free_request(struct mcuio_request *r)
++static void __dequeue_request(struct mcuio_request *r)
+ {
+ 	struct mcuio_hc_data *data;
+ 	data = dev_get_drvdata(&r->hc->dev);
+ 	mutex_lock(&data->lock);
+ 	list_del(&r->list);
+ 	mutex_unlock(&data->lock);
+-	devm_kfree(&r->hc->dev, r);
+ }
+ 
+ 
+@@ -179,7 +178,7 @@ static void __request_timeout(struct work_struct *work)
+ 		container_of(work, struct mcuio_request, to_work.work);
+ 	if (r->cb)
+ 		r->cb(r);
+-	mcuio_free_request(r);
++	__dequeue_request(r);
+ }
+ 
+ static int __write_message(struct regmap *map, const u32 *ptr, int count)
+@@ -355,7 +354,7 @@ static int __receive_messages(void *__data)
+ 			__copy_data(r->data, p, 1);
+ 		if (r->cb)
+ 			r->cb(r);
+-		mcuio_free_request(r);
++		__dequeue_request(r);
+ 	}
+ 	return 0;
+ }
+@@ -677,7 +676,7 @@ static void __cleanup_outstanding_requests(struct mcuio_hc_data *data)
+ 		cancel_delayed_work_sync(&r->to_work);
+ 		if (r->cb)
+ 			r->cb(r);
+-		mcuio_free_request(r);
++		__dequeue_request(r);
+ 	}
+ }
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,77 @@
+Index: linux-3.3.8/arch/mips/ath79/mach-linino-chowchow.c
+===================================================================
+--- linux-3.3.8.orig/arch/mips/ath79/mach-linino-chowchow.c	2015-10-15 18:43:56.051642427 +0200
++++ linux-3.3.8/arch/mips/ath79/mach-linino-chowchow.c	2015-10-15 18:49:57.830155327 +0200
+@@ -38,11 +38,12 @@
+ #define CHOWCHOW_GPIO_LED0		12
+ #define CHOWCHOW_GPIO_LED1		11
+ 
+-#define CHOWCHOW_GPIO_UART0_RX	13
+-#define CHOWCHOW_GPIO_UART0_TX	14
++//#define CHOWCHOW_GPIO_UART0_RX	13
++//#define CHOWCHOW_GPIO_UART0_TX	14
+ #define CHOWCHOW_GPIO_UART1_RX	9
+ #define CHOWCHOW_GPIO_UART1_TX	10
+-#define CHOWCHOW_GPIO_OE2		15
++#define CHOWCHOW_GPIO_OE_UART	15
++#define CHOWCHOW_GPIO_OE_SPI   14
+ #define CHOWCHOW_GPIO_CONF_BTN	0
+ #define CHOWCHOW_GPIO_UART_POL	GPIOF_OUT_INIT_LOW
+ 
+@@ -54,6 +55,8 @@
+ #define AR934X_GPIO_UART1_TD_OUT	79	/* table 2.16 */
+ #define AR934X_GPIO_UART0_SOUT	24	/* table 2.16 */
+ 
++#define _USE_UART0_PINS_AS_GPIO_
++
+ #define CHOWCHOW_GPIO_SPI_INTERRUPT	16
+ #define DS_PCIE_CALDATA_OFFSET	0x5000
+ 
+@@ -155,7 +158,7 @@
+ 	pr_info("mach-linino: enabling GPIO SPI Controller");
+ 
+ 	/* Enable level shifter on SPI signals */
+-	gpio_set_value(CHOWCHOW_GPIO_OE2, 0);
++	gpio_set_value(CHOWCHOW_GPIO_OE_SPI, 0);
+ 	/* Register SPI devices */
+ 	spi_register_board_info(linino_spi_info, ARRAY_SIZE(linino_spi_info));
+ 	/* Register GPIO SPI controller */
+@@ -169,12 +172,17 @@
+ {
+ 	int err;
+ 
+-	/* enable OE2 of level shifter */
+-    pr_info("Setting GPIO OE %d\n", CHOWCHOW_GPIO_OE2);
+-    err= gpio_request_one(CHOWCHOW_GPIO_OE2,
+-			GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED, "OE");
++	/* enable UART OE level shifter */
++    	err= gpio_request_one(CHOWCHOW_GPIO_OE_UART,
++			GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED, "OE_UART");
++	if (err)
++		pr_err("mach-linino: error setting GPIO OE UART\n");
++
++	/* enable SPI OE level shifter */
++    	err= gpio_request_one(CHOWCHOW_GPIO_OE_SPI,
++			GPIOF_OUT_INIT_LOW | GPIOF_EXPORT_DIR_FIXED, "OE_SPI");
+ 	if (err)
+-		pr_err("mach-linino: error setting GPIO OE\n");
++		pr_err("mach-linino: error setting GPIO OE SPI\n");
+ }
+ 
+ 
+@@ -227,6 +235,7 @@
+ 	v |= (CHOWCHOW_GPIO_UART1_RX << 16);
+ 	__raw_writel(v, reg);
+ 
++#ifndef _USE_UART0_PINS_AS_GPIO_
+ 	/* UART0 (low-speed) configuration */
+ 	r = gpio_request(CHOWCHOW_GPIO_UART0_TX, NULL);
+ 	if (r) {
+@@ -246,6 +255,7 @@
+ 	v &= ~0x0000ff00;
+ 	v |= (CHOWCHOW_GPIO_UART0_RX << 8);
+ 	__raw_writel(v, reg);
++#endif
+ 
+ 	ath79_register_m25p80(NULL);
+ 

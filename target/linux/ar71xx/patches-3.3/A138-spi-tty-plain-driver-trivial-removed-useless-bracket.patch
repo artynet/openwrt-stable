@@ -1,0 +1,35 @@
+From 85102b50645800a1424c2fcef5ee90e06c73c698 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Sun, 5 Oct 2014 14:33:41 +0200
+Subject: [PATCH 138/139] spi-tty-plain driver: trivial, removed useless
+ brackets and one useless include
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/spi/spi-tty-plain.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/spi/spi-tty-plain.c b/drivers/spi/spi-tty-plain.c
+index b4ba305..456202f 100644
+--- a/drivers/spi/spi-tty-plain.c
++++ b/drivers/spi/spi-tty-plain.c
+@@ -12,7 +12,6 @@
+ #include <linux/init.h>
+ #include <linux/interrupt.h>
+ #include <linux/spi/spi.h>
+-#include <linux/gpio.h>
+ #include <linux/spinlock.h>
+ #include <linux/serial.h>
+ #include <linux/tty.h>
+@@ -251,7 +250,7 @@ static void spi_poll_work_handler(struct work_struct *w)
+ 	stty = container_of(to_delayed_work(w), struct spi_tty, work);
+ 
+ 	__spi_serial_tty_write(stty, stty->enq_buf, sizeof(stty->enq_buf), 0);
+-	if ((!delayed_work_pending(&stty->work)))
++	if (!delayed_work_pending(&stty->work))
+ 		queue_delayed_work(stty->wq, &stty->work, wqinterval);
+ }
+ 
+-- 
+1.9.1
+

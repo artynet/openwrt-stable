@@ -1,0 +1,28 @@
+From 69cc000aeaec7940ca3132b1a2089c1845d7e665 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 06:01:49 +0200
+Subject: [PATCH 152/188] MCUIO, mcuio-hc-drv.c: hc_irq_handler(): do not
+ clear irq anymore
+
+IRQ is now automatically cleared on status read.
+---
+ drivers/mcuio/mcuio-hc-drv.c |    3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 74743b1..db27771 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -280,9 +280,6 @@ static irqreturn_t hc_irq_handler(int irq, void *__data)
+ 		return IRQ_NONE;
+ 	if (status & RX_RDY)
+ 		wake_up_interruptible(&data->rd_wq);
+-	ret = regmap_write(map, MCUIO_IRQ_CLR, status);
+-	if (ret < 0)
+-		dev_err(&mdev->dev, "error clearing irq flag\n");
+ 	return IRQ_HANDLED;
+ }
+ 
+-- 
+1.7.9.5
+

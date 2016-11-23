@@ -1,0 +1,198 @@
+From b0fdf554210cfb04cf7b79d1dab1b836d7661cc0 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 23 Oct 2014 18:28:56 +0200
+Subject: [PATCH 170/188] MCUIO: add irq test driver function
+
+---
+ drivers/mcuio/Kconfig          |    7 ++
+ drivers/mcuio/Makefile         |    3 +-
+ drivers/mcuio/mcuio-irq-test.c |  150 ++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 159 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/mcuio/mcuio-irq-test.c
+
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index ddcab94..496ca4f 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -58,3 +58,10 @@ config MCUIO_SHIELDS_MANUAL_PROBE
+ 	help
+ 	  Since autoprobe of mcuio shields is not implemented yet, this option
+ 	  makes it possible to manually register shields (experimental).
++
++config MCUIO_IRQ_TEST
++        tristate "mcuio irq test function driver"
++	depends on MCUIO
++	default n
++	help
++	  Adds a driver for the irq test mcuio function
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index 7ca985d..7606351 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -12,4 +12,5 @@ obj-$(CONFIG_MCUIO_JS_SHIELD) += mcuio-js-shield.o
+ obj-$(CONFIG_MCUIO_LUCKY_SHIELD) += mcuio-lucky-shield.o
+ obj-$(CONFIG_MCUIO_DIGITALIO_SHIELD) += mcuio-dio-shield.o
+ obj-$(CONFIG_MCUIO_DOGOLED_SHIELD) += mcuio-dogoled-shield.o
+-obj-$(CONFIG_MCUIO_SHIELDS_MANUAL_PROBE) += mcuio-shields-manprobe.o
+\ No newline at end of file
++obj-$(CONFIG_MCUIO_SHIELDS_MANUAL_PROBE) += mcuio-shields-manprobe.o
++obj-$(CONFIG_MCUIO_IRQ_TEST) += mcuio-irq-test.o
+diff --git a/drivers/mcuio/mcuio-irq-test.c b/drivers/mcuio/mcuio-irq-test.c
+new file mode 100644
+index 0000000..8c06b5a
+--- /dev/null
++++ b/drivers/mcuio/mcuio-irq-test.c
+@@ -0,0 +1,150 @@
++/*
++ * Copyright 2011 Dog Hunter SA
++ * Author: Davide Ciminaghi <ciminaghi@gnudd.com>
++ *
++ * GNU GPLv2 or later
++ */
++
++#define DEBUG
++
++/* mcuio driver for joystick shield */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/types.h>
++#include <linux/regmap.h>
++#include <linux/workqueue.h>
++#include <linux/irq.h>
++#include <linux/interrupt.h>
++#include <linux/gpio.h>
++#include <linux/hid.h>
++#include <linux/i2c.h>
++#include <linux/platform_device.h>
++#include <linux/platform_data/ssd1307.h>
++
++
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++
++#include "mcuio-internal.h"
++
++static const struct regmap_config mcuio_irq_test_regmap_config = {
++	.reg_bits = 32,
++	.val_bits = 32,
++	.max_register = 0x8,
++	.cache_type = REGCACHE_NONE,
++};
++
++
++static irqreturn_t mcuio_irq_test_irq_handler(int irq, void *__data)
++{
++	struct regmap *map = __data;
++	int stat;
++	u32 status;
++
++	stat = regmap_read(map, 0xc, &status);
++	WARN_ON(!status);
++
++	return IRQ_HANDLED;
++}
++
++static int mcuio_irq_test_probe(struct mcuio_device *mdev)
++{
++	int ret = 0;
++	unsigned int v = 1;
++	struct regmap *map;
++
++	dev_dbg(&mdev->dev, "%s entered\n", __func__);
++
++	map = devm_regmap_init_mcuio(mdev, &mcuio_irq_test_regmap_config);
++	if (IS_ERR(map)) {
++		dev_err(&mdev->dev, "cannot init regmap\n");
++		return PTR_ERR(map);
++	}
++
++	ret = devm_request_threaded_irq(&mdev->dev, mdev->irq,
++					NULL,
++					mcuio_irq_test_irq_handler,
++					0,
++					"mcuio-irq-test",
++					map);
++	if (ret < 0)
++		return ret;
++
++	ret = regmap_read(map, 0xc, &v);
++	if (ret < 0) {
++		dev_err(&mdev->dev, "Error cleaning up irq status\n");
++		return ret;
++	}
++
++	/* Immediately enable interrupt */
++	ret = regmap_write(map, 0xc, 1);
++	if (ret < 0) {
++		dev_err(&mdev->dev, "Error enabling interrupt\n");
++		return ret;
++	}
++
++
++	dev_set_drvdata(&mdev->dev, map);
++
++	dev_dbg(&mdev->dev, "%s returns ok\n", __func__);
++
++	return ret;
++}
++
++static int mcuio_irq_test_remove(struct mcuio_device *mdev)
++{
++	int ret;
++	unsigned int v = 0;
++	struct regmap *map;
++
++	map = dev_get_drvdata(&mdev->dev);
++
++	ret = regmap_write(map, 0xc, v);
++	if (ret < 0) {
++		dev_err(&mdev->dev, "Error stopping irq tester\n");
++		return ret;
++	}
++	return 0;
++}
++
++static const struct mcuio_device_id irq_test_drv_ids[] = {
++	{
++		.vendor = MCUIO_VENDOR_DOGHUNTER,
++		.device = 0x1212,
++	},
++	/* Terminator */
++	{
++		.device = MCUIO_NO_DEVICE,
++		.class = MCUIO_CLASS_UNDEFINED,
++	},
++};
++
++static struct mcuio_driver mcuio_irq_test_driver = {
++	.driver = {
++		.name = "mcuio-irq-test",
++	},
++	.id_table = irq_test_drv_ids,
++	.probe = mcuio_irq_test_probe,
++	.remove = mcuio_irq_test_remove,
++};
++
++static int __init mcuio_irq_test_init(void)
++{
++	return mcuio_driver_register(&mcuio_irq_test_driver, THIS_MODULE);
++}
++
++static void __exit mcuio_irq_test_exit(void)
++{
++	return mcuio_driver_unregister(&mcuio_irq_test_driver);
++}
++
++subsys_initcall(mcuio_irq_test_init);
++module_exit(mcuio_irq_test_exit);
++
++MODULE_AUTHOR("Davide Ciminaghi");
++MODULE_DESCRIPTION("MCUIO driver for irq test function");
++MODULE_LICENSE("GPL v2");
+-- 
+1.7.9.5
+

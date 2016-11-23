@@ -1,0 +1,284 @@
+From 98c703c77dba266ff3f00e7f65001f40e76e8484 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 21 May 2014 16:27:48 +0200
+Subject: [PATCH 0997/1009] MCUIO, mcuio-js-shield: add support for lucky
+ shield, push buttons only
+
+---
+ drivers/mcuio/mcuio-js-shield.c |  140 ++++++++++++++++++++++++++++++++-------
+ 1 file changed, 115 insertions(+), 25 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-js-shield.c b/drivers/mcuio/mcuio-js-shield.c
+index 11d897e..dc8a8ed 100644
+--- a/drivers/mcuio/mcuio-js-shield.c
++++ b/drivers/mcuio/mcuio-js-shield.c
+@@ -35,43 +35,97 @@ static char mcuio_js_report_descriptor[] = {
+ 	0x05, 0x09,
+ 	/* USAGE_MINIMUM (Button 1) */
+ 	0x19, 0x01,
+-	/* USAGE_MAXIMUM (Button 4) */
+-	0x29, 0x04,
++	/* USAGE_MAXIMUM (Button 6) */
++	0x29, 0x06,
+ 	/* LOGICAL_MINIMUM (0) */
+ 	0x15, 0x00,
+ 	/* LOGICAL_MAXIMUM (1) */
+ 	0x25, 0x01,
+-	/* REPORT_COUNT (4) */
+-	0x95, 0x04,
++	/* REPORT_COUNT (6) */
++	0x95, 0x06,
+ 	/* REPORT_SIZE (1) */
+ 	0x75, 0x01,
+ 	/* INPUT (Data,Var,Abs) */
+ 	0x81, 0x02,
+-	/* REPORT_COUNT (4) */
+-	0x95, 0x04,
++	/* REPORT_COUNT (2) */
++	0x95, 0x02,
+ 	/* REPORT_SIZE (1) */
+ 	0x75, 0x01,
+-	/* INPUT (Cnst,Var,Abs) */
+-	0x81, 0x03,
+ };
+ 
+ struct mcuio_js_data;
+ 
+-struct mcuio_js_gpio {
++struct mcuio_js_gpio_config {
+ 	const char *name;
++	int out;
++};
++
++struct mcuio_js_gpio {
++	const struct mcuio_js_gpio_config *cfg;
+ 	unsigned gpio;
+ 	int irq;
++	int index;
+ 	struct mcuio_js_data *js_data;
++	struct list_head list;
+ };
+ 
+-static const char *js_gpio_names[] = {
+-	"SCL", "D4", "D5", "D6",
++
++/* gpio configs for "old" joystick shield */
++static const struct mcuio_js_gpio_config js_gpios[] = {
++	{
++		"SCL", 0,
++	},
++	{
++		"D4", 0,
++	},
++	{
++		"D5", 0,
++	},
++	{
++		"D6", 0,
++	},
++	{
++		NULL, 0,
++	},
++};
++
++static const struct mcuio_js_gpio_config lucky_gpios[] = {
++	{
++		"JOYU", 0,
++	},
++#if 0
++	/* D7 is the handshake signal, not available */
++	{
++		"JOYC", 0,
++	},
++#endif
++	{
++		"JOYR", 0,
++	},
++	{
++		"JOYD", 0,
++	},
++	{
++		"JOYL", 0,
++	},
++	{
++		"PB1", 0,
++	},
++	{
++		"LEDR", 1,
++	},
++	{
++		"LEDY", 1,
++	},
++	{
++		NULL, 0,
++	},
+ };
+ 
+ struct mcuio_js_data {
+ 	struct hid_device *hid;
+ 	u8 cached_gpios;
+-	struct mcuio_js_gpio gpios[ARRAY_SIZE(js_gpio_names)];
++	struct list_head gpios;
+ };
+ 
+ 
+@@ -81,7 +135,7 @@ static int __match_gpiochip(struct gpio_chip *chip, void *__gpio_data)
+ 	const char *ptr;
+ 	int i;
+ 
+-	pr_debug("%s entered (name = %s)\n", __func__, data->name);
++	pr_debug("%s entered (name = %s)\n", __func__, data->cfg->name);
+ 
+ 	if (!chip->names) {
+ 		pr_debug("%s: gpiochip has no names\n", __func__);
+@@ -92,7 +146,7 @@ static int __match_gpiochip(struct gpio_chip *chip, void *__gpio_data)
+ 		if (!ptr)
+ 			continue;
+ 		pr_debug("%s: found gpio %s\n", __func__, chip->names[i]);
+-		if (!strcmp(ptr, data->name)) {
++		if (!strcmp(ptr, data->cfg->name)) {
+ 			data->gpio = i + chip->base;
+ 			pr_debug("%s: gpiochip found\n", __func__);
+ 			return 1;
+@@ -102,7 +156,8 @@ static int __match_gpiochip(struct gpio_chip *chip, void *__gpio_data)
+ 	return 0;
+ }
+ 
+-static int __setup_gpio(struct mcuio_device *mdev, struct mcuio_js_gpio *data)
++static int __setup_gpio(struct mcuio_device *mdev, struct mcuio_js_gpio *data,
++			int index)
+ {
+ 	int ret = -ENODEV;
+ 	struct gpio_chip *chip;
+@@ -124,6 +179,11 @@ static int __setup_gpio(struct mcuio_device *mdev, struct mcuio_js_gpio *data)
+ 			data->gpio);
+ 		return ret;
+ 	}
++	if (data->cfg->out) {
++		/* This is an output, no IRQ number */
++		data->irq = 0;
++		return 0;
++	}
+ 	ret = gpio_direction_input(data->gpio);
+ 	if (ret) {
+ 		dev_err(&mdev->dev,
+@@ -139,6 +199,7 @@ static int __setup_gpio(struct mcuio_device *mdev, struct mcuio_js_gpio *data)
+ 		return ret;
+ 	}
+ 	data->irq = ret;
++	data->index = index;
+ 	return 0;
+ }
+ 
+@@ -147,8 +208,9 @@ static irqreturn_t mcuio_js_irq_handler(int irq, void *__data)
+ 	int v;
+ 	struct mcuio_js_gpio *gpio_data = __data;
+ 	struct mcuio_js_data *js_data = gpio_data->js_data;
+-	int gpio_index = gpio_data - js_data->gpios;
+-	pr_debug("%s entered (gpio %u)", __func__, gpio_data->gpio);
++	int gpio_index = gpio_data->index;
++	pr_debug("%s entered (gpio %u), index = %d", __func__, gpio_data->gpio,
++		 gpio_data->index);
+ 
+ 	v = !!!gpio_get_value_cansleep(gpio_data->gpio);
+ 	js_data->cached_gpios &= ~(1 << gpio_index);
+@@ -208,7 +270,8 @@ static int mcuio_js_hid_start(struct hid_device *hid)
+ {
+ 	struct mcuio_device *mdev = hid->driver_data;
+ 	struct mcuio_js_data *js_data;
+-	int i, ret;
++	struct mcuio_js_gpio *data;
++	int i = 0, ret;
+ 
+ 	hid_dbg(hid, "%s invoked\n", __func__);
+ 	if (!mdev) {
+@@ -220,9 +283,12 @@ static int mcuio_js_hid_start(struct hid_device *hid)
+ 		hid_err(hid, "%s: js_data is NULL\n", __func__);
+ 		return -ENODEV;
+ 	}
+-	for (i = 0; i < ARRAY_SIZE(js_data->gpios); i++) {
+-		struct mcuio_js_gpio *data = &js_data->gpios[i];
++	list_for_each_entry(data, &js_data->gpios, list) {
+ 		unsigned int v;
++		if (data->cfg->out) {
++			i++;
++			continue;
++		}
+ 		ret = devm_request_threaded_irq(&mdev->dev, data->irq,
+ 						NULL,
+ 						mcuio_js_irq_handler,
+@@ -235,6 +301,7 @@ static int mcuio_js_hid_start(struct hid_device *hid)
+ 		v = !!!gpio_get_value_cansleep(data->gpio);
+ 		if (v)
+ 			js_data->cached_gpios |= (1 << i);
++		i++;
+ 	}
+ 	hid_dbg(hid, "hw start ok\n");
+ 	return 0;
+@@ -283,6 +350,7 @@ static int mcuio_js_probe(struct mcuio_device *mdev)
+ 	int i, ret = 0;
+ 	struct hid_device *hid;
+ 	struct mcuio_js_data *js_data;
++	const struct mcuio_js_gpio_config *cfg = NULL;
+ 
+ 	dev_dbg(&mdev->dev, "%s entered\n", __func__);
+ 	js_data = devm_kzalloc(&mdev->dev, sizeof(*js_data), GFP_KERNEL);
+@@ -290,13 +358,31 @@ static int mcuio_js_probe(struct mcuio_device *mdev)
+ 		dev_err(&mdev->dev, "no memory for js data structure\n");
+ 		return -ENOMEM;
+ 	}
+-	for (i = 0; i < ARRAY_SIZE(js_data->gpios); i++) {
+-		struct mcuio_js_gpio *data = &js_data->gpios[i];
+-		data->name = js_gpio_names[i];
++	INIT_LIST_HEAD(&js_data->gpios);
++	dev_dbg(&mdev->dev, "%s: device = 0x%04x\n", __func__, mdev->device);
++	if (mdev->id.device == MCUIO_DEVICE_JOYSTICK_SHIELD)
++		cfg = js_gpios;
++	if (mdev->id.device == MCUIO_DEVICE_LUCKY_SHIELD)
++		cfg = lucky_gpios;
++	if (!cfg) {
++		WARN_ON(1);
++		return -ENODEV;
++	}
++
++	for (i = 0; cfg->name && cfg->name[0]; cfg++, i++) {
++		struct mcuio_js_gpio *data = devm_kzalloc(&mdev->dev,
++							  sizeof(*data),
++							  GFP_KERNEL);
++		if (!data) {
++			dev_err(&mdev->dev, "no memory for gpio structure\n");
++			return -ENOMEM;
++		}
++		data->cfg = cfg;
+ 		data->js_data = js_data;
+-		ret = __setup_gpio(mdev, data);
++		ret = __setup_gpio(mdev, data, i);
+ 		if (ret < 0)
+ 			return ret;
++		list_add_tail(&data->list, &js_data->gpios);
+ 	}
+ 
+ 	hid = hid_allocate_device();
+@@ -316,7 +402,7 @@ static int mcuio_js_probe(struct mcuio_device *mdev)
+ 	hid->bus = BUS_VIRTUAL;
+ 	hid->version = 0;
+ 	hid->vendor = MCUIO_VENDOR_DOGHUNTER;
+-	hid->product = MCUIO_DEVICE_JOYSTICK_SHIELD;
++	hid->product = mdev->device;
+ 
+ 	snprintf(hid->name, sizeof(hid->name), "mcuio-js-shield %04hX:%04hX",
+ 		 hid->vendor, hid->product);
+@@ -348,6 +434,10 @@ static const struct mcuio_device_id js_drv_ids[] = {
+ 		.vendor = MCUIO_VENDOR_DOGHUNTER,
+ 		.device = MCUIO_DEVICE_JOYSTICK_SHIELD,
+ 	},
++	{
++		.vendor = MCUIO_VENDOR_DOGHUNTER,
++		.device = MCUIO_DEVICE_LUCKY_SHIELD,
++	},
+ 	/* Terminator */
+ 	{
+ 		.device = MCUIO_NO_DEVICE,
+-- 
+1.7.9.5
+

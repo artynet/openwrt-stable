@@ -1,0 +1,91 @@
+From 6d995bdcb50c22ba69c0b9994a9f600804951cd5 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 06:04:26 +0200
+Subject: [PATCH 153/188] MCUIO, mcuio-soft-hc: handle irq in a separate
+ thread
+
+This is to avoid blocking the packet the hc driver's rx thread.
+---
+ drivers/mcuio/mcuio-soft-hc.c |   19 ++++++++++++++++++-
+ include/linux/mcuio-soft-hc.h |    8 ++++++++
+ 2 files changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-soft-hc.c b/drivers/mcuio/mcuio-soft-hc.c
+index 01075f0..737a925 100644
+--- a/drivers/mcuio/mcuio-soft-hc.c
++++ b/drivers/mcuio/mcuio-soft-hc.c
+@@ -138,7 +138,7 @@ int mcuio_soft_hc_push_chars(struct mcuio_soft_hc *shc, const u8 *in, int len)
+ 	/* set irq status register RX_RDY bit */
+ 	shc->irqstat |= RX_RDY;
+ 	if (shc->irq_enabled)
+-		handle_nested_irq(shc->irqno);
++		queue_kthread_work(&shc->irq_kworker, &shc->do_irq);
+ 	return actual;
+ }
+ EXPORT_SYMBOL(mcuio_soft_hc_push_chars);
+@@ -196,12 +196,29 @@ static void mcuio_soft_hc_irq_unmask(struct irq_data *d)
+ 	shc->irq_enabled = 1;
+ }
+ 
++static void __do_irq(struct kthread_work *work)
++{
++	struct mcuio_soft_hc *shc =
++		container_of(work, struct mcuio_soft_hc, do_irq);
++
++	handle_nested_irq(shc->irqno);
++}
++
+ static struct mcuio_soft_hc *__setup_shc(const struct mcuio_soft_hc_ops *ops,
+ 					 void *priv)
+ {
+ 	struct mcuio_soft_hc *shc = kzalloc(sizeof(*shc), GFP_KERNEL);
+ 	if (!shc)
+ 		return ERR_PTR(-ENOMEM);
++	init_kthread_worker(&shc->irq_kworker);
++	shc->irq_kworker_task = kthread_run(kthread_worker_fn,
++					    &shc->irq_kworker,
++					    "shc_irq");
++	if (IS_ERR(shc->irq_kworker_task)) {
++		pr_err("failed to create irq tsk for shc\n");
++		return ERR_PTR(PTR_ERR(shc->irq_kworker_task));
++	}
++	init_kthread_work(&shc->do_irq, __do_irq);
+ 	shc->ops = ops;
+ 	shc->priv = priv;
+ 	shc->rx_circ_buf.head = shc->rx_circ_buf.tail = 0;
+diff --git a/include/linux/mcuio-soft-hc.h b/include/linux/mcuio-soft-hc.h
+index 64ba7d5..9d13b69 100644
+--- a/include/linux/mcuio-soft-hc.h
++++ b/include/linux/mcuio-soft-hc.h
+@@ -11,6 +11,8 @@
+ #define __MCUIO_SOFT_HOST_CONTROLLER_H__
+ 
+ #include <linux/circ_buf.h>
++#include <linux/workqueue.h>
++#include <linux/kthread.h>
+ #include <linux/irq.h>
+ 
+ struct mcuio_soft_hc;
+@@ -30,6 +32,9 @@ struct mcuio_soft_hc_ops {
+  * @rx_buf: actual rx data buffer
+  * @ops: pointer to hc operations
+  * @chip: related irqchip
++ * @irq_kworker:
++ * @irq_kworker_task:
++ * @do_irq:
+  * @priv: client driver private data
+  */
+ struct mcuio_soft_hc {
+@@ -41,6 +46,9 @@ struct mcuio_soft_hc {
+ 	char rx_buf[256];
+ 	const struct mcuio_soft_hc_ops *ops;
+ 	struct irq_chip chip;
++	struct kthread_worker irq_kworker;
++	struct task_struct *irq_kworker_task;
++	struct kthread_work do_irq;
+ 	void *priv;
+ };
+ 
+-- 
+1.7.9.5
+

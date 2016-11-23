@@ -1,0 +1,213 @@
+From 1fabd198c1dbf3adde575fac33e31e14684c577b Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Fri, 26 Sep 2014 16:28:50 +0200
+Subject: [PATCH 123/124] mcuio: new driver for shield "Dog OLED"
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/Kconfig                  |    7 ++
+ drivers/mcuio/Makefile                 |    1 +
+ drivers/mcuio/mcuio-dogoled-shield.c   |  136 ++++++++++++++++++++++++++++++++
+ drivers/mcuio/mcuio-shields-manprobe.c |    1 +
+ include/linux/mcuio_ids.h              |    1 +
+ 5 files changed, 146 insertions(+)
+ create mode 100644 drivers/mcuio/mcuio-dogoled-shield.c
+
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index f4552ef..f83c3fc 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -44,6 +44,13 @@ config MCUIO_DIGITALIO_SHIELD
+ 	help
+ 	  Adds a driver for the Dog Hunter Digital IO shield (experimental)
+ 
++config MCUIO_DOGOLED_SHIELD
++	tristate "mcuio Dog OLED shield driver"
++	depends on (MCUIO && I2C)
++	default y
++	help
++	  Adds a driver for the Dog Hunter Dog OLED shield (experimental)
++
+ config MCUIO_SHIELDS_MANUAL_PROBE
+ 	tristate "mcuio shields manual probe"
+ 	depends on (MCUIO_LUCKY_SHIELD || MCUIO_DIGITALIO_SHIELD)
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index 928692e..c6e8bb8 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -10,5 +10,6 @@ obj-$(CONFIG_MCUIO_IRQ_CTRL) += mcuio-irq-ctrl.o
+ obj-$(CONFIG_MCUIO_JS_SHIELD) += mcuio-js-shield.o
+ obj-$(CONFIG_MCUIO_LUCKY_SHIELD) += mcuio-lucky-shield.o
+ obj-$(CONFIG_MCUIO_DIGITALIO_SHIELD) += mcuio-dio-shield.o
++obj-$(CONFIG_MCUIO_DOGOLED_SHIELD) += mcuio-dogoled-shield.o
+ obj-$(CONFIG_MCUIO_SHIELDS_MANUAL_PROBE) += mcuio-shields-manprobe.o
+ obj-$(CONFIG_MCUIO_ADC) += mcuio-adc.o
+\ No newline at end of file
+diff --git a/drivers/mcuio/mcuio-dogoled-shield.c b/drivers/mcuio/mcuio-dogoled-shield.c
+new file mode 100644
+index 0000000..5ef32f3
+--- /dev/null
++++ b/drivers/mcuio/mcuio-dogoled-shield.c
+@@ -0,0 +1,136 @@
++/*
++ * Copyright 2014 Dog Hunter SA
++ * Author: Aurelio Colosimo <aurelio@aureliocolosimo.it>
++ *
++ * GNU GPLv2 or later
++ */
++
++#define DEBUG
++
++/* mcuio driver for Dog OLED shield */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/types.h>
++#include <linux/regmap.h>
++#include <linux/workqueue.h>
++#include <linux/irq.h>
++#include <linux/interrupt.h>
++#include <linux/gpio.h>
++#include <linux/i2c.h>
++#include <linux/platform_device.h>
++#include <linux/platform_data/ssd1307.h>
++
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++#include <linux/mcuio-proto.h>
++
++#include "mcuio-internal.h"
++#include "mcuio-shields.h"
++
++static unsigned short ssd1307_addr = 0x3c;
++static unsigned int ssd1307_rst = 120;
++module_param(ssd1307_addr, ushort, 0644);
++module_param(ssd1307_rst, uint, 0644);
++
++static struct ssd1307_platform_data ssd1307_plat = {
++	.type = SSD1307_TYPE_1306,
++	.width = 128,
++	.height = 64,
++	.page_offset = 0,
++	.pins_config = 0x12,
++	.display_offset = 0,
++};
++
++static struct mcuio_shld_i2c_info i2c_lst[] = {
++	MCUIO_SHLD_I2C_DEV("ssd1307fb", &ssd1307_addr, &ssd1307_plat, -1),
++};
++
++static int mcuio_dogoled_probe(struct mcuio_device *mdev)
++{
++	struct mcuio_shld_i2c_info *i;
++
++	struct mcuio_shld_data *data;
++
++	dev_dbg(&mdev->dev, "%s entered\n", __func__);
++
++	data = devm_kzalloc(&mdev->dev, sizeof(*data), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++
++	dev_set_drvdata(&mdev->dev, data);
++
++	/* Apply module_param values to ssd1307 platform_data */
++	ssd1307_plat.reset_gpio = ssd1307_rst;
++
++	data->i2c_adap = mcuio_get_i2c_adapter(mdev);
++
++	if (!data->i2c_adap) {
++		dev_err(&mdev->dev, "error setting up i2c adapter\n");
++		return -ENODEV;
++	}
++
++	data->i2c_info = i2c_lst;
++	data->i2c_cnt = ARRAY_SIZE(i2c_lst);
++
++	i = &data->i2c_info[0];
++	i->info.addr = *i->paddr;
++	i->i2c_client = i2c_new_device(data->i2c_adap, &i->info);
++
++	dev_dbg(&mdev->dev, "%s returns ok\n", __func__);
++
++	return 0;
++}
++
++static int mcuio_dogoled_remove(struct mcuio_device *mdev)
++{
++	struct mcuio_shld_i2c_info *i;
++	struct mcuio_shld_data *data;
++
++	data = dev_get_drvdata(&mdev->dev);
++	i = &data->i2c_info[0];
++	i2c_unregister_device(i->i2c_client);
++	i->i2c_client = NULL;
++	return 0;
++}
++
++static const struct mcuio_device_id dogoled_drv_ids[] = {
++	{
++		.vendor = MCUIO_VENDOR_DOGHUNTER,
++		.device = MCUIO_DEVICE_DOGOLED_SHIELD,
++	},
++	/* Terminator */
++	{
++		.device = MCUIO_NO_DEVICE,
++		.class = MCUIO_CLASS_UNDEFINED,
++	},
++};
++
++static struct mcuio_driver mcuio_dogoled_driver = {
++	.driver = {
++		.name = "mcuio-dogoled-shield",
++	},
++	.id_table = dogoled_drv_ids,
++	.probe = mcuio_dogoled_probe,
++	.remove = mcuio_dogoled_remove,
++};
++
++static int __init mcuio_dogoled_init(void)
++{
++	return mcuio_driver_register(&mcuio_dogoled_driver, THIS_MODULE);
++}
++
++static void __exit mcuio_dogoled_exit(void)
++{
++	return mcuio_driver_unregister(&mcuio_dogoled_driver);
++}
++
++subsys_initcall(mcuio_dogoled_init);
++module_exit(mcuio_dogoled_exit);
++
++MODULE_AUTHOR("Aurelio Colosimo");
++MODULE_DESCRIPTION("MCUIO driver for Dog OLED shield");
++MODULE_LICENSE("GPL v2");
+diff --git a/drivers/mcuio/mcuio-shields-manprobe.c b/drivers/mcuio/mcuio-shields-manprobe.c
+index db3f144..b081ae3 100644
+--- a/drivers/mcuio/mcuio-shields-manprobe.c
++++ b/drivers/mcuio/mcuio-shields-manprobe.c
+@@ -41,6 +41,7 @@ struct shld_probe_info {
+ struct shld_probe_info shld_list[] = {
+ 	DH_SHLD("lucky", MCUIO_DEVICE_LUCKY_SHIELD, 32),
+ 	DH_SHLD("digitalio", MCUIO_DEVICE_DIGITALIO_SHIELD, 33),
++	DH_SHLD("dogoled", MCUIO_DEVICE_DOGOLED_SHIELD, 34),
+ 	{.name = NULL},
+ };
+ 
+diff --git a/include/linux/mcuio_ids.h b/include/linux/mcuio_ids.h
+index 4d0c259..622d864 100644
+--- a/include/linux/mcuio_ids.h
++++ b/include/linux/mcuio_ids.h
+@@ -37,5 +37,6 @@
+ #define MCUIO_DEVICE_DIGITALIO_SHIELD 0x0003
+ #define MCUIO_DEVICE_SOFT_HC	     0x0004
+ #define MCUIO_DEVICE_GENERIC_HC	     0x0005
++#define MCUIO_DEVICE_DOGOLED_SHIELD	0x0006
+ 
+ #endif /* __MCUIO_IDS_H__ */
+-- 
+1.7.9.5
+

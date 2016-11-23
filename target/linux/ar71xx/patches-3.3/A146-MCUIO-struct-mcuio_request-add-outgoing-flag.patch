@@ -1,0 +1,46 @@
+From 403028035d2ff9feefc1a44efb75514ecf197958 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 3 Oct 2014 05:52:13 +0200
+Subject: [PATCH 146/188] MCUIO: struct mcuio_request: add outgoing flag
+
+---
+ include/linux/mcuio.h |   16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/include/linux/mcuio.h b/include/linux/mcuio.h
+index 1177d7b..0cc5f42 100644
+--- a/include/linux/mcuio.h
++++ b/include/linux/mcuio.h
+@@ -73,6 +73,10 @@ typedef void (*request_cb)(struct mcuio_request *);
+  *       flag set
+  */
+ #define MCUIO_REQUEST_FILL BIT(0)
++/*
++ * outgoing: if this is !0 the request is outgoing (incoming otherwise)
++ */
++#define MCUIO_REQUEST_OUTGOING BIT(1)
+ 
+ /*
+  * This represents an mcuio request
+@@ -123,6 +127,18 @@ static inline void mcuio_request_set_fill(struct mcuio_request *r, int f)
+ 		r->flags |= MCUIO_REQUEST_FILL;
+ }
+ 
++static inline int mcuio_request_is_outgoing(struct mcuio_request *r)
++{
++	return r->flags & MCUIO_REQUEST_OUTGOING;
++}
++
++static inline void mcuio_request_set_outgoing(struct mcuio_request *r, int f)
++{
++	r->flags &= ~MCUIO_REQUEST_OUTGOING;
++	if (f)
++		r->flags |= MCUIO_REQUEST_OUTGOING;
++}
++
+ /*
+  * Submit a request, block until request done
+  *
+-- 
+1.7.9.5
+

@@ -1,0 +1,134 @@
+From bcf4752064390b5e22e9c5d625b71ad36eaa5b44 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 25 Mar 2014 15:56:00 +0100
+Subject: [PATCH 923/973] regmap: Add provisions to have user-defined write
+ operation
+
+This commit is a preparatory commit to provide "no-bus" configuration
+option for regmap API. It adds necessary plumbing needed to have the
+ability to provide user define register write function.
+
+Backported by hand Davide Ciminaghi <ciminaghi@linino.org>
+
+Signed-off-by: Andrey Smirnov <andrew.smirnov@gmail.com>
+Signed-off-by: Mark Brown <broonie@opensource.wolfsonmicro.com>
+Signed-off-by: Davide Ciminaghi <ciminaghi@linino.org>
+---
+ drivers/base/regmap/internal.h |  1 +
+ drivers/base/regmap/regmap.c   | 63 +++++++++++++++++++++++++++++-------------
+ 2 files changed, 45 insertions(+), 19 deletions(-)
+
+diff --git a/drivers/base/regmap/internal.h b/drivers/base/regmap/internal.h
+index dbe1ce3..251b508 100644
+--- a/drivers/base/regmap/internal.h
++++ b/drivers/base/regmap/internal.h
+@@ -53,6 +53,7 @@ struct regmap {
+ 	u8 write_flag_mask;
+ 
+ 	int (*reg_read)(void *context, unsigned int reg, unsigned int *val);
++	int (*reg_write)(void *context, unsigned int reg, unsigned int val);
+ 
+ 	/* regcache specific members */
+ 	const struct regcache_ops *cache_ops;
+diff --git a/drivers/base/regmap/regmap.c b/drivers/base/regmap/regmap.c
+index 968adc0..091b88c 100644
+--- a/drivers/base/regmap/regmap.c
++++ b/drivers/base/regmap/regmap.c
+@@ -22,6 +22,10 @@
+ 
+ static int _regmap_bus_read(void *context, unsigned int reg,
+ 			    unsigned int *val);
++static int _regmap_bus_formatted_write(void *context, unsigned int reg,
++				       unsigned int val);
++static int _regmap_bus_raw_write(void *context, unsigned int reg,
++				 unsigned int val);
+ 
+ bool regmap_writeable(struct regmap *map, unsigned int reg)
+ {
+@@ -248,6 +252,11 @@ struct regmap *regmap_init(struct device *dev,
+ 		goto err_map;
+ 	}
+ 
++	if (map->format.format_write)
++		map->reg_write = _regmap_bus_formatted_write;
++	else if (map->format.format_val)
++		map->reg_write = _regmap_bus_raw_write;
++
+ 	regmap_debugfs_init(map);
+ 
+ 	ret = regcache_init(map, config);
+@@ -369,11 +378,44 @@ static int _regmap_raw_write(struct regmap *map, unsigned int reg,
+ 	return ret;
+ }
+ 
++static int _regmap_bus_formatted_write(void *context, unsigned int reg,
++				       unsigned int val)
++{
++	int ret;
++	struct regmap *map = context;
++
++	BUG_ON(!map->format.format_write);
++
++	map->format.format_write(map, reg, val);
++
++	trace_regmap_hw_write_start(map->dev, reg, 1);
++
++	ret = map->bus->write(map->bus_context, map->work_buf,
++			      map->format.buf_size);
++
++	trace_regmap_hw_write_done(map->dev, reg, 1);
++
++	return ret;
++}
++
++static int _regmap_bus_raw_write(void *context, unsigned int reg,
++				 unsigned int val)
++{
++	struct regmap *map = context;
++
++	BUG_ON(!map->format.format_val);
++
++	map->format.format_val(map->work_buf + map->format.reg_bytes, val);
++	return _regmap_raw_write(map, reg,
++				 map->work_buf +
++				 map->format.reg_bytes,
++				 map->format.val_bytes);
++}
++
+ int _regmap_write(struct regmap *map, unsigned int reg,
+ 		  unsigned int val)
+ {
+ 	int ret;
+-	BUG_ON(!map->format.format_write && !map->format.format_val);
+ 
+ 	if (!map->cache_bypass) {
+ 		ret = regcache_write(map, reg, val);
+@@ -387,24 +429,7 @@ int _regmap_write(struct regmap *map, unsigned int reg,
+ 
+ 	trace_regmap_reg_write(map->dev, reg, val);
+ 
+-	if (map->format.format_write) {
+-		map->format.format_write(map, reg, val);
+-
+-		trace_regmap_hw_write_start(map->dev, reg, 1);
+-
+-		ret = map->bus->write(map->bus_context, map->work_buf,
+-				      map->format.buf_size);
+-
+-		trace_regmap_hw_write_done(map->dev, reg, 1);
+-
+-		return ret;
+-	} else {
+-		map->format.format_val(map->work_buf + map->format.reg_bytes,
+-				       val);
+-		return _regmap_raw_write(map, reg,
+-					 map->work_buf + map->format.reg_bytes,
+-					 map->format.val_bytes);
+-	}
++	return map->reg_write(map, reg, val);
+ }
+ 
+ /**
+-- 
+1.8.5.2.233.g932f7e4
+

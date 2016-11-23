@@ -1,0 +1,40 @@
+From 5b444f6f5411107aa2c402dad1b91907d783f13f Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 15 Sep 2014 14:50:07 +0200
+Subject: [PATCH 111/115] MCUIO: mma8491 chip added to Lucky shield
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-lucky-shield.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 81ec111..224d18e 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -41,12 +41,14 @@ static unsigned short mpl3115_addr = 0x60;
+ static unsigned short mag3110_addr = 0x0e;
+ static unsigned short sht21_addr = 0x40;
+ static unsigned short ssd1307_addr = 0x3c;
++static unsigned short mma8491_addr = 0x55;
+ module_param(pca9555_base, uint, 0444);
+ module_param(pca9555_addr, ushort, 0444);
+ module_param(mpl3115_addr, ushort, 0444);
+ module_param(mag3110_addr, ushort, 0444);
+ module_param(sht21_addr, ushort, 0444);
+ module_param(ssd1307_addr, ushort, 0444);
++module_param(mma8491_addr, ushort, 0444);
+ 
+ struct ssd1307_platform_data ssd1307_plat = {
+ 	.type = SSD1307_TYPE_1306,
+@@ -62,6 +64,7 @@ static struct pca953x_platform_data pca9555_plat;
+ static struct mcuio_shld_i2c_info i2c_lst[] = {
+ 	MCUIO_SHLD_I2C_DEV("pca9555", &pca9555_addr, &pca9555_plat, 122),
+ 	MCUIO_SHLD_I2C_DEV("mpl3115", &mpl3115_addr, NULL, -1),
++	MCUIO_SHLD_I2C_DEV("mma8491", &mma8491_addr, NULL, -1),
+ 	MCUIO_SHLD_I2C_DEV("mag3110", &mag3110_addr, NULL, -1),
+ 	MCUIO_SHLD_I2C_DEV("sht21", &sht21_addr, NULL, -1),
+ 	MCUIO_SHLD_I2C_DEV("ssd1307fb", &ssd1307_addr, &ssd1307_plat, -1),
+-- 
+1.9.1
+

@@ -1,0 +1,27 @@
+From eee880fe067b43254e197819ea788b367964b908 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 30 Nov 2015 10:38:49 +0100
+Subject: [PATCH 34/50] MCUIO: lucky shield driver, fix type for bme280_addr
+ module parameter
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-lucky-shield.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 537bb3d..7e4d646 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -52,7 +52,7 @@ module_param(sht21_addr, ushort, 0644);
+ module_param(ssd1307_addr, ushort, 0644);
+ module_param(mma8491_addr, ushort, 0644);
+ module_param(mma8491_rst, uint, 0644);
+-module_param(bme280_addr, uint, 0644);
++module_param(bme280_addr, ushort, 0644);
+ 
+ static struct ssd1307_platform_data ssd1307_plat = {
+ 	.type = SSD1307_TYPE_1306,
+-- 
+2.8.2
+

@@ -1,0 +1,25 @@
+From d6aeb342010a7ff0e7ce7d5d183f8ab9eb63a125 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 18 Apr 2014 09:10:32 +0200
+Subject: [PATCH 969/973] MCUIO, ids: add joystick shield device id
+
+---
+ include/linux/mcuio_ids.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/include/linux/mcuio_ids.h b/include/linux/mcuio_ids.h
+index e1b1745..70ceb78 100644
+--- a/include/linux/mcuio_ids.h
++++ b/include/linux/mcuio_ids.h
+@@ -30,4 +30,8 @@
+ /* Vendors */
+ #define MCUIO_VENDOR_DOGHUNTER	    0x0001
+ 
++
++/* Specific devices */
++#define MCUIO_DEVICE_JOYSTICK_SHIELD 0x0001
++
+ #endif /* __MCUIO_IDS_H__ */
+-- 
+1.8.5.2.233.g932f7e4
+

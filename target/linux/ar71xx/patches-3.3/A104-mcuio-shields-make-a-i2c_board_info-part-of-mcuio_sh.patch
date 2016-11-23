@@ -1,0 +1,102 @@
+From 22970ad8f4e75ad46a728ca67e38b31979f3020f Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 4 Sep 2014 10:16:22 +0200
+Subject: [PATCH 104/115] mcuio shields: make a i2c_board_info part of
+ mcuio_shld_i2c_info
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-dio-shield.c   |  9 +++------
+ drivers/mcuio/mcuio-lucky-shield.c | 10 +++-------
+ drivers/mcuio/mcuio-shields.h      |  5 ++---
+ 3 files changed, 8 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-dio-shield.c b/drivers/mcuio/mcuio-dio-shield.c
+index 079121b..3db0942 100644
+--- a/drivers/mcuio/mcuio-dio-shield.c
++++ b/drivers/mcuio/mcuio-dio-shield.c
+@@ -44,7 +44,6 @@ static struct mcuio_shld_i2c_info i2c_lst[] = {
+ 
+ static int mcuio_dio_probe(struct mcuio_device *mdev)
+ {
+-	struct i2c_board_info info;
+ 	struct mcuio_shld_i2c_info *i;
+ 	int cnt;
+ 
+@@ -74,14 +73,12 @@ static int mcuio_dio_probe(struct mcuio_device *mdev)
+ 	/* Register all devices in Digital IO shield */
+ 	for (cnt = 0; cnt < data->i2c_cnt; cnt++) {
+ 		i = &data->i2c_info[cnt];
+-		strcpy(info.type, i->type);
+-		info.addr = *i->paddr;
+-		info.platform_data = i->platform_data;
++		i->info.addr = *i->paddr;
+ 
+-		i->i2c_client = i2c_new_device(data->i2c_adap, &info);
++		i->i2c_client = i2c_new_device(data->i2c_adap, &i->info);
+ 		if (!i->i2c_client)
+ 			dev_err(&mdev->dev,
+-				"i2c_new_device %s failed\n", i->type);
++				"i2c_new_device %s failed\n", i->info.type);
+ 	}
+ 
+ 	dev_dbg(&mdev->dev, "%s returns ok\n", __func__);
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 2cfc6d4..ffd002b 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -69,7 +69,6 @@ static struct mcuio_shld_i2c_info i2c_lst[] = {
+ 
+ static int mcuio_lucky_probe(struct mcuio_device *mdev)
+ {
+-	struct i2c_board_info info;
+ 	struct mcuio_shld_i2c_info *i;
+ 	int cnt;
+ 
+@@ -100,16 +99,13 @@ static int mcuio_lucky_probe(struct mcuio_device *mdev)
+ 	/* Register all devices in Lucky shield */
+ 	for (cnt = 0; cnt < data->i2c_cnt; cnt++) {
+ 		i = &data->i2c_info[cnt];
+-		memset(&info, 0, sizeof(info));
+-		strcpy(info.type, i->type);
+-		info.addr = *i->paddr;
+-		info.platform_data = i->platform_data;
++		i->info.addr = *i->paddr;
+ 
+-		i->i2c_client = i2c_new_device(data->i2c_adap, &info);
++		i->i2c_client = i2c_new_device(data->i2c_adap, &i->info);
+ 
+ 		if (!i->i2c_client)
+ 			dev_err(&mdev->dev,
+-				"i2c_new_device %s failed\n", i->type);
++				"i2c_new_device %s failed\n", i->info.type);
+ 	}
+ 
+ 	dev_dbg(&mdev->dev, "%s returns ok\n", __func__);
+diff --git a/drivers/mcuio/mcuio-shields.h b/drivers/mcuio/mcuio-shields.h
+index 8a5f4e2..1f72d58 100644
+--- a/drivers/mcuio/mcuio-shields.h
++++ b/drivers/mcuio/mcuio-shields.h
+@@ -4,10 +4,9 @@
+ #include <linux/i2c.h>
+ 
+ struct mcuio_shld_i2c_info {
+-	char *type;
+ 	unsigned short *paddr;
+ 	struct i2c_client *i2c_client;
+-	void *platform_data;
++	struct i2c_board_info info;
+ };
+ 
+ struct mcuio_shld_data {
+@@ -17,6 +16,6 @@ struct mcuio_shld_data {
+ };
+ 
+ #define MCUIO_SHLD_I2C_DEV(t, pa, p) \
+-	{.type = t, .paddr = pa, .platform_data = p}
++	{.paddr = pa, .info = {.platform_data = p, .type = t}}
+ 
+ #endif /* __MCUIO_SHIELDS_H__ */
+-- 
+1.9.1
+

@@ -1,0 +1,25 @@
+From 3013030fa589e73d28567dd38b8b84280252519f Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 4 Sep 2014 05:43:45 +0200
+Subject: [PATCH 082/115] MCUIO, mcuio-lucky-shield: fix init of struct
+ i2c_board_info
+
+---
+ drivers/mcuio/mcuio-lucky-shield.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 0def229..2cfc6d4 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -100,6 +100,7 @@ static int mcuio_lucky_probe(struct mcuio_device *mdev)
+ 	/* Register all devices in Lucky shield */
+ 	for (cnt = 0; cnt < data->i2c_cnt; cnt++) {
+ 		i = &data->i2c_info[cnt];
++		memset(&info, 0, sizeof(info));
+ 		strcpy(info.type, i->type);
+ 		info.addr = *i->paddr;
+ 		info.platform_data = i->platform_data;
+-- 
+1.9.1
+

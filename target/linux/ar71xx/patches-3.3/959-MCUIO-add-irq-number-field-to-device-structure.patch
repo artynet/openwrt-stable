@@ -1,0 +1,31 @@
+From 600e6584040ac279bfe698502f4019df28fdd555 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 9 May 2014 14:27:53 +0200
+Subject: [PATCH 959/973] MCUIO: add irq number field to device structure
+
+Signed-off-by: Davide Ciminaghi <ciminaghi@gnudd.com>
+---
+ include/linux/mcuio.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/linux/mcuio.h b/include/linux/mcuio.h
+index be6c804..0616a0a 100644
+--- a/include/linux/mcuio.h
++++ b/include/linux/mcuio.h
+@@ -25,11 +25,13 @@ struct mcuio_device_id {
+  * @device: device number (0 for host controllers)
+  * @fn: function number (0 for host controllers)
+  * @dev: the relevant device
++ * @irq: irq number for device
+  */
+ struct mcuio_device {
+ 	struct mcuio_device_id id;
+ 	unsigned bus, device, fn;
+ 	struct device dev;
++	int irq;
+ };
+ 
+ #define to_mcuio_dev(_dev) container_of(_dev, struct mcuio_device, dev)
+-- 
+1.8.5.2.233.g932f7e4
+

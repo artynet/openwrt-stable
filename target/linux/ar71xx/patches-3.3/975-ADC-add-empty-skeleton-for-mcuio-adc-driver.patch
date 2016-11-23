@@ -1,0 +1,123 @@
+From 13cbad447a479c7db844414baa9c1207afc2ac5f Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 29 May 2014 15:08:40 +0200
+Subject: [PATCH 975/976] ADC: add empty skeleton for mcuio-adc driver
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/Kconfig     |    7 +++++
+ drivers/mcuio/Makefile    |    1 +
+ drivers/mcuio/mcuio-adc.c |   76 +++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 84 insertions(+)
+ create mode 100644 drivers/mcuio/mcuio-adc.c
+
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index 0ec7d89..4d53948 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -29,3 +29,10 @@ config MCUIO_JS_SHIELD
+ 	default y
+ 	help
+ 	  Adds a driver for a joystick + buttons shield (experimental)
++
++config MCUIO_ADC
++	tristate "mcuio ADC driver"
++	depends on MCUIO
++	default y
++	help
++	  Adds a driver for analog to digital converters (experimental)
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index bd1b4c2..dc626d0 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -8,3 +8,4 @@ obj-$(CONFIG_MCUIO) += mcuio.o mcuio-hc-drv.o mcuio-hc-dev.o mcuio-soft-hc.o
+ obj-$(CONFIG_MCUIO_LDISC_HC) += mcuio-hc-ldisc.o
+ obj-$(CONFIG_MCUIO_IRQ_CTRL) += mcuio-irq-ctrl.o
+ obj-$(CONFIG_MCUIO_JS_SHIELD) += mcuio-js-shield.o
++obj-$(CONFIG_MCUIO_ADC) += mcuio-adc.o
+\ No newline at end of file
+diff --git a/drivers/mcuio/mcuio-adc.c b/drivers/mcuio/mcuio-adc.c
+new file mode 100644
+index 0000000..7095526
+--- /dev/null
++++ b/drivers/mcuio/mcuio-adc.c
+@@ -0,0 +1,76 @@
++/*
++ * Copyright 2014 Dog Hunter SA
++ * Author: Aurelio Colosimo <aurelio@aureliocolosimo.it>
++ *
++ * GNU GPLv2 or later
++ */
++
++/* mcuio driver for ADC inputs */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/types.h>
++#include <linux/regmap.h>
++#include <linux/workqueue.h>
++#include <linux/irq.h>
++#include <linux/interrupt.h>
++#include <linux/hid.h>
++#include <linux/platform_device.h>
++
++
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++#include <linux/mcuio-proto.h>
++
++#include "mcuio-internal.h"
++
++static int mcuio_adc_probe(struct mcuio_device *mdev)
++{
++	return -ENODEV;
++}
++
++static int mcuio_adc_remove(struct mcuio_device *mdev)
++{
++	return 0;
++}
++
++static const struct mcuio_device_id adc_drv_ids[] = {
++	{
++		.class = MCUIO_CLASS_ADC,
++		.class_mask = 0xffff,
++	},
++	/* Terminator */
++	{
++		.device = MCUIO_NO_DEVICE,
++		.class = MCUIO_CLASS_UNDEFINED,
++	},
++};
++
++static struct mcuio_driver mcuio_adc_driver = {
++	.driver = {
++		.name = "mcuio-adc",
++	},
++	.id_table = adc_drv_ids,
++	.probe = mcuio_adc_probe,
++	.remove = mcuio_adc_remove,
++};
++
++static int __init mcuio_adc_init(void)
++{
++	return mcuio_driver_register(&mcuio_adc_driver, THIS_MODULE);
++}
++
++static void __exit mcuio_adc_exit(void)
++{
++	return mcuio_driver_unregister(&mcuio_adc_driver);
++}
++
++subsys_initcall(mcuio_adc_init);
++module_exit(mcuio_adc_exit);
++
++MODULE_AUTHOR("Aurelio Colosimo");
++MODULE_DESCRIPTION("MCUIO driver for ADC");
++MODULE_LICENSE("GPL v2");
+-- 
+1.7.9.5
+

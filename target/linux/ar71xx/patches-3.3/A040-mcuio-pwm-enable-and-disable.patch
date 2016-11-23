@@ -1,0 +1,59 @@
+From a24befd47101eb6601ba88aeafc63120c424a39b Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 28 Jul 2014 16:43:58 +0200
+Subject: [PATCH 40/47] mcuio pwm: enable and disable
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/pwm-mcuio.c |   31 ++++++++++++++++++++++++++++---
+ 1 file changed, 28 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/pwm/pwm-mcuio.c b/drivers/pwm/pwm-mcuio.c
+index 83bdcd2..415127c 100644
+--- a/drivers/pwm/pwm-mcuio.c
++++ b/drivers/pwm/pwm-mcuio.c
+@@ -63,13 +63,38 @@ static int mcuio_pwm_set_polarity(struct pwm_chip *chip, struct pwm_device *pwm,
+ 
+ static int mcuio_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
+ {
+-	/* FIXME TODO */
+-	return -1;
++	struct mcuio_pwm_data *data = to_mcuio_pwm_data(chip);
++	int idx = pwm_idx(pwm);
++	u32 st;
++	u32 addr;
++
++	addr = 0x040 * (idx + 1) + 0x0c;
++
++	if (regmap_read(data->map, addr, &st))
++		return -EIO;
++
++	if (regmap_write(data->map, addr, st | 0x1))
++		return -EIO;
++
++	return 0;
+ }
+ 
+ static void mcuio_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
+ {
+-	/* FIXME TODO */
++	struct mcuio_pwm_data *data = to_mcuio_pwm_data(chip);
++	int idx = pwm_idx(pwm);
++	u32 st = 0;
++	u32 addr;
++
++	addr = 0x040 * (idx + 1) + 0x0c;
++
++	if (regmap_read(data->map, addr, &st))
++		dev_warn(chip->dev, "could not read current status while "
++			"disabling pwm %d\n", idx);
++
++	if (regmap_write(data->map, addr, st & ~0x1))
++		dev_warn(chip->dev, "I/O error while disabling pwm %d\n",
++			 idx);
+ }
+ 
+ static const struct pwm_ops mcuio_pwm_ops = {
+-- 
+1.7.9.5
+

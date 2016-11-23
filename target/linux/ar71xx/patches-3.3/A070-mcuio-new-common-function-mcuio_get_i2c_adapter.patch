@@ -1,0 +1,131 @@
+From e13aed01d2e935d5603006cafa2b276ba122b600 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Tue, 26 Aug 2014 10:19:29 +0200
+Subject: [PATCH 070/115] mcuio: new common function mcuio_get_i2c_adapter
+
+i2c adapter search code is moved from mcuio-js-shield.c to core.c, since it will
+be used by each shield mounting some i2c devices.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/core.c            | 37 +++++++++++++++++++++++++++++++++++++
+ drivers/mcuio/mcuio-internal.h  |  2 ++
+ drivers/mcuio/mcuio-js-shield.c | 33 ++-------------------------------
+ 3 files changed, 41 insertions(+), 31 deletions(-)
+
+diff --git a/drivers/mcuio/core.c b/drivers/mcuio/core.c
+index 42cae57..de9c614 100644
+--- a/drivers/mcuio/core.c
++++ b/drivers/mcuio/core.c
+@@ -16,6 +16,8 @@
+ #include <linux/completion.h>
+ #include <linux/spinlock.h>
+ #include <linux/bitops.h>
++#include <linux/i2c.h>
++#include <linux/mcuio_ids.h>
+ #include "mcuio-internal.h"
+ 
+ unsigned long int busnum;
+@@ -45,6 +47,41 @@ void mcuio_put_bus(unsigned n)
+ }
+ EXPORT_SYMBOL(mcuio_put_bus);
+ 
++static int match_i2c_mcuio(struct device *dev, void *dummy)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	return mdev->id.class == MCUIO_CLASS_I2C_CONTROLLER;
++}
++
++static int match_i2c_adap(struct device *dev, void *dummy)
++{
++	return dev->type == &i2c_adapter_type;
++}
++
++struct i2c_adapter *mcuio_get_i2c_adapter(struct mcuio_device *mdev)
++{
++	/* Look for mcuio i2c controller device */
++	struct device *hcdev = mdev->dev.parent;
++	struct device *mcuio_i2c_dev = device_find_child(hcdev,
++							 NULL,
++							 match_i2c_mcuio);
++	struct device *adap_dev;
++
++	if (!mcuio_i2c_dev) {
++		dev_err(&mdev->dev,
++			"Cannot find mcuio i2c adapter mcuio dev\n");
++		return NULL;
++	}
++	/* Found, now we need the corresponding adapter ... */
++	adap_dev = device_find_child(mcuio_i2c_dev, NULL, match_i2c_adap);
++	if (!adap_dev) {
++		dev_err(&mdev->dev, "Cannot find mcuio i2c adapter\n");
++		return NULL;
++	}
++	return to_i2c_adapter(adap_dev);
++}
++EXPORT_SYMBOL(mcuio_get_i2c_adapter);
++
+ static int __init mcuio_init(void)
+ {
+ 	int ret;
+diff --git a/drivers/mcuio/mcuio-internal.h b/drivers/mcuio/mcuio-internal.h
+index 223e2ec..83c417a 100644
+--- a/drivers/mcuio/mcuio-internal.h
++++ b/drivers/mcuio/mcuio-internal.h
+@@ -10,4 +10,6 @@ extern struct attribute_group mcuio_default_dev_attr_group;
+ int mcuio_get_bus(void);
+ void mcuio_put_bus(unsigned bus);
+ 
++struct i2c_adapter *mcuio_get_i2c_adapter(struct mcuio_device *mdev);
++
+ #endif /* __MCUIO_INTERNAL_H__ */
+diff --git a/drivers/mcuio/mcuio-js-shield.c b/drivers/mcuio/mcuio-js-shield.c
+index 4f5222e..549cf45 100644
+--- a/drivers/mcuio/mcuio-js-shield.c
++++ b/drivers/mcuio/mcuio-js-shield.c
+@@ -443,40 +443,11 @@ static const struct mcuio_js_gpio_config lucky_gpios[] = {
+ 	},
+ };
+ 
+-static int match_i2c_mcuio(struct device *dev, void *dummy)
+-{
+-	struct mcuio_device *mdev = to_mcuio_dev(dev);
+-	return mdev->id.class == MCUIO_CLASS_I2C_CONTROLLER;
+-}
+-
+-static int match_i2c_adap(struct device *dev, void *dummy)
+-{
+-	return dev->type == &i2c_adapter_type;
+-}
+-
+ static int __setup_i2c_adapter(struct mcuio_device *mdev,
+ 			      struct mcuio_js_data *js_data)
+ {
+-	/* Look for mcuio i2c controller device */
+-	struct device *hcdev = mdev->dev.parent;
+-	struct device *mcuio_i2c_dev = device_find_child(hcdev,
+-							 NULL,
+-							 match_i2c_mcuio);
+-	struct device *adap_dev;
+-
+-	if (!mcuio_i2c_dev) {
+-		dev_err(&mdev->dev,
+-			"Cannot find mcuio i2c adapter mcuio dev\n");
+-		return -ENODEV;
+-	}
+-	/* Found, now we need the corresponding adapter ... */
+-	adap_dev = device_find_child(mcuio_i2c_dev, NULL, match_i2c_adap);
+-	if (!adap_dev) {
+-		dev_err(&mdev->dev, "Cannot find mcuio i2c adapter\n");
+-		return -ENODEV;
+-	}
+-	js_data->i2c_adap = to_i2c_adapter(adap_dev);
+-	return 0;
++	js_data->i2c_adap = mcuio_get_i2c_adapter(mdev);
++	return js_data->i2c_adap ? 0 : -ENODEV;
+ }
+ 
+ static int __instantiate_oled(struct mcuio_device *mdev,
+-- 
+1.9.1
+

@@ -1,0 +1,25 @@
+From af33bf5514e116a3420193c9473978db8195cbc1 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 18 Apr 2014 09:08:43 +0200
+Subject: [PATCH 967/973] MCUIO, ids: add shield class
+
+---
+ include/linux/mcuio_ids.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/linux/mcuio_ids.h b/include/linux/mcuio_ids.h
+index 4223742..94469d7 100644
+--- a/include/linux/mcuio_ids.h
++++ b/include/linux/mcuio_ids.h
+@@ -20,6 +20,8 @@
+ #define MCUIO_CLASS_IRQ_CONTROLLER_PROTO  0x000a
+ /* Send irqs from MCU via gpio */
+ #define MCUIO_CLASS_IRQ_CONTROLLER_WIRE   0x000b
++/* Add-on shield */
++#define MCUIO_CLASS_SHIELD	    0x000c
+ 
+ /* Invalid device id (used for id table termination */
+ #define MCUIO_NO_DEVICE		    0x0000
+-- 
+1.8.5.2.233.g932f7e4
+

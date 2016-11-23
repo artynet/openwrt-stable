@@ -1,0 +1,29 @@
+From f495b6ad561183aed0c7e7f136a334d5c67145ff Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 28 Jul 2014 12:39:18 +0200
+Subject: [PATCH 32/47] init/do_mounts.c: Fix warning on const
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ init/do_mounts.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/init/do_mounts.c b/init/do_mounts.c
+index bf6edbf..631c755 100644
+--- a/init/do_mounts.c
++++ b/init/do_mounts.c
+@@ -66,9 +66,9 @@ __setup("rw", readwrite);
+  *
+  * Returns 1 if the device matches, and 0 otherwise.
+  */
+-static int match_dev_by_uuid(struct device *dev, void *data)
++static int match_dev_by_uuid(struct device *dev, const void *data)
+ {
+-	u8 *uuid = data;
++	const u8 *uuid = data;
+ 	struct hd_struct *part = dev_to_part(dev);
+ 
+ 	if (!part->info)
+-- 
+1.7.9.5
+

@@ -1,0 +1,26 @@
+From 51b40c6832725952547691da9de94edbe286b3d1 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 9 Sep 2014 06:23:53 +0200
+Subject: [PATCH 112/115] MCUIO, mcuio-lucky-shield: drop reference to i2c
+ adapter device after registering i2c devs
+
+---
+ drivers/mcuio/mcuio-lucky-shield.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 224d18e..647c5d9 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -113,6 +113,8 @@ static int mcuio_lucky_probe(struct mcuio_device *mdev)
+ 				"i2c_new_device %s failed\n", i->info.type);
+ 	}
+ 
++	put_device(&data->i2c_adap->dev);
++
+ 	dev_dbg(&mdev->dev, "%s returns ok\n", __func__);
+ 
+ 	return 0;
+-- 
+1.9.1
+

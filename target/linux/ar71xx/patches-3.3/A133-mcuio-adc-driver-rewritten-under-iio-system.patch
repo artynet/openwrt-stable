@@ -1,0 +1,704 @@
+From a72fb3817ceff10169e861dce0e67c4419f74a86 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Wed, 1 Oct 2014 17:27:58 +0200
+Subject: [PATCH 133/134] mcuio adc driver rewritten under iio system
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig |    2 +-
+ drivers/iio/adc/Kconfig                |    7 +
+ drivers/iio/adc/Makefile               |    1 +
+ drivers/iio/adc/mcuio_adc.c            |  231 ++++++++++++++++++++
+ drivers/mcuio/Kconfig                  |    7 -
+ drivers/mcuio/Makefile                 |    3 +-
+ drivers/mcuio/mcuio-adc.c              |  365 --------------------------------
+ 7 files changed, 241 insertions(+), 375 deletions(-)
+ create mode 100644 drivers/iio/adc/mcuio_adc.c
+ delete mode 100644 drivers/mcuio/mcuio-adc.c
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index a0954be..8966569 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -2827,7 +2827,6 @@ CONFIG_MCUIO_LUCKY_SHIELD=y
+ CONFIG_MCUIO_DIGITALIO_SHIELD=y
+ CONFIG_MCUIO_DOGOLED_SHIELD=y
+ CONFIG_MCUIO_SHIELDS_MANUAL_PROBE=y
+-CONFIG_MCUIO_ADC=y
+ CONFIG_PWM=y
+ CONFIG_PWM_SYSFS=y
+ CONFIG_PWM_MCUIO=y
+@@ -2864,6 +2863,7 @@ CONFIG_MMA8491=y
+ # CONFIG_MCP3422 is not set
+ # CONFIG_NAU7802 is not set
+ # CONFIG_TI_ADC081C is not set
++CONFIG_MCUIO_ADC=y
+ 
+ #
+ # Amplifiers
+diff --git a/drivers/iio/adc/Kconfig b/drivers/iio/adc/Kconfig
+index a80d236..1dca284 100644
+--- a/drivers/iio/adc/Kconfig
++++ b/drivers/iio/adc/Kconfig
+@@ -260,4 +260,11 @@ config XILINX_XADC
+ 	  The driver can also be build as a module. If so, the module will be called
+ 	  xilinx-xadc.
+ 
++config MCUIO_ADC
++	tristate "mcuio ADC driver"
++	depends on MCUIO
++	default y
++	help
++	  Adds a driver mcuio ADC inputs (experimental)
++
+ endmenu
+diff --git a/drivers/iio/adc/Makefile b/drivers/iio/adc/Makefile
+index 9d60f2d..ff1e095 100644
+--- a/drivers/iio/adc/Makefile
++++ b/drivers/iio/adc/Makefile
+@@ -26,5 +26,6 @@ obj-$(CONFIG_TWL4030_MADC) += twl4030-madc.o
+ obj-$(CONFIG_TWL6030_GPADC) += twl6030-gpadc.o
+ obj-$(CONFIG_VF610_ADC) += vf610_adc.o
+ obj-$(CONFIG_VIPERBOARD_ADC) += viperboard_adc.o
++obj-$(CONFIG_MCUIO_ADC) += mcuio_adc.o
+ xilinx-xadc-y := xilinx-xadc-core.o xilinx-xadc-events.o
+ obj-$(CONFIG_XILINX_XADC) += xilinx-xadc.o
+diff --git a/drivers/iio/adc/mcuio_adc.c b/drivers/iio/adc/mcuio_adc.c
+new file mode 100644
+index 0000000..1088cf7
+--- /dev/null
++++ b/drivers/iio/adc/mcuio_adc.c
+@@ -0,0 +1,231 @@
++/*
++ * Copyright 2014 Dog Hunter SA
++ * Author: Aurelio Colosimo <aurelio@aureliocolosimo.it>
++ *
++ * GNU GPLv2 or later
++ */
++
++/* MCUIO IIO driver for ADC inputs */
++
++#include <linux/err.h>
++#include <linux/module.h>
++#include <linux/iio/iio.h>
++#include <linux/regmap.h>
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++#include <linux/mcuio-proto.h>
++
++#define MCUIO_ADC_FLAG_SIGNED	(1 << 0)
++
++struct mcuio_adc {
++	struct regmap *map;
++	u32 vres_uv;
++};
++
++static const struct regmap_config mcuio_adc_regmap_config = {
++	.reg_bits = 32,
++	.val_bits = 32,
++	.max_register = 0xffc,
++	.cache_type = REGCACHE_NONE,
++};
++
++static int mcuio_adc_read_raw(struct iio_dev *idev,
++			    struct iio_chan_spec const *ch, int *val,
++			    int *shift, long mask)
++{
++	struct mcuio_adc *adc = iio_priv(idev);
++	int ret = -EINVAL;
++	u32 _val = 0;
++	u32 addr;
++
++	switch (mask) {
++	case IIO_CHAN_INFO_RAW:
++		addr = 0x040 * (ch->address + 1) + 0x0c;
++		break;
++
++	case IIO_CHAN_INFO_SCALE:
++		addr = 0x040 * (ch->address + 1) + 0x08;
++		break;
++
++	default:
++		goto out;
++	}
++
++	ret = regmap_read(adc->map, addr, &_val);
++
++	if (ret < 0) {
++		dev_err(&idev->dev,
++			"failed to read mcuio addr %03x\n", addr);
++		goto out;
++	}
++
++	*val = _val;
++	ret = IIO_VAL_INT;
++
++out:
++	return ret;
++}
++
++static const struct iio_info mcuio_adc_info = {
++	.read_raw = mcuio_adc_read_raw,
++	.driver_module = THIS_MODULE,
++};
++
++
++ssize_t mcuio_adc_enable_read(struct iio_dev *idev, uintptr_t private,
++			struct iio_chan_spec const *channel, char *buf)
++{
++	u32 en = 0;
++	struct mcuio_adc *adc = iio_priv(idev);
++	regmap_read(adc->map, 0x14, &en);
++	return snprintf(buf, PAGE_SIZE, "%d\n", en & 0x1 ? 1 : 0);
++}
++
++ssize_t mcuio_adc_enable_write(struct iio_dev *idev, uintptr_t private,
++			 struct iio_chan_spec const *channel, const char *buf,
++			 size_t len)
++{
++	uint32_t _en, en_new;
++	struct mcuio_adc *adc = iio_priv(idev);
++	regmap_read(adc->map, 0x14, &_en);
++	en_new = (buf[0] - '0') & 0x1;
++	regmap_write(adc->map, 0x14, (_en & ~0x1) | en_new);
++	return len;
++}
++
++static struct iio_chan_spec_ext_info iio_chan_spec_enable = {
++	.name = "enable",
++	.shared = IIO_SHARED_BY_ALL,
++	.read = mcuio_adc_enable_read,
++	.write = mcuio_adc_enable_write,
++};
++
++static int mcuio_adc_probe(struct mcuio_device *mdev)
++{
++	struct iio_dev *idev;
++	struct mcuio_adc *adc;
++	int ret = 0;
++	u32 flags;
++	struct iio_chan_spec *ch;
++	int i;
++	char *lbls;
++
++	idev = devm_iio_device_alloc(&mdev->dev, sizeof(*adc));
++	if (!idev)
++		return -ENOMEM;
++
++	dev_set_drvdata(&mdev->dev, idev);
++
++	adc = iio_priv(idev);
++
++	adc->map = devm_regmap_init_mcuio(mdev, &mcuio_adc_regmap_config);
++
++	if (IS_ERR(adc->map)) {
++		dev_err(&mdev->dev, "cannot setup regmap for device\n");
++		return PTR_ERR(adc->map);
++	}
++
++	idev->dev.parent = &mdev->dev;
++	idev->name = "mcuio-adc";
++	idev->modes = INDIO_DIRECT_MODE;
++	idev->info = &mcuio_adc_info;
++
++	pr_info("mcuio adc is %u:%u:%u\n",
++		 mdev->bus, mdev->device, mdev->fn);
++
++	/* Read nchannels */
++	ret = regmap_read(adc->map, 0x008, &idev->num_channels);
++	if (ret < 0)
++		return ret;
++	dev_info(&mdev->dev, "%d input channels detected\n",
++		 idev->num_channels);
++
++	/* Allocate mem for channels info */
++	ch = devm_kzalloc(&mdev->dev,
++			idev->num_channels * sizeof(struct iio_chan_spec),
++			GFP_KERNEL);
++
++	if (!ch)
++		return -ENOMEM;
++
++	/* Allocate mem for labels */
++	lbls = devm_kzalloc(&mdev->dev,
++			idev->num_channels * 8, GFP_KERNEL);
++	if (!lbls)
++		return -ENOMEM;
++
++	/* Initialize channels info */
++	for (i = 0; i < idev->num_channels; i++) {
++		ch[i].type = IIO_VOLTAGE;
++		ch[i].indexed = 1;
++		ch[i].channel = ch[i].address = i;
++		ch[i].info_mask_separate =
++			BIT(IIO_CHAN_INFO_RAW) | BIT(IIO_CHAN_INFO_SCALE);
++
++		/* read flags */
++		regmap_read(adc->map, 0x040 * (i + 1) + 0x04, &flags);
++		ch[i].differential = flags & MCUIO_ADC_FLAG_SIGNED ? 1 : 0;
++		ch[i].indexed = ch[i].differential ? 1 : 0;
++
++		if (i == 0)
++			ch[i].ext_info = &iio_chan_spec_enable;
++
++		/* read label */
++		regmap_read(adc->map, 0x040 * (i + 1), (u32*)&lbls[i * 8]);
++		ch[i].extend_name = &lbls[i * 8];
++		dev_dbg(&mdev->dev, "found adc %u: %s\n", i, &lbls[i * 8]);
++	}
++
++	idev->channels = ch;
++
++	ret = iio_device_register(idev);
++	if (ret < 0)
++		return ret;
++
++	return 0;
++}
++
++static int mcuio_adc_remove(struct mcuio_device *mdev)
++{
++	struct iio_dev *idev = dev_get_drvdata(&mdev->dev);
++	iio_device_unregister(idev);
++	return 0;
++}
++
++static const struct mcuio_device_id mcuio_adc_drv_ids[] = {
++	{
++		.class = MCUIO_CLASS_ADC,
++		.class_mask = 0xffff,
++	},
++	/* Terminator */
++	{
++		.device = MCUIO_NO_DEVICE,
++		.class = MCUIO_CLASS_UNDEFINED,
++	},
++};
++
++static struct mcuio_driver mcuio_adc_driver = {
++	.driver = {
++		.name = "mcuio-adc",
++	},
++	.id_table = mcuio_adc_drv_ids,
++	.probe = mcuio_adc_probe,
++	.remove = mcuio_adc_remove,
++};
++
++static int __init mcuio_adc_init(void)
++{
++	return mcuio_driver_register(&mcuio_adc_driver, THIS_MODULE);
++}
++
++static void __exit mcuio_adc_exit(void)
++{
++	mcuio_driver_unregister(&mcuio_adc_driver);
++}
++
++subsys_initcall(mcuio_adc_init);
++module_exit(mcuio_adc_exit);
++
++MODULE_AUTHOR("Aurelio Colosimo <aurelio@aureliocolosimo.it>");
++MODULE_DESCRIPTION("MCUIO adc driver");
++MODULE_LICENSE("GPL v2");
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index f83c3fc..ddcab94 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -58,10 +58,3 @@ config MCUIO_SHIELDS_MANUAL_PROBE
+ 	help
+ 	  Since autoprobe of mcuio shields is not implemented yet, this option
+ 	  makes it possible to manually register shields (experimental).
+-
+-config MCUIO_ADC
+-	tristate "mcuio ADC driver"
+-	depends on MCUIO
+-	default y
+-	help
+-	  Adds a driver for analog to digital converters (experimental)
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index c6e8bb8..91c52ac 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -11,5 +11,4 @@ obj-$(CONFIG_MCUIO_JS_SHIELD) += mcuio-js-shield.o
+ obj-$(CONFIG_MCUIO_LUCKY_SHIELD) += mcuio-lucky-shield.o
+ obj-$(CONFIG_MCUIO_DIGITALIO_SHIELD) += mcuio-dio-shield.o
+ obj-$(CONFIG_MCUIO_DOGOLED_SHIELD) += mcuio-dogoled-shield.o
+-obj-$(CONFIG_MCUIO_SHIELDS_MANUAL_PROBE) += mcuio-shields-manprobe.o
+-obj-$(CONFIG_MCUIO_ADC) += mcuio-adc.o
+\ No newline at end of file
++obj-$(CONFIG_MCUIO_SHIELDS_MANUAL_PROBE) += mcuio-shields-manprobe.o
+\ No newline at end of file
+diff --git a/drivers/mcuio/mcuio-adc.c b/drivers/mcuio/mcuio-adc.c
+deleted file mode 100644
+index b776e97..0000000
+--- a/drivers/mcuio/mcuio-adc.c
++++ /dev/null
+@@ -1,365 +0,0 @@
+-/*
+- * Copyright 2014 Dog Hunter SA
+- * Author: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+- *
+- * GNU GPLv2 or later
+- */
+-
+-/* mcuio driver for ADC inputs */
+-
+-#include <linux/kernel.h>
+-#include <linux/module.h>
+-#include <linux/init.h>
+-#include <linux/device.h>
+-#include <linux/slab.h>
+-#include <linux/types.h>
+-#include <linux/regmap.h>
+-#include <linux/workqueue.h>
+-#include <linux/irq.h>
+-#include <linux/interrupt.h>
+-#include <linux/hid.h>
+-#include <linux/platform_device.h>
+-
+-
+-#include <linux/mcuio.h>
+-#include <linux/mcuio_ids.h>
+-#include <linux/mcuio-proto.h>
+-
+-#include "mcuio-internal.h"
+-
+-static struct class *mcuio_adc_class;
+-
+-static const struct regmap_config mcuio_adc_regmap_config = {
+-	.reg_bits = 32,
+-	.val_bits = 32,
+-	.max_register = 0xffc,
+-	.cache_type = REGCACHE_NONE,
+-};
+-
+-
+-struct mcuio_adc_in {
+-	const char *name;
+-	int mcu_in;
+-	uint32_t capab;
+-	struct device *dev;
+-	struct adc_data *data;
+-};
+-
+-/* Mapping from mcu gpio to board inputs */
+-struct mcuio_adc_in linino_one_in[] = {
+-	{
+-		.name = "A0",
+-		.mcu_in = 7,
+-	},
+-	{
+-		.name = "A1",
+-		.mcu_in = 6,
+-	},
+-	{
+-		.name = "A2",
+-		.mcu_in = 5,
+-	},
+-	{
+-		.name = "A3",
+-		.mcu_in = 4,
+-	},
+-	{
+-		.name = "A4",
+-		.mcu_in = 1,
+-	},
+-	{
+-		.name = "A5",
+-		.mcu_in = 0,
+-	},
+-	{
+-		.name = NULL,
+-	}
+-};
+-
+-struct adc_data {
+-	struct mcuio_adc_in *in;
+-	struct regmap *map;
+-	struct device *dev;
+-	int in_created;
+-};
+-
+-#define __regmap_read(m, a, v) \
+-	if (regmap_read(m, a, v)) \
+-		dev_err(dev, "I/O error in %s\n", __func__); \
+-
+-#define __regmap_write(m, a, v) \
+-	if (regmap_write(m, a, v)) \
+-		dev_err(dev, "I/O error in %s\n", __func__);
+-
+-
+-static inline void mcuio_adc_disable(struct adc_data *data) {
+-	regmap_write(data->map, 0x14, 0);
+-}
+-
+-/* sysfs interface begin */
+-
+-ssize_t show_value(struct device *dev, struct device_attribute *attr,
+-			char *buf)
+-{
+-	uint32_t val;
+-	uint32_t addr;
+-	struct mcuio_adc_in *in = dev_get_drvdata(dev);
+-
+-	addr = 0x040 * (in->mcu_in + 1) + 0x0c;
+-	__regmap_read(in->data->map, addr, &val);
+-	return sprintf(buf, "%d", val);
+-}
+-
+-ssize_t show_nbits(struct device *dev, struct device_attribute *attr,
+-			char *buf)
+-{
+-#if 0 /* FIXME: to be fixed in bathos-mcuio */
+-	struct mcuio_adc_in *in = dev_get_drvdata(dev);
+-	return sprintf(buf, "%u", (in->capab >> 1) & 0x3f);
+-#endif
+-	return sprintf(buf, "10");
+-}
+-
+-ssize_t show_signd(struct device *dev, struct device_attribute *attr,
+-			char *buf)
+-{
+-#if 0 /* FIXME: to be fixed in bathos-mcuio */
+-	struct mcuio_adc_in *in = dev_get_drvdata(dev);
+-	return sprintf(buf, "%u", in->capab & 0x1);
+-#endif
+-	return sprintf(buf, "0");
+-}
+-
+-static DEVICE_ATTR(value, 0444, show_value, NULL);
+-static DEVICE_ATTR(nbits, 0444, show_nbits, NULL);
+-static DEVICE_ATTR(signd, 0444, show_signd, NULL);
+-
+-static struct attribute *adc_in_dev_attrs[] = {
+-	&dev_attr_value.attr,
+-	&dev_attr_nbits.attr,
+-	&dev_attr_signd.attr,
+-	NULL,
+-};
+-
+-struct attribute_group adc_in_dev_attr_group = {
+-	.attrs = adc_in_dev_attrs,
+-};
+-
+-static ssize_t show_enable(struct device *dev, struct device_attribute *attr,
+-			char *buf)
+-{
+-	uint32_t en = 0;
+-	struct adc_data *data;
+-	data = dev_get_drvdata(dev);
+-	__regmap_read(data->map, 0x14, &en);
+-	return sprintf(buf, "%u", en & 0x1);
+-}
+-
+-static int in_devs_create(struct adc_data *data)
+-{
+-	struct mcuio_adc_in *in = data->in;
+-	uint32_t addr;
+-	mcuio_adc_class = class_create(THIS_MODULE, "mcuio_adc");
+-	while (in->name) {
+-
+-		/* Read capabilities and store its constant value */
+-		addr = 0x040 * (in->mcu_in + 1) + 0x04;
+-		regmap_read(data->map, addr, &in->capab);
+-
+-		in->data = data;
+-
+-		in->dev = device_create(mcuio_adc_class, data->dev,
+-			MKDEV(0, in - data->in), in, in->name);
+-
+-		if (!in->dev) {
+-			dev_err(data->dev, "error creating dev %s\n",
+-				in->name);
+-			return -ENOMEM;
+-		}
+-
+-		sysfs_create_group(&in->dev->kobj,
+-					&adc_in_dev_attr_group);
+-		in++;
+-	}
+-
+-	data->in_created = 1;
+-
+-	return 0;
+-}
+-
+-static void in_devs_destroy(struct adc_data *data)
+-{
+-	struct mcuio_adc_in *in = data->in;
+-	while (in->name) {
+-		if (in->dev) {
+-			device_destroy(mcuio_adc_class,
+-				       MKDEV(0, in - data->in));
+-			in->dev = NULL;
+-		}
+-		in++;
+-	}
+-	data->in_created = 0;
+-	class_destroy(mcuio_adc_class);
+-	mcuio_adc_class = NULL;
+-}
+-
+-static ssize_t store_enable(struct device *dev, struct device_attribute *attr,
+-			 const char *buf, size_t count)
+-{
+-	uint32_t _en, en_new;
+-	struct adc_data *data = dev_get_drvdata(dev);
+-
+-	__regmap_read(data->map, 0x14, &_en);
+-
+-	en_new = (buf[0] - '0') & 0x1;
+-
+-	__regmap_write(data->map, 0x14, (_en & ~0x1) | en_new);
+-
+-	if (en_new && !data->in_created) {
+-		/* If switched to enabled, create nodes in
+-		 * /sys/class/mcuio_adc */
+-		in_devs_create(data);
+-	}
+-	else if (!en_new && data->in_created) {
+-		/* If switched to disabled, destroy nodes in
+-		 * /sys/class/mcuio_adc */
+-		in_devs_destroy(data);
+-	}
+-
+-	return count;
+-}
+-
+-static ssize_t show_aref(struct device *dev, struct device_attribute *attr,
+-			char *buf)
+-{
+-	/* FIXME todo */
+-	return sprintf(buf, "Not implemented yet");
+-}
+-
+-static ssize_t store_aref(struct device *dev, struct device_attribute *attr,
+-			 const char *buf, size_t count)
+-{
+-	/* FIXME todo */
+-	return count;
+-}
+-
+-static DEVICE_ATTR(enable, 0644, show_enable, store_enable);
+-/* FIXME todo
+-static DEVICE_ATTR(aref, 0644, show_aref, store_aref);
+-*/
+-
+-/* sysfs interface end */
+-
+-static int mcuio_adc_probe(struct mcuio_device *mdev)
+-{
+-	int ret;
+-	struct adc_data *data = NULL;
+-	struct regmap *map = NULL;
+-	struct mcuio_device *hc = to_mcuio_dev(mdev->dev.parent);
+-
+-	if (!hc) {
+-		dev_err(&mdev->dev, "no parent for device\n");
+-		return -EINVAL;
+-	}
+-
+-	map = devm_regmap_init_mcuio(mdev, &mcuio_adc_regmap_config);
+-
+-	if (IS_ERR(map)) {
+-		dev_err(&mdev->dev, "cannot setup regmap for device\n");
+-		return PTR_ERR(map);
+-	}
+-
+-	data = devm_kzalloc(&mdev->dev, sizeof(*data), GFP_KERNEL);
+-
+-	if (!data) {
+-		dev_err(&mdev->dev, "error creating adc_data\n");
+-		ret = -ENOMEM;
+-		goto fail1;
+-	}
+-
+-	data->map = map;
+-
+-	pr_debug("mcuio adc is %u:%u:%u\n",
+-		 mdev->bus, mdev->device, mdev->fn);
+-
+-	data->in = linino_one_in;
+-	data->dev = &mdev->dev;
+-
+-	dev_set_drvdata(&mdev->dev, data);
+-
+-	ret = sysfs_create_link(&hc->dev.kobj, &mdev->dev.kobj, "adc");
+-	if (ret)
+-		goto fail1;
+-
+-	ret = device_create_file(&mdev->dev, &dev_attr_enable);
+-	if (ret) {
+-		dev_err(&mdev->dev, "error creating adc enable file\n");
+-		goto fail2;
+-	}
+-
+-	mcuio_adc_disable(data);
+-
+-	return 0;
+-
+-fail2:
+-	sysfs_remove_link(&hc->dev.kobj, "adc");
+-fail1:
+-	return ret;
+-}
+-
+-static int mcuio_adc_remove(struct mcuio_device *mdev)
+-{
+-	struct adc_data *data = dev_get_drvdata(&mdev->dev);
+-	struct mcuio_device *hc = to_mcuio_dev(mdev->dev.parent);
+-
+-	pr_debug("removing mcuio adc %u:%u:%u\n",
+-		 mdev->bus, mdev->device, mdev->fn);
+-	BUG_ON(!data);
+-
+-	if (data->in_created)
+-		in_devs_destroy(data);
+-
+-	device_remove_file(&mdev->dev, &dev_attr_enable);
+-
+-	sysfs_remove_link(&hc->dev.kobj, "adc");
+-
+-	return 0;
+-}
+-
+-static const struct mcuio_device_id adc_drv_ids[] = {
+-	{
+-		.class = MCUIO_CLASS_ADC,
+-		.class_mask = 0xffff,
+-	},
+-	/* Terminator */
+-	{
+-		.device = MCUIO_NO_DEVICE,
+-		.class = MCUIO_CLASS_UNDEFINED,
+-	},
+-};
+-
+-static struct mcuio_driver mcuio_adc_driver = {
+-	.driver = {
+-		.name = "mcuio-adc",
+-	},
+-	.id_table = adc_drv_ids,
+-	.probe = mcuio_adc_probe,
+-	.remove = mcuio_adc_remove,
+-};
+-
+-static int __init mcuio_adc_init(void)
+-{
+-	return mcuio_driver_register(&mcuio_adc_driver, THIS_MODULE);
+-}
+-
+-static void __exit mcuio_adc_exit(void)
+-{
+-	mcuio_driver_unregister(&mcuio_adc_driver);
+-}
+-
+-subsys_initcall(mcuio_adc_init);
+-module_exit(mcuio_adc_exit);
+-
+-MODULE_AUTHOR("Aurelio Colosimo");
+-MODULE_DESCRIPTION("MCUIO driver for ADC");
+-MODULE_LICENSE("GPL v2");
+-- 
+1.7.9.5
+

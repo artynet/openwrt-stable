@@ -1,0 +1,97 @@
+From 2eb85c88d489f74c3031b7fb55f7c14aec476f47 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 1 Sep 2014 16:27:04 +0200
+Subject: [PATCH 084/115] I2C, i2c-mcuio: use regmap_raw_read for reading
+
+---
+ drivers/i2c/busses/i2c-mcuio.c | 59 ++++++++++++++++--------------------------
+ 1 file changed, 23 insertions(+), 36 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-mcuio.c b/drivers/i2c/busses/i2c-mcuio.c
+index 24595df..4313fff 100644
+--- a/drivers/i2c/busses/i2c-mcuio.c
++++ b/drivers/i2c/busses/i2c-mcuio.c
+@@ -72,6 +72,24 @@ struct mcuio_i2c_dev {
+ 	} buf;
+ };
+ 
++#ifdef DEBUG
++static void __dump_ibuf(struct mcuio_i2c_dev *i2cd)
++{
++	int i;
++	printk(KERN_DEBUG "input buffer\n");
++	for (i = 0; i < i2cd->received; i++) {
++		printk("0x%02x\t", i2cd->buf.b[i]);
++		if (i && !(i % 8)) {
++			printk("\n");
++			printk(KERN_DEBUG);
++		}
++	}
++	printk("\n");
++}
++#else
++#define __dump_ibuf(a)
++#endif
++
+ static int __send_data(struct mcuio_i2c_dev *i2cd, u32 *buf, int len,
+ 		       int *head)
+ {
+@@ -97,35 +115,6 @@ static int __send_data(struct mcuio_i2c_dev *i2cd, u32 *buf, int len,
+ 	return ret < 0 ? ret : len;
+ }
+ 
+-static int __receive_data(struct mcuio_i2c_dev *i2cd, u32 *buf, int len,
+-			  int *tail)
+-{
+-	int i, j, actual, t, ret = 0;
+-
+-	dev_dbg(&i2cd->mdev->dev, "len = %d\n", len);
+-	/* TERRIBLE HACK: FIX THIS BY WRITING BYTE BY BYTE */
+-	for (i = 0, j = 0, t = (*tail) & ~0x03;
+-	     i < len && ret >= 0;
+-	     i += actual, t += sizeof(u32), j++) {
+-		u32 v;
+-		ret = regmap_read(i2cd->map_dw, I2C_MCUIO_IBUF + t, &v);
+-		if (ret < 0) {
+-			dev_err(&i2cd->mdev->dev, "error reading message\n");
+-			break;
+-		}
+-		buf[j] = le32_to_cpu(v);
+-		dev_dbg(&i2cd->mdev->dev, "read 0x%08x from 0x%04x\n",
+-			buf[j], I2C_MCUIO_IBUF + t);
+-		actual = sizeof(u32);
+-		if (!i)
+-			actual -= *tail - t;
+-		actual = min(actual, (len - i));
+-
+-		*tail = (*tail + actual) & (i2cd->buf_size - 1);
+-	}
+-	return ret < 0 ? ret : len;
+-}
+-
+ static int __send_obuf(struct mcuio_i2c_dev *i2cd)
+ {
+ 	u32 h, t;
+@@ -196,14 +185,12 @@ static int __get_ibuf(struct mcuio_i2c_dev *i2cd)
+ 	l = min(count, togo);
+ 	dev_dbg(&i2cd->mdev->dev, "togo = %d, %p\n", togo,
+ 		&i2cd->buf.dw[i2cd->received/sizeof(u32)]);
+-	stat = __receive_data(i2cd, &i2cd->buf.dw[i2cd->received/sizeof(u32)],
+-			      l, &t);
+-	if (stat < 0) {
+-		dev_err(&i2cd->mdev->dev, "error receiving data from target\n");
+-		return stat;
+-	}
+-	i2cd->received += stat;
++	stat = regmap_raw_read(i2cd->map_b, I2C_MCUIO_IBUF + t,
++			       &i2cd->buf.b[i2cd->received], l);
++	i2cd->received += l;
++	__dump_ibuf(i2cd);
+ 	dev_dbg(&i2cd->mdev->dev, "received = %d\n", i2cd->received);
++	t = (t + l) & (i2cd->buf_size - 1);
+ 	stat = regmap_write(i2cd->map_dw, I2C_MCUIO_IBUF_TAIL, t);
+ 	if (stat < 0)
+ 		dev_err(&i2cd->mdev->dev, "error setting new ibuf tail\n");
+-- 
+1.9.1
+

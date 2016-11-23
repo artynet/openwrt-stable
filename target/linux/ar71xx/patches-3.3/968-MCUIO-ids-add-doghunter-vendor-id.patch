@@ -1,0 +1,25 @@
+From 264153135498add1dabc42c9efa0331fa71f6193 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Fri, 18 Apr 2014 09:10:13 +0200
+Subject: [PATCH 968/973] MCUIO, ids: add doghunter vendor id
+
+---
+ include/linux/mcuio_ids.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/include/linux/mcuio_ids.h b/include/linux/mcuio_ids.h
+index 94469d7..e1b1745 100644
+--- a/include/linux/mcuio_ids.h
++++ b/include/linux/mcuio_ids.h
+@@ -26,4 +26,8 @@
+ /* Invalid device id (used for id table termination */
+ #define MCUIO_NO_DEVICE		    0x0000
+ 
++
++/* Vendors */
++#define MCUIO_VENDOR_DOGHUNTER	    0x0001
++
+ #endif /* __MCUIO_IDS_H__ */
+-- 
+1.8.5.2.233.g932f7e4
+

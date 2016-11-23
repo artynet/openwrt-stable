@@ -1,0 +1,57 @@
+From 4f2df95be18d26cd0fca34a09f614a41c4dd13e1 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Wed, 3 Sep 2014 10:20:07 +0200
+Subject: [PATCH 081/115] mcuio: lucky shield, chip hih6130 has been replaced
+ by sht21
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig | 2 +-
+ drivers/mcuio/mcuio-lucky-shield.c     | 6 +++---
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index 9883629..c472a7b 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -1954,7 +1954,7 @@ CONFIG_SENSORS_HTU21=y
+ # CONFIG_SENSORS_PCF8591 is not set
+ # CONFIG_PMBUS is not set
+ # CONFIG_SENSORS_SHT15 is not set
+-# CONFIG_SENSORS_SHT21 is not set
++CONFIG_SENSORS_SHT21=y
+ # CONFIG_SENSORS_SIS5595 is not set
+ # CONFIG_SENSORS_SMM665 is not set
+ # CONFIG_SENSORS_DME1737 is not set
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+index 204f070..0def229 100644
+--- a/drivers/mcuio/mcuio-lucky-shield.c
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -39,13 +39,13 @@ static unsigned int pca9555_base = 200;
+ static unsigned short pca9555_addr = 0x20;
+ static unsigned short mpl3115_addr = 0x60;
+ static unsigned short mag3110_addr = 0x0e;
+-static unsigned short hih6130_addr = 0x27;
++static unsigned short sht21_addr = 0x40;
+ static unsigned short ssd1307_addr = 0x3c;
+ module_param(pca9555_base, uint, 0444);
+ module_param(pca9555_addr, ushort, 0444);
+ module_param(mpl3115_addr, ushort, 0444);
+ module_param(mag3110_addr, ushort, 0444);
+-module_param(hih6130_addr, ushort, 0444);
++module_param(sht21_addr, ushort, 0444);
+ module_param(ssd1307_addr, ushort, 0444);
+ 
+ struct ssd1307_platform_data ssd1307_plat = {
+@@ -63,7 +63,7 @@ static struct mcuio_shld_i2c_info i2c_lst[] = {
+ 	MCUIO_SHLD_I2C_DEV("pca9555", &pca9555_addr, &pca9555_plat),
+ 	MCUIO_SHLD_I2C_DEV("mpl3115", &mpl3115_addr, NULL),
+ 	MCUIO_SHLD_I2C_DEV("mag3110", &mag3110_addr, NULL),
+-	MCUIO_SHLD_I2C_DEV("hih6130", &hih6130_addr, NULL),
++	MCUIO_SHLD_I2C_DEV("sht21", &sht21_addr, NULL),
+ 	MCUIO_SHLD_I2C_DEV("ssd1307fb", &ssd1307_addr, &ssd1307_plat),
+ };
+ 
+-- 
+1.9.1
+

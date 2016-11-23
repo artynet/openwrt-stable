@@ -1,0 +1,47 @@
+From 9c39b3ae121202167b2a5845e18d088416773a32 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Tue, 21 Oct 2014 17:27:02 +0200
+Subject: [PATCH 160/188] MCUIO, mcuio-hc-drv: verbose __receive_messages()
+
+---
+ drivers/mcuio/mcuio-hc-drv.c |   11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 3e6dc67..580f5a3 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -370,20 +370,29 @@ static int __receive_messages(void *__data)
+ 			continue;
+ 		}
+ 		p = (struct mcuio_packet *)buf;
++		pr_debug("%s %d, packet received, type = %d\n",
++			 __func__, __LINE__, mcuio_packet_type(p));
++		dump_packet(p);
+ 		if (!mcuio_packet_is_reply(p)) {
+-			if (mcuio_packet_is_read(p))
++			if (mcuio_packet_is_read(p)) {
+ 				/*
+ 				  Packet is a read request, we do not handle
+ 				  read requests at the moment
+ 				*/
++				pr_debug("%s %d: unexpected read req\n",
++					 __func__, __LINE__);
+ 				continue;
++			}
+ 		}
+ 		r = __find_request(hc, p);
+ 		if (!r) {
+ 			dev_err(&hc->dev, "unexpected reply");
++			dump_packet(p);
+ 			continue;
+ 		}
+ 		r->status = mcuio_packet_is_error(p);
++		pr_debug("%s %d, r->status = %d\n", __func__, __LINE__,
++			 r->status);
+ 		cancel_delayed_work_sync(&r->to_work);
+ 		if (mcuio_packet_is_reply(p)) {
+ 			if (mcuio_packet_is_read(p))
+-- 
+1.7.9.5
+

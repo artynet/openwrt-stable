@@ -1,0 +1,71 @@
+From abae02d12cdcce3b726c9c5c73b6fce36c67d203 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Wed, 25 Jun 2014 11:24:27 +0200
+Subject: [PATCH 1/2] spicons: fix register/unregister in case of bind/unbind
+ spi-gpio device
+
+This patch is needed to fix a kernel oops in the dynamic bind/unbind of
+spi-gpio device, e.g.:
+echo spi_gpio.1 > /sys/bus/platform/drivers/spi_gpio/unbind
+echo spi_gpio.1 > /sys/bus/platform/drivers/spi_gpio/bind
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/spi/spi-gpio.c |   13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/spi/spi-gpio.c b/drivers/spi/spi-gpio.c
+index 39358cc..0ec7312 100644
+--- a/drivers/spi/spi-gpio.c
++++ b/drivers/spi/spi-gpio.c
+@@ -243,11 +243,12 @@ static void spi_console_write (struct console *co, const char *s,
+ 			      unsigned count)
+ {
+ 	struct spi_device *spi_dev = (struct spi_device*)co->data;
+-	spi_gpio_chipselect(spi_dev, 1);
+ 
+ 	if (!spi_dev)
+ 		return;
+ 
++	spi_gpio_chipselect(spi_dev, 1);
++
+ 	while(count) {
+ 		if (((*s) & 0xff) == '\n')
+ 			spi_gpio_txrx_word_mode0(spi_dev, SPICONS_DLY, '\r', 8);
+@@ -273,8 +274,6 @@ static int spi_gpio_setup(struct spi_device *spi)
+ 	if (!spicons.data)
+ 		spicons.data = spi;
+ 
+-	register_console(&spicons);
+-
+ 	if (spi->bits_per_word > 32)
+ 		return -EINVAL;
+ 
+@@ -292,6 +291,9 @@ static int spi_gpio_setup(struct spi_device *spi)
+ 		if (!spi->controller_state && cs != SPI_GPIO_NO_CHIPSELECT)
+ 			gpio_free(cs);
+ 	}
++
++	register_console(&spicons);
++
+ 	return status;
+ }
+ 
+@@ -299,11 +301,12 @@ static void spi_gpio_cleanup(struct spi_device *spi)
+ {
+ 	unsigned long	cs = (unsigned long) spi->controller_data;
+ 
++	unregister_console(&spicons);
++	spicons.data = NULL;
++
+ 	if (cs != SPI_GPIO_NO_CHIPSELECT)
+ 		gpio_free(cs);
+ 	spi_bitbang_cleanup(spi);
+-
+-	unregister_console(&spicons);
+ }
+ 
+ static int __devinit spi_gpio_alloc(unsigned pin, const char *label, bool is_in)
+-- 
+1.7.9.5
+

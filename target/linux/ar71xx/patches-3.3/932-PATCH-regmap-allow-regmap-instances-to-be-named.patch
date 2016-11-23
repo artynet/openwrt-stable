@@ -1,0 +1,121 @@
+From d6bddd275a49713b56fcc8762b89b8511c477be8 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 28 Apr 2014 13:59:53 +0200
+Subject: [PATCH 932/973] [PATCH] regmap: allow regmap instances to be named
+
+Some devices have multiple separate register regions. Logically, one
+regmap would be created per region. One issue that prevents this is that
+each instance will attempt to create the same debugfs files. Avoid this
+by allowing regmaps to be named, and use the name to construct the
+debugfs directory name.
+
+Backported to 3.3 Davide Ciminaghi <ciminaghi@gnudd.com>
+
+Signed-off-by: Stephen Warren <swarren@nvidia.com>
+Signed-off-by: Mark Brown <broonie@opensource.wolfsonmicro.com>
+Signed-off-by: Davide CIminaghi <ciminaghi@gnudd.com>
+---
+ drivers/base/regmap/internal.h       |  5 +++--
+ drivers/base/regmap/regmap-debugfs.c | 14 +++++++++++---
+ drivers/base/regmap/regmap.c         |  2 +-
+ include/linux/regmap.h               |  5 +++++
+ 4 files changed, 20 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/base/regmap/internal.h b/drivers/base/regmap/internal.h
+index 6e8f32e..41dafd9 100644
+--- a/drivers/base/regmap/internal.h
++++ b/drivers/base/regmap/internal.h
+@@ -42,6 +42,7 @@ struct regmap {
+ 
+ #ifdef CONFIG_DEBUG_FS
+ 	struct dentry *debugfs;
++	const char *debugfs_name;
+ #endif
+ 
+ 	unsigned int max_register;
+@@ -104,11 +105,11 @@ int _regmap_write(struct regmap *map, unsigned int reg,
+ 
+ #ifdef CONFIG_DEBUG_FS
+ extern void regmap_debugfs_initcall(void);
+-extern void regmap_debugfs_init(struct regmap *map);
++extern void regmap_debugfs_init(struct regmap *map, const char *name);
+ extern void regmap_debugfs_exit(struct regmap *map);
+ #else
+ static inline void regmap_debugfs_initcall(void) { }
+-static inline void regmap_debugfs_init(struct regmap *map) { }
++static inline void regmap_debugfs_init(struct regmap *map, const char *name) { }
+ static inline void regmap_debugfs_exit(struct regmap *map) { }
+ #endif
+ 
+diff --git a/drivers/base/regmap/regmap-debugfs.c b/drivers/base/regmap/regmap-debugfs.c
+index 6f39747..41c2aad 100644
+--- a/drivers/base/regmap/regmap-debugfs.c
++++ b/drivers/base/regmap/regmap-debugfs.c
+@@ -177,10 +177,17 @@ static const struct file_operations regmap_access_fops = {
+ 	.llseek = default_llseek,
+ };
+ 
+-void regmap_debugfs_init(struct regmap *map)
++void regmap_debugfs_init(struct regmap *map, const char *name)
+ {
+-	map->debugfs = debugfs_create_dir(dev_name(map->dev),
+-					  regmap_debugfs_root);
++	if (name) {
++		map->debugfs_name = kasprintf(GFP_KERNEL, "%s-%s",
++					      dev_name(map->dev), name);
++		name = map->debugfs_name;
++	} else {
++		name = dev_name(map->dev);
++	}
++
++	map->debugfs = debugfs_create_dir(name, regmap_debugfs_root);
+ 	if (!map->debugfs) {
+ 		dev_warn(map->dev, "Failed to create debugfs directory\n");
+ 		return;
+@@ -197,6 +204,7 @@ void regmap_debugfs_init(struct regmap *map)
+ void regmap_debugfs_exit(struct regmap *map)
+ {
+ 	debugfs_remove_recursive(map->debugfs);
++	kfree(map->debugfs_name);
+ }
+ 
+ void regmap_debugfs_initcall(void)
+diff --git a/drivers/base/regmap/regmap.c b/drivers/base/regmap/regmap.c
+index c0d7614..1729d80 100644
+--- a/drivers/base/regmap/regmap.c
++++ b/drivers/base/regmap/regmap.c
+@@ -281,7 +281,7 @@ struct regmap *regmap_init(struct device *dev,
+ 	}
+ 
+ skip_format_initialization:
+-	regmap_debugfs_init(map);
++	regmap_debugfs_init(map, config->name);
+ 
+ 	ret = regcache_init(map, config);
+ 	if (ret < 0)
+diff --git a/include/linux/regmap.h b/include/linux/regmap.h
+index cf5f2fd..66449d1 100644
+--- a/include/linux/regmap.h
++++ b/include/linux/regmap.h
+@@ -43,6 +43,9 @@ struct reg_default {
+ /**
+  * Configuration for the register map of a device.
+  *
++ * @name: Optional name of the regmap. Useful when a device has multiple
++ *        register regions.
++ *
+  * @reg_bits: Number of bits in a register address, mandatory.
+  * @val_bits: Number of bits in a register value, mandatory.
+  *
+@@ -79,6 +82,8 @@ struct reg_default {
+  * @num_reg_defaults_raw: Number of elements in reg_defaults_raw.
+  */
+ struct regmap_config {
++	const char *name;
++
+ 	int reg_bits;
+ 	int val_bits;
+ 
+-- 
+1.8.5.2.233.g932f7e4
+

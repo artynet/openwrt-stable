@@ -1,0 +1,273 @@
+From d12418ca4604d2c4de1c377d6ffda73ba60777da Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 28 Aug 2014 14:52:32 +0200
+Subject: [PATCH 074/115] mcuio: first implementation of lucky shield driver
+
+Minimal implementation of lucky shield driver.
+Still missing: interrupt handling, led, hid, mma8491 (no driver available in
+linux yet).
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ arch/mips/configs/yun_linino_defconfig |   1 +
+ drivers/mcuio/Kconfig                  |   7 ++
+ drivers/mcuio/Makefile                 |   1 +
+ drivers/mcuio/mcuio-lucky-shield.c     | 175 +++++++++++++++++++++++++++++++++
+ drivers/mcuio/mcuio-shields.h          |  22 +++++
+ 5 files changed, 206 insertions(+)
+ create mode 100644 drivers/mcuio/mcuio-lucky-shield.c
+ create mode 100644 drivers/mcuio/mcuio-shields.h
+
+diff --git a/arch/mips/configs/yun_linino_defconfig b/arch/mips/configs/yun_linino_defconfig
+index 8f90f52..90ad71c 100644
+--- a/arch/mips/configs/yun_linino_defconfig
++++ b/arch/mips/configs/yun_linino_defconfig
+@@ -2824,6 +2824,7 @@ CONFIG_MCUIO=y
+ CONFIG_MCUIO_LDISC_HC=y
+ CONFIG_MCUIO_IRQ_CTRL=y
+ CONFIG_MCUIO_JS_SHIELD=y
++CONFIG_MCUIO_LUCKY_SHIELD=y
+ CONFIG_MCUIO_ADC=y
+ CONFIG_PWM=y
+ CONFIG_PWM_SYSFS=y
+diff --git a/drivers/mcuio/Kconfig b/drivers/mcuio/Kconfig
+index 4d53948..60f212a 100644
+--- a/drivers/mcuio/Kconfig
++++ b/drivers/mcuio/Kconfig
+@@ -30,6 +30,13 @@ config MCUIO_JS_SHIELD
+ 	help
+ 	  Adds a driver for a joystick + buttons shield (experimental)
+ 
++config MCUIO_LUCKY_SHIELD
++	tristate "mcuio lucky shield driver"
++	depends on (MCUIO && MCUIO_IRQ_CTRL && I2C)
++	default y
++	help
++	  Adds a driver for the Dog Hunter Lucky shield (experimental)
++
+ config MCUIO_ADC
+ 	tristate "mcuio ADC driver"
+ 	depends on MCUIO
+diff --git a/drivers/mcuio/Makefile b/drivers/mcuio/Makefile
+index dc626d0..31564a7 100644
+--- a/drivers/mcuio/Makefile
++++ b/drivers/mcuio/Makefile
+@@ -8,4 +8,5 @@ obj-$(CONFIG_MCUIO) += mcuio.o mcuio-hc-drv.o mcuio-hc-dev.o mcuio-soft-hc.o
+ obj-$(CONFIG_MCUIO_LDISC_HC) += mcuio-hc-ldisc.o
+ obj-$(CONFIG_MCUIO_IRQ_CTRL) += mcuio-irq-ctrl.o
+ obj-$(CONFIG_MCUIO_JS_SHIELD) += mcuio-js-shield.o
++obj-$(CONFIG_MCUIO_LUCKY_SHIELD) += mcuio-lucky-shield.o
+ obj-$(CONFIG_MCUIO_ADC) += mcuio-adc.o
+\ No newline at end of file
+diff --git a/drivers/mcuio/mcuio-lucky-shield.c b/drivers/mcuio/mcuio-lucky-shield.c
+new file mode 100644
+index 0000000..204f070
+--- /dev/null
++++ b/drivers/mcuio/mcuio-lucky-shield.c
+@@ -0,0 +1,175 @@
++/*
++ * Copyright 2014 Dog Hunter SA
++ * Author: Aurelio Colosimo <aurelio@aureliocolosimo.it>
++ * Originally copied from mcuio-js-shield.c,
++ *      by Davide Ciminaghi <ciminaghi@gnudd.com>
++ *
++ * GNU GPLv2 or later
++ */
++
++#define DEBUG
++
++/* mcuio driver for Lucky shield */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/device.h>
++#include <linux/slab.h>
++#include <linux/types.h>
++#include <linux/regmap.h>
++#include <linux/workqueue.h>
++#include <linux/irq.h>
++#include <linux/interrupt.h>
++#include <linux/gpio.h>
++#include <linux/hid.h>
++#include <linux/i2c.h>
++#include <linux/platform_device.h>
++#include <linux/platform_data/ssd1307.h>
++#include <linux/i2c/pca953x.h>
++
++#include <linux/mcuio.h>
++#include <linux/mcuio_ids.h>
++#include <linux/mcuio-proto.h>
++
++#include "mcuio-internal.h"
++#include "mcuio-shields.h"
++
++static unsigned int pca9555_base = 200;
++static unsigned short pca9555_addr = 0x20;
++static unsigned short mpl3115_addr = 0x60;
++static unsigned short mag3110_addr = 0x0e;
++static unsigned short hih6130_addr = 0x27;
++static unsigned short ssd1307_addr = 0x3c;
++module_param(pca9555_base, uint, 0444);
++module_param(pca9555_addr, ushort, 0444);
++module_param(mpl3115_addr, ushort, 0444);
++module_param(mag3110_addr, ushort, 0444);
++module_param(hih6130_addr, ushort, 0444);
++module_param(ssd1307_addr, ushort, 0444);
++
++struct ssd1307_platform_data ssd1307_plat = {
++	.type = SSD1307_TYPE_1306,
++	.width = 128,
++	.height = 64,
++	.page_offset = 0,
++	.pins_config = 0x12,
++	.display_offset = 0,
++};
++
++static struct pca953x_platform_data pca9555_plat;
++
++static struct mcuio_shld_i2c_info i2c_lst[] = {
++	MCUIO_SHLD_I2C_DEV("pca9555", &pca9555_addr, &pca9555_plat),
++	MCUIO_SHLD_I2C_DEV("mpl3115", &mpl3115_addr, NULL),
++	MCUIO_SHLD_I2C_DEV("mag3110", &mag3110_addr, NULL),
++	MCUIO_SHLD_I2C_DEV("hih6130", &hih6130_addr, NULL),
++	MCUIO_SHLD_I2C_DEV("ssd1307fb", &ssd1307_addr, &ssd1307_plat),
++};
++
++static int mcuio_lucky_probe(struct mcuio_device *mdev)
++{
++	struct i2c_board_info info;
++	struct mcuio_shld_i2c_info *i;
++	int cnt;
++
++	struct mcuio_shld_data *data;
++
++	dev_dbg(&mdev->dev, "%s entered\n", __func__);
++
++	data = devm_kzalloc(&mdev->dev, sizeof(*data), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++
++	dev_set_drvdata(&mdev->dev, data);
++
++	/* Apply module_param values to platform_data when needed */
++	pca9555_plat.gpio_base = pca9555_base;
++	ssd1307_plat.reset_gpio = pca9555_base + 15;
++
++	data->i2c_adap = mcuio_get_i2c_adapter(mdev);
++
++	if (!data->i2c_adap) {
++		dev_err(&mdev->dev, "error setting up i2c adapter\n");
++		return -ENODEV;
++	}
++
++	data->i2c_info = i2c_lst;
++	data->i2c_cnt = ARRAY_SIZE(i2c_lst);
++
++	/* Register all devices in Lucky shield */
++	for (cnt = 0; cnt < data->i2c_cnt; cnt++) {
++		i = &data->i2c_info[cnt];
++		strcpy(info.type, i->type);
++		info.addr = *i->paddr;
++		info.platform_data = i->platform_data;
++
++		i->i2c_client = i2c_new_device(data->i2c_adap, &info);
++
++		if (!i->i2c_client)
++			dev_err(&mdev->dev,
++				"i2c_new_device %s failed\n", i->type);
++	}
++
++	dev_dbg(&mdev->dev, "%s returns ok\n", __func__);
++
++	return 0;
++}
++
++static int mcuio_lucky_remove(struct mcuio_device *mdev)
++{
++	struct mcuio_shld_i2c_info *i;
++	struct mcuio_shld_data *data;
++
++	data = dev_get_drvdata(&mdev->dev);
++
++	/* Unregister all devices in Lucky shield, in reverse order as
++	 * they were registered */
++	for (i = &data->i2c_info[data->i2c_cnt - 1];
++	     data->i2c_cnt; i--, data->i2c_cnt--) {
++		if (i->i2c_client) {
++			i2c_unregister_device(i->i2c_client);
++			i->i2c_client = NULL;
++		}
++	}
++
++	return 0;
++}
++
++static const struct mcuio_device_id lucky_drv_ids[] = {
++	{
++		.vendor = MCUIO_VENDOR_DOGHUNTER,
++		.device = MCUIO_DEVICE_LUCKY_SHIELD,
++	},
++	/* Terminator */
++	{
++		.device = MCUIO_NO_DEVICE,
++		.class = MCUIO_CLASS_UNDEFINED,
++	},
++};
++
++static struct mcuio_driver mcuio_lucky_driver = {
++	.driver = {
++		.name = "mcuio-lucky-shield",
++	},
++	.id_table = lucky_drv_ids,
++	.probe = mcuio_lucky_probe,
++	.remove = mcuio_lucky_remove,
++};
++
++static int __init mcuio_lucky_init(void)
++{
++	return mcuio_driver_register(&mcuio_lucky_driver, THIS_MODULE);
++}
++
++static void __exit mcuio_lucky_exit(void)
++{
++	return mcuio_driver_unregister(&mcuio_lucky_driver);
++}
++
++subsys_initcall(mcuio_lucky_init);
++module_exit(mcuio_lucky_exit);
++
++MODULE_AUTHOR("Aurelio Colosimo");
++MODULE_DESCRIPTION("MCUIO driver for Lucky shield");
++MODULE_LICENSE("GPL v2");
+diff --git a/drivers/mcuio/mcuio-shields.h b/drivers/mcuio/mcuio-shields.h
+new file mode 100644
+index 0000000..8a5f4e2
+--- /dev/null
++++ b/drivers/mcuio/mcuio-shields.h
+@@ -0,0 +1,22 @@
++#ifndef __MCUIO_SHIELDS_H__
++#define __MCUIO_SHIELDS_H__
++
++#include <linux/i2c.h>
++
++struct mcuio_shld_i2c_info {
++	char *type;
++	unsigned short *paddr;
++	struct i2c_client *i2c_client;
++	void *platform_data;
++};
++
++struct mcuio_shld_data {
++	struct i2c_adapter *i2c_adap;
++	struct mcuio_shld_i2c_info *i2c_info;
++	int i2c_cnt;
++};
++
++#define MCUIO_SHLD_I2C_DEV(t, pa, p) \
++	{.type = t, .paddr = pa, .platform_data = p}
++
++#endif /* __MCUIO_SHIELDS_H__ */
+-- 
+1.9.1
+

@@ -1,0 +1,88 @@
+From 09c985923b950c7edb9ca930c809f7c43f7dcea2 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 28 Aug 2014 15:01:05 +0200
+Subject: [PATCH 072/115] video: patch for oled setup on lucky shield
+
+Previous settings for ssd1306 were not fine on the way controller is
+connected to display on Dog Hunter Lucky shield. This patch adds two more
+parameters to driver setup, so that 'no display offset' and 'alternative
+COM pin configuration' can be set by lucky shield driver,
+instead of default values.
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-js-shield.c       | 2 ++
+ drivers/video/ssd1307fb.c             | 9 +++++++--
+ include/linux/platform_data/ssd1307.h | 2 ++
+ 3 files changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-js-shield.c b/drivers/mcuio/mcuio-js-shield.c
+index 549cf45..015d7fa 100644
+--- a/drivers/mcuio/mcuio-js-shield.c
++++ b/drivers/mcuio/mcuio-js-shield.c
+@@ -459,6 +459,8 @@ static int __instantiate_oled(struct mcuio_device *mdev,
+ 		.width = 128,
+ 		.height = 64,
+ 		.page_offset = 0,
++		.pins_config = 0x12,
++		.display_offset = 0,
+ 	};
+ 	struct i2c_board_info oled_board_info = {
+ 		I2C_BOARD_INFO("ssd1307fb", 0x3c),
+diff --git a/drivers/video/ssd1307fb.c b/drivers/video/ssd1307fb.c
+index a6d9580..2264486 100644
+--- a/drivers/video/ssd1307fb.c
++++ b/drivers/video/ssd1307fb.c
+@@ -53,6 +53,8 @@ struct ssd1307fb_par {
+ 	u32 page_offset;
+ 	int reset;
+ 	u32 width;
++	u32 display_offset;
++	u8 pins_config;
+ };
+ 
+ struct ssd1307fb_array {
+@@ -324,7 +326,7 @@ static int ssd1307fb_ssd1306_init(struct ssd1307fb_par *par)
+ 
+ 	/* set display offset value */
+ 	ret = ssd1307fb_write_cmd(par->client, SSD1307FB_SET_DISPLAY_OFFSET);
+-	ret = ssd1307fb_write_cmd(par->client, 0x20);
++	ret = ssd1307fb_write_cmd(par->client, par->display_offset);
+ 	if (ret < 0)
+ 		return ret;
+ 
+@@ -342,7 +344,7 @@ static int ssd1307fb_ssd1306_init(struct ssd1307fb_par *par)
+ 
+ 	/* Set COM pins configuration */
+ 	ret = ssd1307fb_write_cmd(par->client, SSD1307FB_SET_COM_PINS_CONFIG);
+-	ret = ret & ssd1307fb_write_cmd(par->client, 0x22);
++	ret = ret & ssd1307fb_write_cmd(par->client, par->pins_config);
+ 	if (ret < 0)
+ 		return ret;
+ 
+@@ -456,6 +458,9 @@ static int __devinit ssd1307fb_probe(struct i2c_client *client, const struct i2c
+ 		of_get_named_gpio(client->dev.of_node,
+ 				  "reset-gpios", 0);
+ 
++	par->pins_config = plat ? plat->pins_config : 0x22;
++	par->display_offset = plat ? plat->display_offset : 0x20;
++
+ 	if (!gpio_is_valid(par->reset)) {
+ 		ret = -EINVAL;
+ 		goto reset_oled_error;
+diff --git a/include/linux/platform_data/ssd1307.h b/include/linux/platform_data/ssd1307.h
+index c782c38..e515e8b 100644
+--- a/include/linux/platform_data/ssd1307.h
++++ b/include/linux/platform_data/ssd1307.h
+@@ -21,6 +21,8 @@ struct ssd1307_platform_data {
+ 	u32 width;
+ 	u32 height;
+ 	u32 page_offset;
++	u32 display_offset;
++	u8 pins_config;
+ };
+ 
+ #endif /* _SSD1307_H */
+-- 
+1.9.1
+

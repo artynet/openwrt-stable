@@ -1,0 +1,60 @@
+From 4b4bc40ba45386fbe43ebe261cb5f6c8fe7cdff1 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Mon, 26 May 2014 21:35:26 +0200
+Subject: [PATCH 1002/1009] mcuio-js-shield driver: setup oled reset gpio
+
+---
+ drivers/mcuio/mcuio-js-shield.c |   16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-js-shield.c b/drivers/mcuio/mcuio-js-shield.c
+index 4a7cbc6..aff5cd8 100644
+--- a/drivers/mcuio/mcuio-js-shield.c
++++ b/drivers/mcuio/mcuio-js-shield.c
+@@ -87,6 +87,7 @@ struct mcuio_js_led {
+ struct mcuio_js_data {
+ 	struct hid_device *hid;
+ 	u8 cached_gpios;
++	int oled_reset_gpio;
+ 	struct list_head gpios;
+ };
+ 
+@@ -218,6 +219,16 @@ static int __setup_led(struct mcuio_device *mdev, struct mcuio_js_gpio *data,
+ 	return 0;
+ }
+ 
++static int __setup_oled_reset(struct mcuio_device *mdev,
++			      struct mcuio_js_gpio *data,
++			      int index)
++{
++	data->js_data->oled_reset_gpio = data->gpio;
++	data->irq = 0;
++	data->index = index;
++	return 0;
++}
++
+ static irqreturn_t mcuio_js_irq_handler(int irq, void *__data)
+ {
+ 	int v;
+@@ -420,6 +431,10 @@ static const struct mcuio_js_gpio_config lucky_gpios[] = {
+ 		.setup = __setup_led,
+ 	},
+ 	{
++		.name = "ORES",
++		.setup = __setup_oled_reset,
++	},
++	{
+ 		.name = NULL,
+ 	},
+ };
+@@ -438,6 +453,7 @@ static int mcuio_js_probe(struct mcuio_device *mdev)
+ 		dev_err(&mdev->dev, "no memory for js data structure\n");
+ 		return -ENOMEM;
+ 	}
++	js_data->oled_reset_gpio = -1;
+ 	INIT_LIST_HEAD(&js_data->gpios);
+ 	dev_dbg(&mdev->dev, "%s: device = 0x%04x\n", __func__, mdev->device);
+ 	if (mdev->id.device == MCUIO_DEVICE_JOYSTICK_SHIELD)
+-- 
+1.7.9.5
+

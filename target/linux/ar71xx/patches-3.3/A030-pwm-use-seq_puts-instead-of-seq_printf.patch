@@ -1,0 +1,40 @@
+From 0aff56cbf06103f7788ac726cda27464d647765b Mon Sep 17 00:00:00 2001
+From: Jingoo Han <jg1.han@samsung.com>
+Date: Thu, 19 Dec 2013 13:31:24 +0900
+Subject: [PATCH 30/47] pwm: use seq_puts() instead of seq_printf()
+
+For a constant format without additional arguments, use seq_puts()
+instead of seq_printf(). Also, the following checkpatch warning is
+fixed.
+
+  WARNING: Prefer seq_puts to seq_printf
+
+Signed-off-by: Jingoo Han <jg1.han@samsung.com>
+Signed-off-by: Thierry Reding <thierry.reding@gmail.com>
+---
+ drivers/pwm/core.c |    6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/pwm/core.c b/drivers/pwm/core.c
+index 60d3197..cfb449d 100644
+--- a/drivers/pwm/core.c
++++ b/drivers/pwm/core.c
+@@ -594,12 +594,12 @@ static void pwm_dbg_show(struct pwm_chip *chip, struct seq_file *s)
+ 		seq_printf(s, " pwm-%-3d (%-20.20s):", i, pwm->label);
+ 
+ 		if (test_bit(PWMF_REQUESTED, &pwm->flags))
+-			seq_printf(s, " requested");
++			seq_puts(s, " requested");
+ 
+ 		if (test_bit(PWMF_ENABLED, &pwm->flags))
+-			seq_printf(s, " enabled");
++			seq_puts(s, " enabled");
+ 
+-		seq_printf(s, "\n");
++		seq_puts(s, "\n");
+ 	}
+ }
+ 
+-- 
+1.7.9.5
+

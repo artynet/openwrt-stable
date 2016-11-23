@@ -1,0 +1,87 @@
+From 1e585fd853606b3325475f6ece24da8c54928459 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Mon, 28 Jul 2014 14:00:30 +0200
+Subject: [PATCH 16/47] pwm: fix compile in pwm_request function
+
+Since deferral mechanism is not included in our kernel, do not use EPROBE_DEFER.
+pwm_request is deprecated, so this should not affect functionality.
+I tried to backport deferral mechanism (commit d1c3414c in linux mainline)
+but it caused a kernel Oops:
+
+[    6.570000] ------------[ cut here ]------------
+[    6.580000] WARNING: at mm/page_alloc.c:2204 __alloc_pages_nodemask+0x164/0x600()
+[    6.600000] Modules linked in: leds_gpio(+)
+[    6.610000] Call Trace:
+[    6.610000] [<802a5b94>] dump_stack+0x8/0x34
+[    6.620000] [<80071ccc>] warn_slowpath_common+0x78/0xa4
+[    6.630000] [<80071d10>] warn_slowpath_null+0x18/0x24
+[    6.640000] [<800b3a70>] __alloc_pages_nodemask+0x164/0x600
+[    6.660000] [<800b3f24>] __get_free_pages+0x18/0x4c
+[    6.670000] [<83b94214>] init_module+0xf214/0xf44c [leds_gpio]
+[    6.680000]
+[    6.680000] ---[ end trace 30d048a53d0221dd ]---
+[    6.690000] leds-gpio: probe of leds-gpio failed with error -12
+[   10.040000] JFFS2 notice: (459) jffs2_build_xattr_subsystem: complete building xattr subsystem, 1 of xdatum (1 unchecked, 0 orphan) and 13 of xref (0 dead, 0 orphan) found.
+[   10.830000] SCSI subsystem initialized
+[   10.970000] usbcore: registered new interface driver usbfs
+[   10.980000] usbcore: registered new interface driver hub
+[   11.010000] usbcore: registered new device driver usb
+[   11.620000] ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
+[   11.640000] ehci-platform ehci-platform: Generic Platform EHCI Controller
+[   11.650000] ehci-platform ehci-platform: new USB bus registered, assigned bus number 1
+[   11.670000] CPU 0 Unable to handle kernel paging request at virtual address 3b336078, epc == 83036d58, ra == 830066a4
+[   11.690000] Oops[#1]:
+[   11.690000] Cpu 0
+[   11.690000] $ 0   : 00000000 0000006d 3b336078 bb000000
+[   11.690000] $ 4   : 83ad8000 0000002f 00000000 00000000
+[   11.690000] $ 8   : 00000000 00000000 00000000 00000000
+[   11.690000] $12   : 00000000 00000000 00000001 65642c20
+[   11.690000] $16   : 83ad8000 80336078 00000080 83ad80d8
+[   11.690000] $20   : 00000003 83010000 83017f08 800a1e64
+[   11.690000] $24   : 00000000 00000000
+[   11.690000] $28   : 8302e000 8302fcb0 00000124 830066a4
+[   11.690000] Hi    : 00000608
+[   11.690000] Lo    : 00000000
+[   11.690000] epc   : 83036d58 0x83036d58
+[   11.690000]     Tainted: G        W  O
+[   11.690000] ra    : 830066a4 usb_add_hcd+0x20c/0x678 [usbcore]
+[   11.690000] Status: 1000f003    KERNEL EXL IE
+[   11.690000] Cause : 00800008
+[   11.690000] BadVA : 3b336078
+[   11.690000] PrId  : 00019374 (MIPS 24Kc)
+[   11.690000] Modules linked in: ehci_hcd(+) sd_mod reiserfs ext4 jbd2 mbcache usbcore usb_common scsi_mod nls_base crc16 crypto_hash crypto_algapi ledtrig_timer ledtrig_default_on leds_gpio
+[   11.690000] Process insmod (pid: 492, threadinfo=8302e000, task=83b9dd18, tls=773d1440)
+[   11.690000] Stack : 00000003 80090058 8302fd08 83ad8000 83010000 83ad8000 83010000 00000080
+[   11.690000]         83ad8090 830066a4 83847aa0 83bfd880 00000001 00000000 00000000 83b9dd18
+[   11.690000]         8301e400 00000000 00000003 00000003 83ad8000 80340000 80336030 803b0000
+[   11.690000]         80380000 00000028 800a1e64 830376ac 83038144 803b0000 80380000 801af3d8
+[   11.690000]         00000000 ffffffea 80380000 80336064 80336030 ffffffed 83038144 801af6d8
+[   11.690000]         ...
+[   11.690000] Call Trace:
+[   11.690000] [<83036d58>] 0x83036d58
+[   11.690000]
+[   11.690000]
+[   11.690000] Code: 8c83009c  00621021  ac8200d8 <8c430000> 306300ff  00431821  ac8300dc  8c420004  ac8200e4
+[   12.060000] ---[ end trace 30d048a53d0221de ]---
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/core.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pwm/core.c b/drivers/pwm/core.c
+index a447be1..54a9453 100644
+--- a/drivers/pwm/core.c
++++ b/drivers/pwm/core.c
+@@ -229,7 +229,7 @@ struct pwm_device *pwm_request(int pwm, const char *label)
+ 
+ 	dev = pwm_to_device(pwm);
+ 	if (!dev) {
+-		dev = ERR_PTR(-EPROBE_DEFER);
++		dev = ERR_PTR(-EAGAIN);
+ 		goto out;
+ 	}
+ 
+-- 
+1.7.9.5
+

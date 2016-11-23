@@ -1,0 +1,28 @@
+From 7f4633ad2725e45302f178a380de938b354754c9 Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Thu, 31 Jul 2014 14:04:58 +0200
+Subject: [PATCH 48/51] pwm: if update_period is defined, call it when
+ exporting pwm
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/pwm/sysfs.c |    3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/pwm/sysfs.c b/drivers/pwm/sysfs.c
+index a1410e3..dfeb985 100644
+--- a/drivers/pwm/sysfs.c
++++ b/drivers/pwm/sysfs.c
+@@ -302,6 +302,9 @@ static ssize_t pwm_export_store(struct device *parent,
+ 	if (ret < 0)
+ 		pwm_put(pwm);
+ 
++	if (pwm->chip->ops->update_period)
++		pwm->chip->ops->update_period(pwm->chip, pwm);
++
+ 	return ret ? : len;
+ }
+ 
+-- 
+1.7.9.5
+

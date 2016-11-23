@@ -1,0 +1,36 @@
+From 105a9e86b0530a2e2102ab89a2ce0f2eae597fe5 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Thu, 23 Oct 2014 17:55:44 +0200
+Subject: [PATCH 168/188] MCUIO: mcuio-hc-ldisc: check for tty write returning
+ 0
+
+---
+ drivers/mcuio/mcuio-hc-ldisc.c |    6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/mcuio/mcuio-hc-ldisc.c b/drivers/mcuio/mcuio-hc-ldisc.c
+index a5e8f97..f2a0d3c 100644
+--- a/drivers/mcuio/mcuio-hc-ldisc.c
++++ b/drivers/mcuio/mcuio-hc-ldisc.c
+@@ -38,15 +38,15 @@ struct ldisc_priv_data {
+ static int mcuio_ldisc_shc_write(struct mcuio_soft_hc *shc,
+ 				 const u8 *ptr, unsigned int len)
+ {
+-	int stat, count;
++	int stat = 0, count;
+ 	struct tty_struct *tty = shc->priv;
+ 
+ 	for (count = 0; count < len; count += stat) {
+ 		stat = tty->ops->write(tty, (char *)&ptr[count], len - count);
+-		if (stat < 0)
++		if (stat <= 0)
+ 			break;
+ 	}
+-	return stat < 0 ? stat : 0;
++	return stat <= 0 ? stat : 0;
+ }
+ 
+ static const struct mcuio_soft_hc_ops ops = {
+-- 
+1.7.9.5
+

@@ -1,0 +1,141 @@
+From cf8e9301f5993b79c3a6cea42607b6c95e69b2f9 Mon Sep 17 00:00:00 2001
+From: Davide Ciminaghi <ciminaghi@gnudd.com>
+Date: Wed, 22 Oct 2014 17:25:22 +0200
+Subject: [PATCH 165/188] MCUIO: mcuio-soft-hc: instantiate a soft irq ctrl
+ while registering mcuio devs
+
+---
+ drivers/mcuio/mcuio-soft-hc.c |   80 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 80 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-soft-hc.c b/drivers/mcuio/mcuio-soft-hc.c
+index 7544056..b760b27 100644
+--- a/drivers/mcuio/mcuio-soft-hc.c
++++ b/drivers/mcuio/mcuio-soft-hc.c
+@@ -25,6 +25,8 @@
+ #include <linux/mcuio-soft-hc.h>
+ #include "mcuio-internal.h"
+ 
++static struct notifier_block device_nb;
++
+ static bool mcuio_soft_hc_readable(struct device *dev, unsigned int reg)
+ {
+ 	return true;
+@@ -245,11 +247,17 @@ static void mcuio_soft_hc_release(struct device *device)
+ {
+ 	struct mcuio_hc_platform_data *plat = dev_get_platdata(device);
+ 	struct mcuio_soft_hc *shc;
++	int i;
+ 	if (!plat) {
+ 		WARN_ON(1);
+ 		return;
+ 	}
+ 	shc = plat->data;
++	bus_unregister_notifier(&mcuio_bus_type, &device_nb);
++	/* Unregister all irq controllers */
++	for (i = 0; i < MCUIO_DEVS_PER_BUS; i++)
++		if (shc->irq_controllers[i])
++			mcuio_device_unregister(shc->irq_controllers[i]);
+ 	irq_set_handler(shc->irqno, NULL);
+ 	irq_set_chip(shc->irqno, NULL);
+ 	irq_free_desc(shc->irqno);
+@@ -257,6 +265,69 @@ static void mcuio_soft_hc_release(struct device *device)
+ 	mcuio_hc_dev_default_release(device);
+ }
+ 
++static void __device_added(struct device *dev)
++{
++	struct mcuio_device *mdev = to_mcuio_dev(dev);
++	struct mcuio_device *hc;
++	struct mcuio_soft_hc *shc;
++	struct mcuio_device *ic;
++	struct mcuio_hc_platform_data *plat;
++	int base_irq;
++
++	/* Ignore the hc */
++	if (!mdev->device)
++		return;
++	hc = to_mcuio_dev(dev->parent);
++	plat = dev_get_platdata(&hc->dev);
++	if (!plat) {
++		WARN_ON(1);
++		return;
++	}
++	shc = plat->data;
++	if (!shc) {
++		WARN_ON(1);
++		return;
++	}
++	/* FIXME: ADD LOCKING */
++	ic = shc->irq_controllers[mdev->device];
++	if (ic)
++		return;
++	base_irq = irq_alloc_descs(-1, 0, MCUIO_FUNCS_PER_DEV, 0);
++	/* New device, add soft local irq controller */
++	ic = mcuio_add_soft_local_irq_ctrl(hc, mdev->device, base_irq);
++	if (!ic) {
++		pr_err("mcuio soft hc: error adding irq ctrl for dev %d\n",
++		       mdev->device);
++		return;
++	}
++	shc->irq_controllers[mdev->device] = ic;
++	/*
++	  This is the first function of the new device. When the corresponding
++	  mcuio_device was instantiated, the hc had no irqs, fix the field
++	  up now
++	*/
++	mdev->irq = base_irq + mdev->fn;
++}
++
++static int mcuio_add_notifier(struct notifier_block *nb,
++			      unsigned long action, void *data)
++{
++	struct device *dev = data;
++
++	switch (action) {
++	case BUS_NOTIFY_ADD_DEVICE:
++		__device_added(dev);
++		break;
++	default:
++		return NOTIFY_DONE;
++	}
++	return NOTIFY_OK;
++}
++
++static struct notifier_block device_nb = {
++	.notifier_call = mcuio_add_notifier,
++};
++
+ struct device *mcuio_add_soft_hc(struct mcuio_device_id *id,
+ 				 const struct mcuio_soft_hc_ops *ops,
+ 				 void *priv)
+@@ -264,6 +335,7 @@ struct device *mcuio_add_soft_hc(struct mcuio_device_id *id,
+ 	struct mcuio_hc_platform_data *plat;
+ 	struct mcuio_soft_hc *shc = __setup_shc(ops, priv);
+ 	struct device *out;
++	int stat;
+ 	if (!shc)
+ 		return ERR_PTR(-ENOMEM);
+ 	plat = kzalloc(sizeof(*plat), GFP_KERNEL);
+@@ -273,10 +345,18 @@ struct device *mcuio_add_soft_hc(struct mcuio_device_id *id,
+ 	}
+ 	plat->setup_regmap = mcuio_soft_hc_setup_regmap;
+ 	plat->data = shc;
++
++	stat = bus_register_notifier(&mcuio_bus_type, &device_nb);
++	if (stat < 0) {
++		kfree(shc);
++		return ERR_PTR(stat);
++	}
++
+ 	out = mcuio_add_hc_device(id ? id : &default_soft_hc_id, plat,
+ 				  mcuio_soft_hc_release);
+ 	if (IS_ERR(out)) {
+ 		kfree(shc);
++		bus_unregister_notifier(&mcuio_bus_type, &device_nb);
+ 		return out;
+ 	}
+ 	shc->hc = to_mcuio_dev(out);
+-- 
+1.7.9.5
+

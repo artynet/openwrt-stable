@@ -1,0 +1,70 @@
+From ac3393ec9c1642c0622c60ad3fc0dcaf81207f7d Mon Sep 17 00:00:00 2001
+From: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+Date: Wed, 3 Sep 2014 10:19:07 +0200
+Subject: [PATCH 080/115] mcuio: temporary hack for __do_enum kernel oops
+
+This patch is a hack for this kernel oops (at mcuio startup):
+
+[   74.980000] CPU 0 Unable to handle kernel paging request at virtual address 00000000, epc == 801b1bc4, ra == 801b1bec
+[   74.980000] Oops[#1]:
+[   74.980000] Cpu 0
+[   74.980000] $ 0   : 00000000 80380000 00000000 00000001
+[   74.980000] $ 4   : 802ade60 829b3a00 00000000 0000154d
+[   74.980000] $ 8   : 00000004 8016d02c 00000000 8285c000
+[   74.980000] $12   : 00000000 ffffffff 77fe5144 004055f4
+[   74.980000] $16   : 00000001 00000084 829b3a00 802addd0
+[   74.980000] $20   : 833faa8c 833fa820 00000000 ffffff6f
+[   74.980000] $24   : 000000df 800955f0
+[   74.980000] $28   : 829e2000 829e3e38 833fa800 801b1bec
+[   74.980000] Hi    : 00000011
+[   74.980000] Lo    : 75280100
+[   74.980000] epc   : 801b1bc4 add_dr+0x24/0x2c
+[   74.980000]     Tainted: G           O
+[   74.980000] ra    : 801b1bec devres_add+0x20/0x40
+[   74.980000] Status: 1000fc02    KERNEL EXL
+[   74.980000] Cause : 8080000c
+[   74.980000] BadVA : 00000000
+[   74.980000] PrId  : 00019374 (MIPS 24Kc)
+[   74.980000] Modules linked in: fuse v4l2_common videodev i2c_dev ath79_wdt ledtrig_netdev nf_nat_irc nf_conntrack_irc nf_nat_ftp nf_conntrack_ftp ipt_MASQUERADE iptable_nat nf_nat pppoe xt_conntrack xt_CT xt_No
+[   74.980000] Process 0:0.0_enum (pid: 1139, threadinfo=829e2000, task=829d18f0, tls=00000000)
+[   74.980000] Stack : 829e3e58 00000000 829efa90 00000084 829b3a10 801b1c7c 829d0880 8033a8c0
+[   74.980000]         00000000 829e3e5c 829e3e5c 829efa90 ffffffff 00000000 00000003 801f6cac
+[   74.980000]         8033a888 80094b64 829d18f0 80092564 00000003 829d18f0 833faa10 829d18f0
+[   74.980000]         833faa8c 833faa7c 00000001 00000000 00000000 00000000 00000000 00000000
+[   74.980000]         00000000 8008a4fc 8008a424 00000000 00000000 00000000 829b9b94 833faa7c
+[   74.980000]         ...
+[   74.980000] Call Trace:
+[   74.980000] [<801b1bc4>] add_dr+0x24/0x2c
+[   74.980000] [<801b1bec>] devres_add+0x20/0x40
+[   74.980000] [<801b1c7c>] devm_kzalloc+0x70/0x90
+[   74.980000] [<801f6cac>] __do_enum+0x164/0x234
+[   74.980000] [<8008a4fc>] kthread_worker_fn+0xd8/0x118
+[   74.980000] [<8008a5c4>] kthread+0x88/0x90
+[   74.980000] [<80064b40>] kernel_thread_helper+0x10/0x18
+[   74.980000]
+[   74.980000]
+[   74.980000] Code: 24840090  aca40000  aca20004 <03e00008> ac450000 27bdffe8  afbf0014  afb00010  41706000
+[   75.540000] ---[ end trace 2f059fe1fb166ec9 ]---
+
+Signed-off-by: Aurelio Colosimo <aurelio@aureliocolosimo.it>
+---
+ drivers/mcuio/mcuio-hc-drv.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/mcuio/mcuio-hc-drv.c b/drivers/mcuio/mcuio-hc-drv.c
+index 823fdba..9629663 100644
+--- a/drivers/mcuio/mcuio-hc-drv.c
++++ b/drivers/mcuio/mcuio-hc-drv.c
+@@ -171,6 +171,9 @@ static struct mcuio_request *__make_request(struct mcuio_device *mdev,
+ 	out->status = -ETIMEDOUT;
+ 	out->cb = cb;
+ 	out->fill = fill;
++	/* HACK: don't free mcuio_request, as mcuio_free is called too
++	 * early and causes kernel oops in __do_enum */
++	out->dont_free = 1;
+ 	return out;
+ }
+ 
+-- 
+1.9.1
+
