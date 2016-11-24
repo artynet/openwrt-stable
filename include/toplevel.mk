@@ -91,6 +91,11 @@ config: scripts/config/conf prepare-tmpinfo FORCE
 config-clean: FORCE
 	$(_SINGLE)$(NO_TRACE_MAKE) -C scripts/config clean
 
+deflinino: scripts/config/conf prepare-tmpinfo FORCE
+	touch .config
+	@if [ -e $(TOPDIR)/configfiles/lininoconfig ]; then cp $(TOPDIR)/configfiles/lininoconfig .config; fi
+	$< -D .config Config.in
+
 defconfig: scripts/config/conf prepare-tmpinfo FORCE
 	touch .config
 	$< -D .config Config.in
