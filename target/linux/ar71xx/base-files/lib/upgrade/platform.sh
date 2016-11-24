@@ -3,6 +3,7 @@
 #
 
 . /lib/ar71xx.sh
+ar71xx_board_detect
 
 PART_NAME=firmware
 RAMFS_COPY_DATA=/lib/ar71xx.sh
@@ -93,7 +94,14 @@ platform_check_image() {
 	db120 | \
 	hornet-ub | \
 	zcn-1523h-2 | \
-	zcn-1523h-5)
+	zcn-1523h-5 | \
+	linino-yun-mini | \
+	linino-chiwawa | \
+	linino-chowchow | \
+	linino-lei | \
+	linino-one | \
+	linino-freedog | \
+	linino-yun)
 		[ "$magic_long" != "68737173" -a "$magic_long" != "19852003" ] && {
 			echo "Invalid image type."
 			return 1
