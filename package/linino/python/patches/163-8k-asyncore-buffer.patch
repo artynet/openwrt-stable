@@ -1,0 +1,11 @@
+--- a/Lib/asyncore.py	2016-05-24 11:44:02.036518147 +0200
++++ b/Lib/asyncore.py	2016-05-24 11:44:16.720760694 +0200
+@@ -532,7 +532,7 @@
+ 
+     def initiate_send(self):
+         num_sent = 0
+-        num_sent = dispatcher.send(self, self.out_buffer[:512])
++        num_sent = dispatcher.send(self, self.out_buffer[:8192])
+         self.out_buffer = self.out_buffer[num_sent:]
+ 
+     def handle_write(self):

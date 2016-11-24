@@ -1,0 +1,31 @@
+diff -r ed76eac4491e Doc/library/socketserver.rst
+--- a/Doc/library/socketserver.rst	Sun Sep 30 21:07:56 2012 -0700
++++ b/Doc/library/socketserver.rst	Fri Oct 05 10:22:54 2012 +0000
+@@ -306,8 +306,8 @@
+ .. method:: RequestHandler.finish()
+ 
+    Called after the :meth:`handle` method to perform any clean-up actions
+-   required.  The default implementation does nothing.  If :meth:`setup` or
+-   :meth:`handle` raise an exception, this function will not be called.
++   required.  The default implementation does nothing.  If :meth:`setup`
++   raises an exception, this function will not be called.
+ 
+ 
+ .. method:: RequestHandler.handle()
+diff -r ed76eac4491e Lib/SocketServer.py
+--- a/Lib/SocketServer.py	Sun Sep 30 21:07:56 2012 -0700
++++ b/Lib/SocketServer.py	Fri Oct 05 10:22:54 2012 +0000
+@@ -690,7 +690,12 @@
+ 
+     def finish(self):
+         if not self.wfile.closed:
+-            self.wfile.flush()
++            try:
++                self.wfile.flush()
++            except socket.error:
++                # An final socket error may have occur here, such as
++                # the local error ECONNABORTED.
++                pass
+         self.wfile.close()
+         self.rfile.close()
+ 

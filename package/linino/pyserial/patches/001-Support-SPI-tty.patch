@@ -1,0 +1,37 @@
+--- pyserial-2.4/serial/serialposix.py	2008-06-22 00:08:43.000000000 +0200
++++ pyserial-2.4/serial/serialposix.py	2014-02-20 19:11:34.000000000 +0100
+@@ -178,9 +178,14 @@
+             self.fd = None
+             raise SerialException("could not open port %s: %s" % (self._port, msg))
+         #~ fcntl.fcntl(self.fd, FCNTL.F_SETFL, 0)  #set blocking
+-        
+-        try:
+-            self._reconfigurePort()
++        #
++        #DOGHUNTER Modification
++        # 
++        #try:
++            #self._reconfigurePort()
++        try:                                                                                 
++            if 'SPI' not in self.portstr:                                                    
++                self._reconfigurePort()         
+         except:
+             os.close(self.fd)
+             self.fd = None
+@@ -334,8 +339,14 @@
+     def inWaiting(self):
+         """Return the number of characters currently in the input buffer."""
+         #~ s = fcntl.ioctl(self.fd, TERMIOS.FIONREAD, TIOCM_zero_str)
+-        s = fcntl.ioctl(self.fd, TIOCINQ, TIOCM_zero_str)
+-        return struct.unpack('I',s)[0]
++        #
++        #DOGHUNTER Modification
++        # 
++        try:
++            s = fcntl.ioctl(self.fd, TIOCINQ, TIOCM_zero_str)
++            return struct.unpack('I',s)[0]
++        except TypeError:
++            return 3
+ 
+     def read(self, size=1):
+         """Read size bytes from the serial port. If a timeout is set it may

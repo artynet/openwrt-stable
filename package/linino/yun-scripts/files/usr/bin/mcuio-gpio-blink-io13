@@ -1,0 +1,32 @@
+#!/bin/sh
+
+# PC7 <-> IO13, GPIO15 (+100 = 115)
+GPION=115
+
+# Gpio name
+NAME=IO13
+ATMEL_NAME=PC7
+
+start() {
+	echo $GPION > /sys/class/gpio/export || \
+		 { echo "error exporting gpio $GPION" ; exit 1 ; }
+	echo out > /sys/class/gpio/$NAME/direction || \
+		{ echo "error setting gpio $GPION direction" ; exit 2 ; }
+}
+
+end() {
+	echo $GPION > /sys/class/gpio/unexport
+	exit 0
+}
+
+trap end INT
+start
+echo "This sample program controls an atmega gpio ($ATMEL_NAME <-> $NAME) "
+echo "just like one of the standard ar9331 gpios. This is done via the "
+echo "gpio-mcuio driver, which registers the atmega gpios from gpio100 to "
+echo "gpio139."
+echo "Will blink the red led on the yun board, press CTRL-C to stop."
+while true ; do
+	echo 1 > /sys/class/gpio/$NAME/value ; sleep 1
+	echo 0 > /sys/class/gpio/$NAME/value ; sleep 1
+done

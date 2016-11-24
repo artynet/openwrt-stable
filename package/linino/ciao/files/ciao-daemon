@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+# Copyright (c) 2016 Arduino Srl
+# This file is part of Arduino Ciao.
+
+while true; do
+	ps w | grep -v grep | grep "python -u ciao.py" > /dev/null
+	if ! [ $? -eq 0 ]; then
+  	#	echo "Process is not running."
+		/usr/bin/run-ciao &
+	#else
+  	#	echo "Process is running."
+	fi
+	sleep 30
+done
