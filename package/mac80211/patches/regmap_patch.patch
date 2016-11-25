@@ -1,0 +1,45 @@
+Index: compat-wireless-2014-01-23.1/backport-include/linux/regmap.h
+===================================================================
+--- compat-wireless-2014-01-23.1.orig/backport-include/linux/regmap.h	2014-05-16 17:05:20.000000000 +0200
++++ compat-wireless-2014-01-23.1/backport-include/linux/regmap.h	2014-05-16 17:06:22.000000000 +0200
+@@ -15,6 +15,9 @@
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0) && \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
++
++#if 0
++
+ #if defined(CONFIG_REGMAP)
+ #define devm_regmap_init LINUX_BACKPORT(devm_regmap_init)
+ struct regmap *devm_regmap_init(struct device *dev,
+@@ -46,6 +49,9 @@
+ }
+ 
+ #endif /* defined(CONFIG_REGMAP) */
++
++#endif
++
+ #endif /* 3.2 <= version < 3.4 */
+ 
+ #endif /* __BACKPORT_LINUX_REGMAP_H */
+Index: compat-wireless-2014-01-23.1/compat/compat-3.4.c
+===================================================================
+--- compat-wireless-2014-01-23.1.orig/compat/compat-3.4.c	2014-05-16 17:02:33.000000000 +0200
++++ compat-wireless-2014-01-23.1/compat/compat-3.4.c	2014-05-16 17:03:31.000000000 +0200
+@@ -20,6 +20,7 @@
+ 
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0))
+ 
++#if 0
+ #if defined(CONFIG_REGMAP)
+ static void devm_regmap_release(struct device *dev, void *res)
+ {
+@@ -170,6 +171,8 @@
+ #endif /* defined(CONFIG_REGMAP_I2C) */
+ 
+ #endif /* defined(CONFIG_REGMAP) */
++#endif /* 0 */
++
+ #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)) */
+ 
+ int simple_open(struct inode *inode, struct file *file)
